@@ -1,15 +1,15 @@
 "use client";
-// T8 마이페이지 · 설정 · 알림 · 고객센터 — AU-03 (세션), AU-04 PATCH /auth/me (언어), BK-10 GET /notifications, CM-01 GET /contents/{key}
+// T8 마이페이지 · 설정 · 고객센터 — AU-03 (세션), CM-01 GET /contents/{key}. 언어·알림은 상단 바
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, Card, Chip, Hero, SectionTitle, Spinner } from "@/components/ui";
 import { BottomSheet, ErrorBox, LoginRequired } from "@/components/tourist";
-import { dateTime, errMsg, okv, ROLE_LABEL } from "@/components/tourist/format";
-import { get, patch } from "@/lib/api";
+import { errMsg, okv, ROLE_LABEL } from "@/components/tourist/format";
+import { get } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
 import { useLang } from "@/lib/i18n";
-import type { ContentDoc, Lang, ListResponse, Notification, User } from "@/lib/types";
+import type { ContentDoc } from "@/lib/types";
 
 const DOCS: { key: string; label: string }[] = [
   { key: "support", label: "고객센터 · 긴급연락처 (112 · 119 · 운영자)" },
@@ -22,29 +22,13 @@ const PRIVACY_FALLBACK: ContentDoc = { key: "privacy", language: "ko", title: "�
 export default function MePage() {
   const router = useRouter();
   const { user } = useUser();
-  const { lang, set: setLang } = useLang();
+  const { lang } = useLang();
   const [currency, setCurrency] = useState<"KRW" | "USD">("KRW");
-  const [notis, setNotis] = useState<Notification[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
   const [doc, setDoc] = useState<ContentDoc | null>(null);
   const [docKey, setDocKey] = useState<string | null>(null);
   const [docErr, setDocErr] = useState<string | null>(null);
-  const [langBusy, setLangBusy] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-    let alive = true;
-    get<ListResponse<Notification>>("/notifications").then((r) => { if (alive) setNotis(r.items); }).catch((e: unknown) => { if (alive) setErr(errMsg(e)); });
-    return () => { alive = false; };
-  }, [user]);
 
-  const changeLang = async (l: Lang) => {
-    setLang(l);
-    setLangBusy(true);
-    try { const u = await patch<User | null>("/auth/me", { language: l }); session.update({ language: u?.language ?? l }); }
-    catch (e) { setErr(errMsg(e)); }
-    finally { setLangBusy(false); }
-  };
   const openDoc = (key: string) => {
     setDocKey(key); setDoc(null); setDocErr(null);
     okv(get<ContentDoc>(`/contents/${key}`, { lang })).then(setDoc).catch((e: unknown) => { if (key === "privacy") setDoc(PRIVACY_FALLBACK); else setDocErr(errMsg(e)); });
@@ -70,29 +54,11 @@ export default function MePage() {
 
         <SectionTitle>설정</SectionTitle>
         <div className="flex items-center gap-3">
-          <span className="w-10 text-[14px] text-ink">언어</span>
-          <Chip selected={lang === "en"} onClick={() => changeLang("en")}>English</Chip>
-          <Chip selected={lang === "ko"} onClick={() => changeLang("ko")}>한국어</Chip>
-          {langBusy && <span className="text-[12px] text-muted">저장 중…</span>}
-        </div>
-        <div className="flex items-center gap-3">
           <span className="w-10 text-[14px] text-ink">통화</span>
           <Chip selected={currency === "KRW"} onClick={() => setCurrency("KRW")}>KRW</Chip>
           <Chip selected={currency === "USD"} onClick={() => setCurrency("USD")}>USD</Chip>
           <span className="text-[12px] text-muted">결제는 원화로 진행돼요</span>
         </div>
-
-        <SectionTitle>알림</SectionTitle>
-        <ErrorBox message={err} />
-        {!notis && !err && <Spinner />}
-        {notis && notis.length === 0 && <Card tint className="text-[13px] text-muted">알림이 없어요.</Card>}
-        {notis?.map((n) => (
-          <Card key={n.id} className="flex items-center gap-3 py-3">
-            <span className={`h-2 w-2 shrink-0 rounded-full ${n.read_at ? "bg-transparent" : "bg-orange"}`} />
-            <div className="min-w-0 flex-1 text-[13px] text-ink break-keep">{n.title}</div>
-            <span className="shrink-0 text-[12px] text-muted">{dateTime(n.created_at)}</span>
-          </Card>
-        ))}
 
         <SectionTitle>고객센터 · 약관</SectionTitle>
         {DOCS.map((d) => (
@@ -101,10 +67,6 @@ export default function MePage() {
           </Card>
         ))}
 
-        <div className="flex items-center justify-between pt-3">
-          <button type="button" onClick={logout} className="text-[14px] text-navy font-semibold">로그아웃</button>
-          <span className="text-[12px] text-muted">Seongbuk Stay</span>
-        </div>
         <Button variant="ghost" onClick={logout}>로그아웃</Button>
       </div>
 

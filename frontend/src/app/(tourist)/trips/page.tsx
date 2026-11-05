@@ -87,7 +87,7 @@ export default function TripsPage() {
 
   return (
     <>
-      <Hero title="My trips" sub={user.name} right={<Link href="/me" className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">마이페이지</Link>} />
+      <Hero title="My trips" sub={user.name} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <div className="flex gap-2">
           <Chip selected={tab === "upcoming"} onClick={() => setTab("upcoming")}>예정 ({upcoming.length})</Chip>
