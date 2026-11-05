@@ -39,6 +39,9 @@ AI 다국어 안내문 초안,AI-05,A-05,AI,POST,/ai/translate-notice,operator,�
 결제 주문 생성,PM-01,F-07,결제 (Payments),POST,/payments/prepare,tourist,"결제 주문 생성. orderId·금액(서버 예약 금액)·주문명·customerKey",T5,필수,구현
 결제 승인,PM-02,F-07,결제 (Payments),POST,/payments/confirm,tourist,"결제창 성공 후 승인 { payment_key, order_id, amount }. 금액 불일치면 승인 요청 안 함",T5,필수,구현
 결제 조회,PM-03,F-07,결제 (Payments),GET,/payments/bookings/{id},tourist,"예약의 결제 상태·수단·영수증 URL·환불액",T6,권장,구현
+PayPal 주문 생성,PM-04,F-07,결제 (Payments),POST,/payments/paypal/orders,tourist,"PayPal 주문 생성. 예약 원화 금액을 고정 환율로 USD 환산 (외국인·해외카드)",T5,필수,구현
+PayPal 캡처,PM-05,F-07,결제 (Payments),POST,/payments/paypal/capture,tourist,"구매자 승인 후 캡처. 캡처 금액·통화가 주문과 같아야 완료",T5,필수,구현
+결제수단 조회,PM-06,F-07,결제 (Payments),GET,/payments/methods,공개,"서버에 켜진 결제수단 { toss, paypal, usd_krw_rate }",T5,권장,구현
 체크인 안내 조회,BK-07,F-10,예약 (Bookings),GET,/bookings/{id}/checkin-guide,tourist,"체크인 안내 (기숙사 위치, 입실 절차, 비상연락처)",T6,필수,목업
 리뷰 작성,BK-08,F-11,예약 (Bookings),POST,/bookings/{id}/reviews,tourist,숙박·버디·투어 리뷰 작성,T6,권장,목업
 버디 채팅,BK-09,F-09,예약 (Bookings),GET,/bookings/{id}/chat,"tourist, buddy",버디 채팅 메시지 (자동 번역 포함 예정),"T6, B1",필수,목업

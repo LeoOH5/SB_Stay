@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     toss_secret_key: str = ""
     toss_api_base: str = "https://api.tosspayments.com"
 
+    # PayPal (외국인 결제, USD). 비우면 PayPal 버튼 숨김. 운영은 https://api-m.paypal.com
+    paypal_client_id: str = ""
+    paypal_client_secret: str = ""
+    paypal_api_base: str = "https://api-m.sandbox.paypal.com"
+    usd_krw_rate: float = 1400.0  # 원화 → 달러 고정 환율 (해커톤용)
+
     # 수수료율 (해커톤은 상수)
     platform_fee_rate: float = 0.10
 

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Button, Card, Chip, Hero, LinkButton, Spinner, StatusPill } from "@/components/ui";
 import { BottomSheet, ErrorBox, LoginRequired, Notice, Row, selectCls, Stars, textareaCls, TypeBadge } from "@/components/tourist";
 import { DEMO_TODAY, errMsg, itemStatusLabel, md, okv, ymd } from "@/components/tourist/format";
-import { tossEnabled } from "@/lib/toss";
+import { paymentsEnabled } from "@/lib/toss";
 import type { ChatMessage, CheckinGuide } from "@/components/tourist/types";
 import { get, post, won } from "@/lib/api";
 import { useUser } from "@/lib/auth";
@@ -126,7 +126,7 @@ export default function TripsPage() {
                 </div>
               ))}
               <div className="flex items-center justify-between text-[13px]"><span className="text-muted">합계 · {b.paid_at ? "결제 완료" : "미결제"}</span><span className="font-semibold text-ink">{won(b.total_price)}</span></div>
-              {!b.paid_at && tossEnabled() && <LinkButton href={`/pay?booking=${b.id}`}>{won(b.total_price)} 결제하기</LinkButton>}
+              {!b.paid_at && paymentsEnabled() && <LinkButton href={`/pay?booking=${b.id}`}>{won(b.total_price)} 결제하기</LinkButton>}
               <Button variant="danger" className="text-[14px]" onClick={() => cancel(b)} disabled={busy}>예약 취소하기</Button>
               <p className="text-[12px] text-orange">취소 시 숙박·투어·버디 모두 취소 · 환불: 체크인 7일 전 100% · 3일 전 50% · 이후 0%</p>
             </Card>
@@ -216,7 +216,7 @@ export default function TripsPage() {
             <div className="flex items-end justify-between pt-2 border-t border-line"><span className="text-[13px] text-muted">합계</span><span className="text-[22px] font-bold text-navy">{won(receiptFor.total_price)}</span></div>
             <Row label="결제">{receiptFor.paid_at ? ymd(receiptFor.paid_at.slice(0, 10)) : "-"}</Row>
             <Row label="상태"><StatusPill status={receiptFor.status} /></Row>
-            {receiptFor.payment?.method && <Row label="결제 수단">{receiptFor.payment.method === "mock" ? "테스트 결제" : receiptFor.payment.method}</Row>}
+            {receiptFor.payment?.method && <Row label="결제 수단">{receiptFor.payment.method === "mock" ? "테스트 결제" : receiptFor.payment.method}{receiptFor.payment.foreign_amount ? ` · $${receiptFor.payment.foreign_amount}` : ""}</Row>}
             {receiptFor.status === "cancelled" && <Notice>{receiptFor.payment ? `환불 ${won(receiptFor.payment.canceled_amount)}` : "결제 전 취소 · 환불 없음"}</Notice>}
             {receiptFor.payment?.receipt_url && <a href={receiptFor.payment.receipt_url} target="_blank" rel="noreferrer" className="block pt-2 text-center text-[13px] font-semibold text-navy">카드 영수증 보기 →</a>}
           </div>

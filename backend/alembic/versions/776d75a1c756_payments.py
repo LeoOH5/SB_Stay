@@ -1,4 +1,4 @@
-"""payments (토스페이먼츠 결제)
+"""payments (토스페이먼츠 · PayPal 결제)
 
 Revision ID: 776d75a1c756
 Revises: dd4855a338bf
@@ -20,6 +20,10 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('booking_id', sa.Integer(), nullable=False),
     sa.Column('order_id', sa.String(length=64), nullable=False),
+    sa.Column('provider', sa.String(length=10), server_default='toss', nullable=False),
+    sa.Column('currency', sa.String(length=3), server_default='KRW', nullable=False),
+    sa.Column('foreign_amount', sa.String(length=20), nullable=True),
+    sa.Column('capture_id', sa.String(length=100), nullable=True),
     sa.Column('payment_key', sa.String(length=200), nullable=True),
     sa.Column('amount', sa.Integer(), nullable=False),
     sa.Column('status', sa.String(length=20), nullable=False),

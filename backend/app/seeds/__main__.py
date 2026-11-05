@@ -21,11 +21,11 @@ from app.models import (
     Message,
     Notification,
     Package,
+    Payment,
     Place,
     Review,
     Tour,
     TourPlace,
-    Payment,
     University,
     User,
 )

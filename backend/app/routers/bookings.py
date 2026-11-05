@@ -13,7 +13,7 @@ from app.schemas.bookings import BookingCreateIn, BookingItemOut, BookingOut, De
 from app.schemas.common import ListResponse
 from app.services import booking_state as bs
 from app.services import payments as ps
-from app.services import toss
+from app.services import paypal, toss
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -110,8 +110,8 @@ def pay(booking_id: int, user: User = Depends(get_current_user), db: Session = D
     b = _get_booking(db, booking_id)
     if b.tourist_id != user.id and user.role != "operator":
         raise api_error(403, "FORBIDDEN", "본인 예약만 결제할 수 있습니다")
-    if toss.enabled():
-        raise api_error(409, "USE_PAYMENT_WIDGET", "결제창(POST /payments/prepare)으로 결제해 주세요")
+    if toss.enabled() or paypal.enabled():
+        raise api_error(409, "USE_PAYMENT_WIDGET", "결제창(토스 또는 PayPal)으로 결제해 주세요")
     try:
         p = ps.mock_pay(db, b)
     except ps.PaymentError as e:

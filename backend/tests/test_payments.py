@@ -117,3 +117,87 @@ def test_refund_rate_policy():
     assert ps.refund_rate(B(), items, today=date(2027, 1, 5)) == 1.0
     assert ps.refund_rate(B(), items, today=date(2027, 1, 9)) == 0.5
     assert ps.refund_rate(B(), items, today=date(2027, 1, 10)) == 0.0
+
+
+# ---------- PayPal (외국인 결제, USD)
+@pytest.fixture
+def paypal_on(monkeypatch):
+    from app.services import paypal
+
+    s = get_settings()
+    monkeypatch.setattr(s, "paypal_client_id", "sb-client")
+    monkeypatch.setattr(s, "paypal_client_secret", "sb-secret")
+    monkeypatch.setattr(s, "usd_krw_rate", 1400.0)
+    calls: dict[str, list] = {"create": [], "capture": [], "refund": []}
+
+    def fake_create(order_id, usd, description):
+        calls["create"].append((order_id, usd))
+        return {"id": f"PP-{order_id}", "status": "CREATED"}
+
+    def fake_capture(pp_id):
+        calls["capture"].append(pp_id)
+        usd = paypal.usd_for(TOTAL)
+        value = "1.00" if pp_id.endswith("tamper") else usd
+        return {"id": pp_id, "status": "COMPLETED", "purchase_units": [{"payments": {"captures": [
+            {"id": f"CAP-{pp_id}", "status": "COMPLETED", "amount": {"currency_code": "USD", "value": value}, "create_time": "2026-11-06T01:00:00Z"}]}}]}
+
+    def fake_refund(capture_id, usd=None):
+        calls["refund"].append((capture_id, usd))
+        return {"id": "RF-1", "status": "COMPLETED"}
+
+    monkeypatch.setattr(paypal, "create_order", fake_create)
+    monkeypatch.setattr(paypal, "capture", fake_capture)
+    monkeypatch.setattr(paypal, "refund", fake_refund)
+    return calls
+
+
+def test_usd_conversion(monkeypatch):
+    from app.services import paypal
+
+    monkeypatch.setattr(get_settings(), "usd_krw_rate", 1400.0)
+    assert paypal.usd_for(125000) == "89.29"  # 89.2857… 센트 올림
+    assert paypal.usd_for(140000) == "100.00"
+
+
+def test_paypal_order_capture_refund(client, tourist, booking, paypal_on):
+    bid = booking["id"]
+    m = client.get("/api/v1/payments/methods").json()
+    assert m["paypal"] is True and m["toss"] is False
+    assert client.post(f"/api/v1/bookings/{bid}/pay", headers=tourist).json()["error"]["code"] == "USE_PAYMENT_WIDGET"
+
+    o = client.post("/api/v1/payments/paypal/orders", json={"booking_id": bid}, headers=tourist).json()
+    assert o["currency"] == "USD" and o["usd_amount"] == "89.29" and o["amount"] == TOTAL and o["paypal_order_id"].startswith("PP-")
+
+    c = client.post("/api/v1/payments/paypal/capture", json={"paypal_order_id": o["paypal_order_id"]}, headers=tourist)
+    assert c.status_code == 200, c.text
+    pay = c.json()["payment"]
+    assert pay["status"] == "DONE" and pay["provider"] == "paypal" and pay["foreign_amount"] == "89.29" and c.json()["paid_at"]
+    # 두 번 캡처해도 PayPal 호출은 1번
+    client.post("/api/v1/payments/paypal/capture", json={"paypal_order_id": o["paypal_order_id"]}, headers=tourist)
+    assert len(paypal_on["capture"]) == 1
+
+    r = client.post(f"/api/v1/bookings/{bid}/cancel", json={"reason": "change of plans"}, headers=tourist)
+    assert r.status_code == 200 and r.json()["payment"]["status"] == "CANCELED"
+    assert paypal_on["refund"] == [(f"CAP-{o['paypal_order_id']}", None)]  # 7일 넘게 남아 전액
+
+
+def test_paypal_capture_amount_mismatch(client, tourist, booking, paypal_on, monkeypatch):
+    from app.services import paypal
+
+    real_create = paypal.create_order
+    monkeypatch.setattr(paypal, "create_order", lambda oid, usd, d: {**real_create(oid, usd, d), "id": f"PP-{oid}-tamper"})
+    o = client.post("/api/v1/payments/paypal/orders", json={"booking_id": booking["id"]}, headers=tourist).json()
+    c = client.post("/api/v1/payments/paypal/capture", json={"paypal_order_id": o["paypal_order_id"]}, headers=tourist)
+    assert c.status_code == 400 and c.json()["error"]["code"] == "CAPTURE_MISMATCH"
+    assert client.get(f"/api/v1/bookings/{booking['id']}", headers=tourist).json()["paid_at"] is None
+
+
+def test_paypal_partial_refund(db, client, tourist, booking, paypal_on, monkeypatch):
+    """첫 일정 3~6일 전 취소 → 달러로 50% 환불"""
+    o = client.post("/api/v1/payments/paypal/orders", json={"booking_id": booking["id"]}, headers=tourist).json()
+    client.post("/api/v1/payments/paypal/capture", json={"paypal_order_id": o["paypal_order_id"]}, headers=tourist)
+    monkeypatch.setattr(ps, "refund_rate", lambda b, items, today=None: 0.5)
+    r = client.post(f"/api/v1/bookings/{booking['id']}/cancel", json={}, headers=tourist)
+    assert r.status_code == 200 and r.json()["payment"]["status"] == "PARTIAL_CANCELED"
+    assert r.json()["payment"]["canceled_amount"] == TOTAL // 2
+    assert paypal_on["refund"][-1][1] == "44.64"  # 89.29 × 0.5 내림

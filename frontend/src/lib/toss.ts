@@ -1,9 +1,10 @@
 // 토스페이먼츠 결제위젯 SDK v2 (https://js.tosspayments.com/v2/standard). 클라이언트 키: NEXT_PUBLIC_TOSS_CLIENT_KEY (test_gck_...)
 import { USE_MOCK } from "@/lib/api";
+import { PAYPAL_CLIENT_ID } from "@/lib/paypal";
 
 export const TOSS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY ?? "";
-/** 실제 결제창을 쓰는지. 키가 없거나 목업 모드면 예약 즉시 결제 완료(목업) */
-export const tossEnabled = () => !!TOSS_CLIENT_KEY && !USE_MOCK;
+/** 실제 결제(토스 또는 PayPal)를 쓰는지. 키가 없거나 목업 모드면 예약 즉시 결제 완료(목업) */
+export const paymentsEnabled = () => !USE_MOCK && (!!TOSS_CLIENT_KEY || !!PAYPAL_CLIENT_ID);
 
 export interface PaymentOrder {
   enabled: boolean; booking_id: number; order_id: string; amount: number; order_name: string;
