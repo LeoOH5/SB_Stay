@@ -44,11 +44,45 @@ export function ListRow({ icon, title, meta, right, onClick, className }: { icon
 }
 
 export function Button({ children, variant = "primary", className, full = true, ...rest }: { children: ReactNode; variant?: "primary" | "secondary" | "ghost" | "danger"; className?: string; full?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const v = { primary: "bg-navy text-white hover:bg-navy-700", secondary: "bg-white text-green-dark border-2 border-green hover:bg-green-bg", ghost: "bg-white text-navy border border-line hover:bg-gray-bg", danger: "bg-white text-orange border border-orange hover:bg-orange-bg" }[variant];
+  const v = BTN_VARIANT[variant];
   return (
     <button {...rest} className={cn("h-13 min-h-[52px] rounded-xl px-5 text-[15px] font-semibold transition disabled:opacity-40", v, full && "w-full", className)}>
       {children}
     </button>
+  );
+}
+
+const BTN_VARIANT = { primary: "bg-navy text-white hover:bg-navy-700", secondary: "bg-white text-green-dark border-2 border-green hover:bg-green-bg", ghost: "bg-white text-navy border border-line hover:bg-gray-bg", danger: "bg-white text-orange border border-orange hover:bg-orange-bg" } as const;
+
+/** 버튼처럼 보이는 링크 (a 안에 button을 넣지 않기 위해) */
+export function LinkButton({ href, children, variant = "primary", className, full = true }: { href: string; children: ReactNode; variant?: keyof typeof BTN_VARIANT; className?: string; full?: boolean }) {
+  return (
+    <Link href={href} className={cn("inline-flex min-h-[52px] items-center justify-center rounded-xl px-5 text-[15px] font-semibold transition", BTN_VARIANT[variant], full && "w-full", className)}>
+      {children}
+    </Link>
+  );
+}
+
+/** 숙박·투어·버디 바로가기 타일 */
+export function CategoryTiles() {
+  const items = [
+    { href: "/stay", title: "숙박", desc: "방학 중 대학 기숙사", icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 20V9l9-5 9 5v11" /><path d="M9 20v-6h6v6" /></svg>) },
+    { href: "/tours", title: "역사 투어", desc: "해설사와 걷는 성북", icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" /><path d="M9 4v14M15 6v14" /></svg>) },
+    { href: "/buddies", title: "대학생 버디", desc: "동네를 같이 걸어요", icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><circle cx="17" cy="9" r="2.6" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3.3 0 6 2.2 6 5.5" /></svg>) },
+  ];
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {items.map((i) => (
+        <Link key={i.href} href={i.href} className="flex flex-col items-start gap-2 rounded-[14px] bg-white p-3 ring-1 ring-line/60 shadow-[0_1px_3px_rgba(31,42,68,0.08)] active:scale-[0.98] transition">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-bg text-navy">{i.icon}</span>
+          <span className="text-[14px] font-bold text-ink leading-tight">{i.title}</span>
+          <span className="text-[11.5px] leading-snug text-muted">{i.desc}</span>
+        </Link>
+      ))}
+    </div>
   );
 }
 
@@ -135,3 +169,29 @@ export function TopBar({ title, back, right }: { title?: string; back?: string; 
 
 export function Spinner() { return <div className="py-10 text-center text-[13px] text-muted">불러오는 중…</div>; }
 export function Empty({ children }: { children: ReactNode }) { return <div className="py-10 text-center text-[13px] text-muted">{children}</div>; }
+
+/** OpenStreetMap 임베드 (키 불필요). points의 범위를 자동으로 잡는다. */
+export function MapEmbed({ points, className, h = "h-44" }: { points: { lat: number; lng: number }[]; className?: string; h?: string }) {
+  if (points.length === 0) return null;
+  const lats = points.map((p) => p.lat), lngs = points.map((p) => p.lng);
+  const pad = 0.004;
+  const bbox = [Math.min(...lngs) - pad, Math.min(...lats) - pad, Math.max(...lngs) + pad, Math.max(...lats) + pad].join(",");
+  const m = points[0];
+  return (
+    <div className={cn("overflow-hidden rounded-[14px] ring-1 ring-line/60", h, className)}>
+      <iframe title="지도" className="h-full w-full border-0" loading="lazy" src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${m.lat},${m.lng}`} />
+    </div>
+  );
+}
+
+/** 사진이 없을 때 쓰는 타일 */
+export function PhotoTile({ className, label }: { className?: string; label?: string }) {
+  return (
+    <div className={cn("flex items-center justify-center rounded-[14px] bg-gradient-to-br from-navy to-navy-700 text-white/80", className)}>
+      <div className="flex flex-col items-center gap-1">
+        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M3 20V9l9-5 9 5v11" /><path d="M9 20v-6h6v6" /></svg>
+        {label && <span className="text-[12px] font-semibold">{label}</span>}
+      </div>
+    </div>
+  );
+}

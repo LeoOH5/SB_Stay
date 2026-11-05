@@ -2,7 +2,7 @@
 // T4 투어 상세 + AI 역사 스토리 — TR-02 GET /tours/{id}, AI-02 POST /ai/story, TR-04 GET /tours/{id}/reviews
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AiBlock, Button, Card, Chip, Hero, ImageBlock, inputCls, SectionTitle, Spinner, TopBar } from "@/components/ui";
+import { AiBlock, Button, Card, Chip, Hero, MapEmbed, SectionTitle, Spinner, TopBar, inputCls } from "@/components/ui";
 import { ErrorBox, Notice, Stars } from "@/components/tourist";
 import { daysLabel, DEFAULT_TOUR_DATE, dowKey, errMsg, langsCode, md, okv } from "@/components/tourist/format";
 import { get, post, won } from "@/lib/api";
@@ -77,7 +77,7 @@ export default function TourDetailPage() {
         {!tour && !err && <Spinner />}
         {tour && (
           <>
-            <ImageBlock h="h-[100px]" label={`지도 · 코스 경로 ${tour.places.map((_, i) => CIRCLED[i]).join("→")} · 집결 ${tour.meeting_point}`} />
+            <MapEmbed points={tour.places.map((pl) => ({ lat: pl.lat, lng: pl.lng }))} />
             {tour.description && <p className="text-[13px] text-muted">{tour.description}</p>}
             <div className="flex flex-wrap gap-2">
               {tour.places.map((p, i) => <Chip key={p.id} selected={placeId === p.id} onClick={() => selectPlace(p.id)}>{CIRCLED[i]} {lang === "en" ? p.name_en : p.name}</Chip>)}
@@ -126,7 +126,7 @@ export default function TourDetailPage() {
             {added && <Card tint className="text-[13px] text-navy">장바구니에 담았어요.</Card>}
             <div className="grid grid-cols-2 gap-3">
               <Button variant="secondary" className="text-[14px]" onClick={() => add(false)} disabled={!operates}>장바구니 담기</Button>
-              <Button className="text-[14px]" onClick={() => add(true)} disabled={!operates}>바로 예약 (즉시 확정)</Button>
+              <Button className="text-[14px]" onClick={() => add(true)} disabled={!operates}>바로 예약</Button>
             </div>
           </>
         )}

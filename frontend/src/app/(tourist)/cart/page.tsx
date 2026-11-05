@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, Card, Hero, SectionTitle } from "@/components/ui";
+import { Button, Card, CategoryTiles, Hero, LinkButton, SectionTitle } from "@/components/ui";
 import { ErrorBox, Notice, selectCls, TypeBadge } from "@/components/tourist";
 import { submitBooking } from "@/components/tourist/booking";
 import { cartMeta, errMsg, SS_TRAVELER } from "@/components/tourist/format";
@@ -40,15 +40,14 @@ export default function CartPage() {
       <Hero title="Cart" sub="숙박·투어·버디를 한 번에 신청해요" right={<span className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">{cart.items.length}개</span>} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         {cart.items.length === 0 && (
-          <Card tint className="text-center py-8">
-            <div className="text-[14px] text-ink">장바구니가 비어 있어요.</div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <Link href="/stay"><Button variant="ghost" className="px-2 text-[13px]">숙박</Button></Link>
-              <Link href="/tours"><Button variant="ghost" className="px-2 text-[13px]">투어</Button></Link>
-              <Link href="/buddies"><Button variant="ghost" className="px-2 text-[13px]">버디</Button></Link>
-            </div>
-            <Link href="/plan" className="block mt-2"><Button>AI로 여행 설계하기 →</Button></Link>
-          </Card>
+          <>
+            <Card tint className="py-6 text-center">
+              <div className="text-[15px] font-semibold text-ink">장바구니가 비어 있어요</div>
+              <div className="mt-1 text-[13px] text-muted">AI에게 일정을 맡기거나 직접 골라 보세요</div>
+              <LinkButton href="/plan" className="mt-4">AI로 일정 만들기 →</LinkButton>
+            </Card>
+            <CategoryTiles />
+          </>
         )}
         {cart.items.map((i) => (
           <Card key={`${i.type}-${i.ref_id}`} className="flex items-start gap-3 p-3">

@@ -66,7 +66,7 @@ export default function BuddiesPage() {
 
   return (
     <>
-      <Hero title="Buddies" sub="성북구 대학생과 캠퍼스·동네 걷기 · 문화교류 동행 (해설은 해설사·AI가)" />
+      <Hero title="Buddies" sub="성북구 대학생과 캠퍼스·동네를 함께 걸어요" />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <div className="flex flex-wrap gap-2">
           <Chip selected={language === "en"} onClick={() => pick(() => setLanguage((v) => (v === "en" ? "" : "en")))}>EN</Chip>

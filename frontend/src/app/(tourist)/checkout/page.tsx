@@ -71,7 +71,7 @@ export default function CheckoutPage() {
         <Field label={`여권번호 (선택${hasDorm ? " · 숙박 항목이 있을 때만" : ""})`}>
           <input className={inputCls} value={form.passport_no ?? ""} onChange={(e) => set("passport_no", e.target.value)} placeholder="C12345678" />
         </Field>
-        <Notice>승인 후 대학 담당자에게만 전달돼요. (최소 수집 원칙)</Notice>
+        <Notice>숙박 승인 후 대학 담당자에게만 전달돼요.</Notice>
         <Field label="긴급연락처"><input className={inputCls} value={form.emergency_contact ?? ""} onChange={(e) => set("emergency_contact", e.target.value)} placeholder="+1 555 0100 (Mother)" /></Field>
         <div>
           <span className="block text-[12px] text-muted mb-1.5">동행 인원</span>

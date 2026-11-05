@@ -2,7 +2,7 @@
 // T6 내 여행 · 예약 상태 + T11 지난 예약·취소 — BK-02 GET /bookings/me, BK-07 체크인 안내, BK-09 채팅, BK-05 취소, BK-08 리뷰
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button, Card, Chip, Hero, SectionTitle, Spinner, StatusPill } from "@/components/ui";
+import { Button, Card, Chip, Hero, LinkButton, Spinner, StatusPill } from "@/components/ui";
 import { BottomSheet, ErrorBox, LoginRequired, Notice, Row, selectCls, Stars, textareaCls, TypeBadge } from "@/components/tourist";
 import { DEMO_TODAY, errMsg, itemStatusLabel, md, okv, ymd } from "@/components/tourist/format";
 import type { ChatMessage, CheckinGuide } from "@/components/tourist/types";
@@ -96,7 +96,7 @@ export default function TripsPage() {
         <ErrorBox message={err} />
         {!bookings && !err && <Spinner />}
         {bookings && shown.length === 0 && (
-          <Card tint className="text-center py-8"><div className="text-[14px] text-ink">{tab === "upcoming" ? "예정된 여행이 없어요." : "지난 예약이 없어요."}</div>{tab === "upcoming" && <Link href="/plan" className="block mt-4"><Button>AI로 여행 설계하기</Button></Link>}</Card>
+          <Card tint className="text-center py-8"><div className="text-[14px] text-ink">{tab === "upcoming" ? "예정된 여행이 없어요." : "지난 예약이 없어요."}</div>{tab === "upcoming" && <LinkButton href="/plan" className="mt-4">AI로 여행 설계하기</LinkButton>}</Card>
         )}
 
         {tab === "upcoming" && shown.map((b) => {
@@ -124,7 +124,7 @@ export default function TripsPage() {
                 </div>
               ))}
               <div className="flex items-center justify-between text-[13px]"><span className="text-muted">합계 · {b.paid_at ? "결제 완료" : "미결제"}</span><span className="font-semibold text-ink">{won(b.total_price)}</span></div>
-              <Button variant="danger" className="text-[14px]" onClick={() => cancel(b)} disabled={busy}>예약 취소하기 (확인 팝업)</Button>
+              <Button variant="danger" className="text-[14px]" onClick={() => cancel(b)} disabled={busy}>예약 취소하기</Button>
               <p className="text-[12px] text-orange">취소 시 숙박·투어·버디 모두 취소 · 환불: 체크인 7일 전 100% · 3일 전 50% · 이후 0%</p>
             </Card>
           );
@@ -149,9 +149,6 @@ export default function TripsPage() {
           );
         })}
 
-        <SectionTitle>체크인 안내</SectionTitle>
-        <Card accent="navy"><div className="text-[13px] text-ink leading-relaxed">국제관 위치 지도 · 입실 절차 · 와이파이<br />긴급 연락처: 대학 담당자 / 운영자 / 112·119</div></Card>
-        <p className="text-[13px]"><Link href="/me" className="text-navy font-semibold">마이페이지 (알림 · 고객센터) →</Link></p>
       </div>
 
       {/* 체크인 안내 */}
@@ -192,8 +189,8 @@ export default function TripsPage() {
         )}
       </BottomSheet>
 
-      {/* 리뷰 작성 (항목별 1회) */}
-      <BottomSheet open={reviewFor !== null} onClose={() => setReviewFor(null)} title="리뷰 작성 (항목별 1회)">
+      {/* 리뷰 작성 */}
+      <BottomSheet open={reviewFor !== null} onClose={() => setReviewFor(null)} title="리뷰 작성">
         {reviewFor && (
           <div className="space-y-3">
             <select className={selectCls} value={reviewItem} onChange={(e) => setReviewItem(Number(e.target.value))}>

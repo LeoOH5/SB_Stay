@@ -2,7 +2,7 @@
 // T4b 객실 상세 — DM-03 GET /dorms/{id}, 장바구니 담기
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Card, Hero, ImageBlock, inputCls, Spinner, TopBar } from "@/components/ui";
+import { Button, Card, Hero, PhotoTile, Spinner, TopBar, inputCls } from "@/components/ui";
 import { ErrorBox, Notice } from "@/components/tourist";
 import { DEFAULT_FROM, DEFAULT_TO, errMsg, md, nightsBetween, okv, ROOM_LABEL, ymd } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -48,7 +48,7 @@ export default function StayDetailPage() {
         {!dorm && !err && <Spinner />}
         {dorm && (
           <>
-            <ImageBlock h="h-24" label="객실 사진 (스와이프)" />
+            <PhotoTile className="h-28" label={dorm.building} />
             <div className="text-[17px] font-semibold text-ink">{ROOM_LABEL[dorm.room_type]} · 1박 {won(dorm.price_per_night)}</div>
             <p className="text-[12px] text-muted">개방 기간 {md(dorm.open_from)} – {md(dorm.open_to)} · 남은 객실 {dorm.available_rooms} · 침구·청소 포함</p>
             <Card accent="navy">

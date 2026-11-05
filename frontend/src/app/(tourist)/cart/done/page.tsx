@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Button, Card, Hero, Spinner, StatusPill } from "@/components/ui";
+import { Card, Hero, LinkButton, Spinner, StatusPill } from "@/components/ui";
 import { ErrorBox, TypeBadge } from "@/components/tourist";
 import { errMsg, itemStatusLabel, okv } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -51,8 +51,8 @@ function Done() {
           <p className="text-[12px] text-muted">투어는 즉시 확정, 숙박은 대학 승인, 버디는 버디 수락 후 확정돼요. 세 곳이 모두 승인하면 결제가 확정됩니다.</p>
         </>
       )}
-      <Link href="/trips" className="block"><Button>내 여행 보기</Button></Link>
-      <Link href="/home" className="block"><Button variant="ghost">홈으로</Button></Link>
+      <LinkButton href="/trips">내 여행 보기</LinkButton>
+      <LinkButton href="/home" variant="ghost">홈으로</LinkButton>
     </div>
   );
 }

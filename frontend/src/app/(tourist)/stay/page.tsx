@@ -34,7 +34,7 @@ export default function StayPage() {
           <Card className="divide-y divide-line/60 py-0">
             {dorms.map((d) => (
               <Link key={d.id} href={`/stay/${d.id}`} className="block">
-                <ListRow icon="사진" title={`${lang === "en" ? d.university.name_en : d.university.name} ${d.building}`}
+                <ListRow icon={<svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 20V9l9-5 9 5v11" /><path d="M9 20v-6h6v6" /></svg>} title={`${lang === "en" ? d.university.name_en : d.university.name} ${d.building}`}
                   meta={`${ROOM_LABEL[d.room_type]} · 남은 객실 ${d.available_rooms} · 개방 ${ymd(d.open_from).slice(5)} – ${ymd(d.open_to).slice(5)}`}
                   right={<div className="text-[14px] font-semibold text-navy">{won(d.price_per_night)}~</div>} />
               </Link>

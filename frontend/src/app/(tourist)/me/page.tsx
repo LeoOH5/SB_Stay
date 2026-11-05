@@ -79,7 +79,7 @@ export default function MePage() {
           <span className="w-10 text-[14px] text-ink">통화</span>
           <Chip selected={currency === "KRW"} onClick={() => setCurrency("KRW")}>KRW</Chip>
           <Chip selected={currency === "USD"} onClick={() => setCurrency("USD")}>USD</Chip>
-          <span className="text-[12px] text-muted">결제는 항상 KRW</span>
+          <span className="text-[12px] text-muted">결제는 원화로 진행돼요</span>
         </div>
 
         <SectionTitle>알림</SectionTitle>

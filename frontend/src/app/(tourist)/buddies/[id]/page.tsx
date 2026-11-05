@@ -67,7 +67,7 @@ export default function BuddyDetailPage() {
               {TIMES.map((t) => <Chip key={t} selected={time === t} onClick={() => setTime(t)}>{t}</Chip>)}
             </div>
             <p className="text-[12px] text-muted">버디는 &apos;가이드&apos;가 아니라 문화교류 동행이에요. 역사 해설은 해설사·AI가 해요.</p>
-            <Button onClick={request} disabled={!date}>동행 요청 (장바구니)</Button>
+            <Button onClick={request} disabled={!date}>동행 요청하기</Button>
           </>
         )}
       </div>

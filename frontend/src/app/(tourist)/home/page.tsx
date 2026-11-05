@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AiBlock, Button, Card, Hero, ImageBlock, ListRow, SectionTitle, Spinner } from "@/components/ui";
+import { AiBlock, Button, Card, CategoryTiles, Hero, LinkButton, ListRow, SectionTitle, Spinner } from "@/components/ui";
 import { BottomSheet, ErrorBox, TypeBadge } from "@/components/tourist";
 import { addDays, DEFAULT_FROM, DEFAULT_TOUR_DATE, errMsg, md, nightsBetween, okv, ROOM_LABEL } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -69,13 +69,19 @@ export default function HomePage() {
 
   return (
     <>
-      <Hero title="Seongbuk Stay (가칭)" sub="Stay in a campus. Walk through history."
-        right={user ? <Link href="/me" className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">{user.name.split(" ")[0]}</Link> : <Link href="/login" className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">로그인</Link>} />
-      <div className="px-5 pb-6 space-y-3 pt-4">
-        <ImageBlock h="h-[150px]" label={"성북동 사진\n\"서울 도성 밖 문화재가 가장 많은 동네\""} className="whitespace-pre-line" />
-        <Link href="/plan" className="block"><Button>AI로 여행 설계하기 →</Button></Link>
+      <Hero title={user ? `${user.name.split(" ")[0]} 님, 반가워요` : "Seongbuk Stay"} sub="성북 대학 기숙사에 머물며 걷는 역사 여행"
+        right={user ? <Link href="/me" className="rounded-lg bg-white/15 px-2.5 py-1 text-[12px] font-semibold text-white">마이페이지</Link> : <Link href="/login" className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">로그인</Link>} />
+      <div className="px-5 pb-8 pt-4 space-y-3">
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-navy-bg to-green-bg p-5 ring-0">
+          <div className="text-[12px] font-semibold text-green-dark">AI 여행 설계</div>
+          <div className="mt-1 text-[18px] font-bold leading-snug text-ink">기간과 관심사만 고르면<br />숙박·투어·버디 일정을 짜 드려요</div>
+          <LinkButton href="/plan" className="mt-4">일정 만들기 →</LinkButton>
+        </Card>
 
-        <SectionTitle right={cart.items.length > 0 ? <Link href="/cart" className="text-[13px] text-navy font-semibold">장바구니 {cart.items.length}개 →</Link> : undefined}>추천 패키지 (숙박 + 투어 + 버디)</SectionTitle>
+        <SectionTitle>둘러보기</SectionTitle>
+        <CategoryTiles />
+
+        <SectionTitle right={cart.items.length > 0 ? <Link href="/cart" className="text-[13px] text-navy font-semibold">장바구니 {cart.items.length}개 →</Link> : undefined}>추천 패키지</SectionTitle>
         <ErrorBox message={err} />
         {!pkgs && !err && <Spinner />}
         {pkgs && (
@@ -87,16 +93,14 @@ export default function HomePage() {
           </Card>
         )}
 
-        <SectionTitle>성북 소개</SectionTitle>
-        <Card accent="green">
-          <div className="text-[13px] text-ink leading-relaxed">{intro?.body ?? "정릉 · 심우장 · 길상사 · 수연산방 · 선잠박물관\n지붕 없는 박물관, 성북동."}</div>
-          <div className="mt-2 text-right"><Link href="/tours" className="text-[13px] text-navy font-semibold">지도 미리보기 →</Link></div>
-        </Card>
-        <div className="grid grid-cols-3 gap-2 pt-1">
-          <Link href="/stay"><Button variant="ghost" className="px-2 text-[13px]">숙박</Button></Link>
-          <Link href="/tours"><Button variant="ghost" className="px-2 text-[13px]">투어</Button></Link>
-          <Link href="/buddies"><Button variant="ghost" className="px-2 text-[13px]">버디</Button></Link>
-        </div>
+        {intro && (
+          <>
+            <SectionTitle>성북 소개</SectionTitle>
+            <Card accent="green">
+              <div className="text-[13px] leading-relaxed text-ink">{intro.body}</div>
+            </Card>
+          </>
+        )}
       </div>
 
       <BottomSheet open={sel !== null} onClose={() => setSel(null)} title={sel ? (lang === "en" ? sel.title_en : sel.title) : ""}>
