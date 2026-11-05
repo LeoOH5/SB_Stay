@@ -45,8 +45,8 @@ export default function CheckoutPage() {
     if (!user) { router.push("/login"); return; }
     setBusy(true);
     try {
-      const b = await submitBooking(traveler, cart.items);
-      router.push(`/cart/done?id=${b.id}`);
+      const { booking, needsPayment } = await submitBooking(traveler, cart.items);
+      router.push(needsPayment ? `/pay?booking=${booking.id}` : `/cart/done?id=${booking.id}`);
     } catch (e) { setErr(errMsg(e)); setBusy(false); }
   };
 

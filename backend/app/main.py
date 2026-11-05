@@ -14,6 +14,7 @@ from app.routers import (
     contents,
     dorms,
     notifications,
+    payments,
     tours,
 )
 
@@ -40,6 +41,7 @@ app.include_router(buddy_me.router, prefix=API)
 app.include_router(ai.router, prefix=API)
 app.include_router(bookings.router, prefix=API)
 app.include_router(notifications.router, prefix=API)
+app.include_router(payments.router, prefix=API)
 app.include_router(admin.router, prefix=API)
 
 

@@ -54,6 +54,11 @@ export interface BookingItem {
 export interface Booking {
   id: number; code: string; status: BookingStatus; total_price: number; platform_fee: number;
   traveler?: Traveler; items: BookingItem[]; created_at: string; paid_at?: string | null;
+  payment?: PaymentSummary | null;
+}
+export interface PaymentSummary {
+  order_id: string; status: "READY" | "DONE" | "CANCELED" | "PARTIAL_CANCELED" | "FAILED"; amount: number; method: string | null;
+  approved_at: string | null; receipt_url: string | null; canceled_amount: number; provider: "toss" | "mock";
 }
 export interface Review { id: number; rating: number; text: string; author: string; created_at: string }
 export interface Notification { id: number; type: string; title: string; body?: string; read_at: string | null; created_at: string }

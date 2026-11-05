@@ -58,6 +58,7 @@ class BookingOut(BaseModel):
     created_at: datetime
     paid_at: datetime | None = None
     cancelled_at: datetime | None = None
+    payment: dict | None = None  # 결제 요약 (status · method · receipt_url · canceled_amount)
 
 
 class DecideIn(BaseModel):
