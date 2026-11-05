@@ -201,3 +201,27 @@ def test_paypal_partial_refund(db, client, tourist, booking, paypal_on, monkeypa
     assert r.status_code == 200 and r.json()["payment"]["status"] == "PARTIAL_CANCELED"
     assert r.json()["payment"]["canceled_amount"] == TOTAL // 2
     assert paypal_on["refund"][-1][1] == "44.64"  # 89.29 × 0.5 내림
+
+
+def test_auto_refund_after_a_day(db, client, tourist, booking, toss_on):
+    """테스트 결제는 결제 후 24시간이 지나면 전액 자동 환불, 예약은 미결제로"""
+    from datetime import UTC, datetime, timedelta
+
+    order = client.post("/api/v1/payments/prepare", json={"booking_id": booking["id"]}, headers=tourist).json()
+    client.post("/api/v1/payments/confirm", json={"payment_key": "pk_auto", "order_id": order["order_id"], "amount": TOTAL}, headers=tourist)
+    approved = datetime.fromisoformat("2026-11-06T10:00:00+09:00")
+    assert ps.auto_refund_due(db, 24, now=approved + timedelta(hours=23)) == []  # 아직 하루 안 됨
+    ids = ps.auto_refund_due(db, 24, now=approved + timedelta(hours=25))
+    assert len(ids) == 1 and toss_on["cancel"] == [("pk_auto", "테스트 결제 자동 환불", None)]
+    b = client.get(f"/api/v1/bookings/{booking['id']}", headers=tourist).json()
+    assert b["paid_at"] is None and b["status"] != "cancelled" and b["payment"]["status"] == "CANCELED"
+    assert ps.auto_refund_due(db, 24, now=datetime.now(UTC) + timedelta(days=3)) == []  # 두 번 환불하지 않음
+
+
+def test_auto_refund_skips_live_keys(db, client, tourist, booking, toss_on, monkeypatch):
+    from datetime import UTC, datetime, timedelta
+
+    order = client.post("/api/v1/payments/prepare", json={"booking_id": booking["id"]}, headers=tourist).json()
+    client.post("/api/v1/payments/confirm", json={"payment_key": "pk_live", "order_id": order["order_id"], "amount": TOTAL}, headers=tourist)
+    monkeypatch.setattr(get_settings(), "toss_secret_key", "live_gsk_dummy")
+    assert ps.auto_refund_due(db, 24, now=datetime.now(UTC) + timedelta(days=30)) == [] and toss_on["cancel"] == []

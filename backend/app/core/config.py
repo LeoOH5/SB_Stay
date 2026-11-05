@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     paypal_api_base: str = "https://api-m.sandbox.paypal.com"
     usd_krw_rate: float = 1400.0  # 원화 → 달러 고정 환율 (해커톤용)
 
+    # 테스트 결제 자동 환불: 결제 후 N시간이 지나면 전액 환불 (0 = 끔). 테스트 키(test_gsk · sandbox)일 때만 동작
+    auto_refund_after_hours: int = 0
+    auto_refund_check_minutes: int = 10
+
     # 수수료율 (해커톤은 상수)
     platform_fee_rate: float = 0.10
 

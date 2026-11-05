@@ -1,6 +1,6 @@
 """결제 흐름 — 주문 생성(prepare) → 결제창 → 승인(confirm) → 취소 시 환불. 금액은 항상 서버의 예약 금액 기준."""
 import secrets
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_DOWN, Decimal
 
 from sqlalchemy import select
@@ -206,3 +206,51 @@ def refund_on_cancel(db: Session, b: Booking, reason: str | None) -> dict:
     p.canceled_amount += refund
     db.commit()
     return {"refund_amount": refund, "refund_rate": rate}
+
+
+# ---------- 테스트 결제 자동 환불
+def _is_test(p: Payment) -> bool:
+    """테스트 키로 받은 결제만 자동 환불 대상 (실결제 보호)"""
+    from app.core.config import get_settings
+
+    s = get_settings()
+    if p.provider == "toss":
+        return s.toss_secret_key.startswith("test_")
+    if p.provider == "paypal":
+        return "sandbox" in s.paypal_api_base
+    return p.provider == "mock"
+
+
+def auto_refund_due(db: Session, after_hours: int, now: datetime | None = None) -> list[int]:
+    """결제 후 after_hours가 지난 테스트 결제를 전액 환불. 예약은 남기고 미결제로 되돌린다. 환불한 payment id 목록."""
+    if after_hours <= 0:
+        return []
+    now = now or datetime.now(UTC)
+    cutoff = now - timedelta(hours=after_hours)
+    due = db.scalars(select(Payment).where(Payment.status.in_(("DONE", "PARTIAL_CANCELED")), Payment.approved_at <= cutoff)).all()
+    done: list[int] = []
+    for p in due:
+        if not _is_test(p):
+            continue
+        remaining = p.amount - p.canceled_amount
+        if remaining <= 0:
+            continue
+        try:
+            if p.provider == "toss" and p.payment_key:
+                _apply_toss(p, toss.cancel(p.payment_key, "테스트 결제 자동 환불"))
+            elif p.provider == "paypal" and p.capture_id:
+                usd = None if p.canceled_amount == 0 else f"{(Decimal(p.foreign_amount or '0') * Decimal(remaining) / Decimal(p.amount)).quantize(Decimal('0.01'), rounding=ROUND_DOWN):.2f}"
+                paypal.refund(p.capture_id, usd)
+        except (toss.TossError, paypal.PayPalError) as e:
+            p.fail_code, p.fail_message = e.code, f"자동 환불 실패: {e.message}"[:300]
+            db.commit()
+            continue
+        p.status = "CANCELED"
+        p.canceled_amount = p.amount
+        b = db.get(Booking, p.booking_id)
+        if b:
+            b.paid_at = None
+            db.add(Notification(user_id=b.tourist_id, type="payment_refunded", title=f"{b.code} · 테스트 결제 자동 환불 {remaining:,}원"))
+        db.commit()
+        done.append(p.id)
+    return done

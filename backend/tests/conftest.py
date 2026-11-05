@@ -2,6 +2,10 @@ import os
 
 os.environ["DATABASE_URL"] = "postgresql+psycopg://sbstay:sbstay@localhost:5432/sbstay_test"
 os.environ["JWT_SECRET"] = "test-secret"
+# 로컬 .env 의 결제 키가 테스트에 섞이지 않게 비운다 (필요한 테스트에서만 켬)
+for _k in ("TOSS_SECRET_KEY", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"):
+    os.environ[_k] = ""
+os.environ["AUTO_REFUND_AFTER_HOURS"] = "0"
 os.environ["TOKEN_ENCRYPTION_KEY"] = "u6wXK7hv2iQ0pZ3bYcNq9e1rT4sF8gL5mA2dH7jK0oI="
 
 import pytest
