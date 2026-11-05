@@ -1,7 +1,6 @@
 "use client";
-// 버디 마이페이지 — 프로필(BD-05 GET·PUT /buddy/profile), 캘린더 연동 상태, 고객센터·약관(CM-01), 로그아웃
+// 버디 마이페이지 — 프로필(BD-05 GET·PUT /buddy/profile), 고객센터·약관(CM-01), 로그아웃
 import { HeaderActions } from "@/components/tourist/header-actions";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, Card, Chip, Field, Hero, SectionTitle, Spinner, inputCls } from "@/components/ui";
@@ -39,7 +38,6 @@ export default function Page() {
 
   const name = user?.name ?? profile?.name ?? "지우";
   const email = user?.email ?? "jiwoo@a-univ.ac.kr";
-  const connected = !!user?.calendar_connected;
 
   const startEdit = () => { if (!profile) return; setDraft({ major: profile.major, year: profile.year, languages: profile.languages, interests: profile.interests, intro: profile.intro }); setEditing(true); };
   const toggleIn = (arr: string[], k: string) => (arr.includes(k) ? arr.filter((x) => x !== k) : [...arr, k]);
@@ -99,14 +97,6 @@ export default function Page() {
           </Card>
         )}
 
-
-        <SectionTitle>구글 캘린더</SectionTitle>
-        <Link href="/buddy/schedule" className="block">
-          <Card className="flex items-center justify-between py-3">
-            <span className="text-[13px] text-ink">{connected ? "연동됨 · 확정된 동행이 캘린더에 자동으로 들어가요" : "연동 안 됨 · 일정 화면에서 연동할 수 있어요"}</span>
-            <span className="text-muted">›</span>
-          </Card>
-        </Link>
 
         <SectionTitle>고객센터 · 약관</SectionTitle>
         <div className="space-y-2">
