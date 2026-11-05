@@ -188,7 +188,7 @@ export function MapEmbed({ points, className, h = "h-44" }: { points: { lat: num
   const m = points[0];
   return (
     <div className={cn("overflow-hidden rounded-[14px] ring-1 ring-line/60", h, className)}>
-      <iframe title="지도" className="h-full w-full border-0" loading="lazy" src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${m.lat},${m.lng}`} />
+      <iframe title="지도" className="h-full w-full border-0" src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${m.lat},${m.lng}`} />
     </div>
   );
 }

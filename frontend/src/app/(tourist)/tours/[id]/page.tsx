@@ -2,7 +2,8 @@
 // T4 투어 상세 + AI 역사 스토리 — TR-02 GET /tours/{id}, AI-02 POST /ai/story, TR-04 GET /tours/{id}/reviews
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AiBlock, Button, Card, Chip, Hero, MapEmbed, SectionTitle, Spinner, inputCls } from "@/components/ui";
+import { KakaoMap } from "@/components/kakao-map";
+import { AiBlock, Button, Card, Chip, Hero, SectionTitle, Spinner, inputCls } from "@/components/ui";
 import { ErrorBox, Notice, Stars } from "@/components/tourist";
 import { daysLabel, DEFAULT_TOUR_DATE, dowKey, errMsg, langsCode, md, okv } from "@/components/tourist/format";
 import { get, post, won } from "@/lib/api";
@@ -76,7 +77,7 @@ export default function TourDetailPage() {
         {!tour && !err && <Spinner />}
         {tour && (
           <>
-            <MapEmbed points={tour.places.map((pl) => ({ lat: pl.lat, lng: pl.lng }))} />
+            <KakaoMap route numbered points={[...tour.places].sort((a, b) => a.order - b.order).map((pl) => ({ lat: pl.lat, lng: pl.lng, label: lang === "en" ? pl.name_en : pl.name }))} />
             {tour.description && <p className="text-[13px] text-muted">{tour.description}</p>}
             <div className="flex flex-wrap gap-2">
               {tour.places.map((p, i) => <Chip key={p.id} selected={placeId === p.id} onClick={() => selectPlace(p.id)}>{CIRCLED[i]} {lang === "en" ? p.name_en : p.name}</Chip>)}
