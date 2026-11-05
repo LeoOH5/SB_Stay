@@ -1,6 +1,7 @@
 "use client";
 // B5 버디 로그인 · 학교 이메일 인증(목업)
 // API: POST /auth/google (AU-01), POST /auth/login (AU-05), PUT /buddy/profile (BD-03 — 인증 후 프로필 등록, 여기서는 안내만)
+import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button, Card, Chip, Field, Hero, SectionTitle, inputCls } from "@/components/ui";
@@ -41,7 +42,12 @@ export default function Page() {
   };
   const google = async () => {
     setBusy(true); setError(null);
-    try { finish(await post<TokenOut>("/auth/google", { id_token: "mock" })); }
+    try {
+      if (!googleConfigured()) { finish(await post<TokenOut>("/auth/google", { id_token: "mock" })); return; }
+      const code = await requestGoogleCode("login");
+      if (!code) return;
+      finish(await post<TokenOut>("/auth/google", googleBody(code)));
+    }
     catch (err) { setError(err instanceof Error ? err.message : "구글 로그인에 실패했어요"); }
     finally { setBusy(false); }
   };

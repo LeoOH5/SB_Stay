@@ -1,5 +1,6 @@
 "use client";
 // T0 온보딩 · 언어 선택 / 로그인 — AU-01 (구글, 목업), AU-05 (이메일 데모 계정)
+import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -42,7 +43,12 @@ export default function LoginPage() {
   };
   const loginGoogle = async () => {
     setErr(null); setBusy("google");
-    try { finish(await post<TokenOut>("/auth/google", { id_token: "mock" })); }
+    try {
+      if (!googleConfigured()) { finish(await post<TokenOut>("/auth/google", { id_token: "mock" })); return; }
+      const code = await requestGoogleCode("login");
+      if (!code) return;
+      finish(await post<TokenOut>("/auth/google", googleBody(code)));
+    }
     catch (e) { setErr(errMsg(e)); }
     finally { setBusy(null); }
   };
@@ -58,7 +64,7 @@ export default function LoginPage() {
         </div>
 
         <Button variant="ghost" className="mt-3" onClick={loginGoogle} disabled={busy !== null}>
-          {busy === "google" ? "로그인 중…" : "G  Continue with Google (목업)"}
+          {busy === "google" ? "로그인 중…" : googleConfigured() ? "G  Continue with Google" : "G  Continue with Google (목업)"}
         </Button>
 
         <form className="space-y-3 pt-2" onSubmit={(e) => { e.preventDefault(); void loginEmail(); }}>

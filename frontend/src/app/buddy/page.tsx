@@ -37,7 +37,7 @@ export default function Page() {
   const decide = async (req: BuddyRequest, action: DecideAction, reason?: string) => {
     setBusy(req.item_id);
     try {
-      await patch(`/bookings/0/items/${req.item_id}`, { action, reason }); // booking id는 목에서 무시
+      await patch(`/bookings/${req.booking_id}/items/${req.item_id}`, { action, reason });
       show(action === "approve" ? `${req.tourist.name} 요청을 수락했어요` : `${req.tourist.name} 요청을 거절했어요`);
       reload();
     } catch (e) {
