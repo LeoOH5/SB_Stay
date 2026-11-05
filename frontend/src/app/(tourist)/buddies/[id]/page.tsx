@@ -54,7 +54,7 @@ export default function BuddyDetailPage() {
               <div className="mt-1 text-[12px] text-muted">가능 날짜  {buddy.available_dates.map(md).join(", ")}</div>
               <div className="mt-2 flex items-center gap-2 text-[12px] text-muted"><Stars value={Math.round(buddy.rating)} size="text-[12px]" /> {buddy.rating} ({buddy.review_count})</div>
               {reviews.map((r) => <div key={r.id} className="mt-1 text-[12px] text-muted">&quot;{r.text}&quot; – {r.author}</div>)}
-              <Notice className="mt-3">동행 프로그램 · {HOURS}시간 · {won(fee)} (활동비, 팀 결정)</Notice>
+              <Notice className="mt-3">동행 프로그램 · {HOURS}시간 · {won(fee)} (활동비)</Notice>
               <Notice className="mt-1">버디 수락 후 확정됩니다.</Notice>
             </Card>
 

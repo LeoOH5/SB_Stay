@@ -1,6 +1,5 @@
 "use client";
-// B4 내 활동 · 정산(목업) + 프로필
-// API: GET /buddy/earnings (BD-07), GET/PUT /buddy/profile (BD-03)
+// 내 활동 · 정산 + 프로필
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, Card, Chip, Empty, Field, Hero, KpiTile, SectionTitle, Spinner, StatusPill, inputCls } from "@/components/ui";
@@ -69,8 +68,8 @@ export default function Page() {
         {earn === null ? <Spinner /> : (
           <div className="mt-4 grid grid-cols-2 gap-2.5">
             <KpiTile label="이번 달 활동" value={`${earn.activities}회`} sub={`${isGuide ? "투어" : "동행"} ${earn.activities} · 평균 ${profile?.rating ?? 4.9}★`} />
-            <KpiTile label={`${feeWord} 합계`} value={won(isGuide ? earn.activities * perFee : earn.total_fee)} sub={`회당 ${won(perFee)} (팀 결정 ③)`} accent />
-            <div className="col-span-2"><KpiTile label="정산 완료 / 대기" value={<span className="text-[22px]">{won(earn.paid)} / {won(earn.pending)}</span>} sub="매월 말 지급 (목업)" /></div>
+            <KpiTile label={`${feeWord} 합계`} value={won(isGuide ? earn.activities * perFee : earn.total_fee)} sub={`회당 ${won(perFee)}`} accent />
+            <div className="col-span-2"><KpiTile label="정산 완료 / 대기" value={<span className="text-[22px]">{won(earn.paid)} / {won(earn.pending)}</span>} sub="매월 말 지급" /></div>
           </div>
         )}
 
@@ -81,7 +80,7 @@ export default function Page() {
               <Card key={`${it.date}-${i}`} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="text-[14px] font-semibold text-ink">{fmtShort(it.date)}  {it.tourist}</div>
-                  <div className="mt-0.5 truncate text-[12px] text-muted">{it.activity} · {won(isGuide ? perFee : it.amount)}</div>
+                  <div className="mt-0.5 break-keep text-[12px] text-muted">{it.activity} · {won(isGuide ? perFee : it.amount)}</div>
                 </div>
                 <StatusPill status={it.status} label={it.status === "paid" ? "정산 완료" : "정산 대기"} />
               </Card>
@@ -123,10 +122,6 @@ export default function Page() {
             </div>
           </Card>
         )}
-
-        <Card className="mt-4 bg-orange-bg ring-0">
-          <p className="text-[13px] leading-relaxed text-orange">팀 결정 ③: 버디 유급(활동비) vs 무급 교류 — 무급이면 금액 열을 숨기고 &lsquo;활동 내역&rsquo;만. 해설사는 투어비 ₩20,000/회로 표시.</p>
-        </Card>
 
         <Button variant="ghost" className="mt-4" onClick={logout}>로그아웃</Button>
       </div>

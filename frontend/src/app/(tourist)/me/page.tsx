@@ -62,13 +62,13 @@ export default function MePage() {
         <Card className="flex items-center gap-3">
           <div className="h-12 w-12 shrink-0 rounded-full bg-navy-bg flex items-center justify-center text-[16px] font-semibold text-navy">{user.name[0]}</div>
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold text-ink truncate">{user.name}</div>
-            <div className="text-[12px] text-muted truncate">{user.email} · {ROLE_LABEL[user.role]}</div>
+            <div className="text-[15px] font-semibold text-ink break-keep">{user.name}</div>
+            <div className="text-[12px] text-muted break-keep">{user.email} · {ROLE_LABEL[user.role]}</div>
           </div>
           <Link href="/checkout" className="text-[13px] text-navy font-semibold">수정</Link>
         </Card>
 
-        <SectionTitle right={<span className="text-[12px] text-muted">언어만 저장 · 통화는 표시용</span>}>설정 (AU-04)</SectionTitle>
+        <SectionTitle>설정</SectionTitle>
         <div className="flex items-center gap-3">
           <span className="w-10 text-[14px] text-ink">언어</span>
           <Chip selected={lang === "en"} onClick={() => changeLang("en")}>English</Chip>
@@ -82,19 +82,19 @@ export default function MePage() {
           <span className="text-[12px] text-muted">결제는 항상 KRW</span>
         </div>
 
-        <SectionTitle>알림 (BK-10 · 목업)</SectionTitle>
+        <SectionTitle>알림</SectionTitle>
         <ErrorBox message={err} />
         {!notis && !err && <Spinner />}
         {notis && notis.length === 0 && <Card tint className="text-[13px] text-muted">알림이 없어요.</Card>}
         {notis?.map((n) => (
           <Card key={n.id} className="flex items-center gap-3 py-3">
             <span className={`h-2 w-2 shrink-0 rounded-full ${n.read_at ? "bg-transparent" : "bg-orange"}`} />
-            <div className="min-w-0 flex-1 text-[13px] text-ink truncate">{n.title}</div>
+            <div className="min-w-0 flex-1 text-[13px] text-ink break-keep">{n.title}</div>
             <span className="shrink-0 text-[12px] text-muted">{dateTime(n.created_at)}</span>
           </Card>
         ))}
 
-        <SectionTitle>고객센터 · 약관 (CM-01 · 목업)</SectionTitle>
+        <SectionTitle>고객센터 · 약관</SectionTitle>
         {DOCS.map((d) => (
           <Card key={d.key} className="flex items-center justify-between py-3" onClick={() => openDoc(d.key)}>
             <span className="text-[13px] text-ink">{d.label}</span><span className="text-muted">›</span>
@@ -103,7 +103,7 @@ export default function MePage() {
 
         <div className="flex items-center justify-between pt-3">
           <button type="button" onClick={logout} className="text-[14px] text-navy font-semibold">로그아웃</button>
-          <span className="text-[12px] text-muted">Seongbuk Stay v0.1 · 성북 해커톤</span>
+          <span className="text-[12px] text-muted">Seongbuk Stay</span>
         </div>
         <Button variant="ghost" onClick={logout}>로그아웃</Button>
       </div>

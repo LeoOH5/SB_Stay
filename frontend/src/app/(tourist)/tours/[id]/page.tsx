@@ -36,7 +36,7 @@ export default function TourDetailPage() {
     return () => { alive = false; };
   }, [id]);
 
-  // 장소 칩 선택 시 그 장소의 이야기 자동 호출 (AI-02, question 없음)
+  // 장소 칩 선택 시 그 장소의 이야기 자동 호출 (question 없음)
   useEffect(() => {
     if (placeId === null) return;
     let alive = true;
@@ -111,7 +111,7 @@ export default function TourDetailPage() {
               <Button type="submit" full={false} className="h-12 min-h-[48px] px-4" disabled={askBusy || !question.trim()}>↑</Button>
             </form>
 
-            <SectionTitle>리뷰 (샘플)</SectionTitle>
+            <SectionTitle>리뷰</SectionTitle>
             {reviews.length === 0 && <Card tint className="text-[13px] text-muted">아직 리뷰가 없어요.</Card>}
             {reviews.map((r) => (
               <Card key={r.id} className="py-3">

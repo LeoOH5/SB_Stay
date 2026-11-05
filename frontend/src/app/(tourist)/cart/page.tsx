@@ -54,7 +54,7 @@ export default function CartPage() {
           <Card key={`${i.type}-${i.ref_id}`} className="flex items-start gap-3 p-3">
             <TypeBadge type={i.type} />
             <div className="min-w-0 flex-1">
-              <div className="text-[14px] font-semibold text-ink truncate">{i.title}</div>
+              <div className="text-[14px] font-semibold text-ink break-keep">{i.title}</div>
               <div className="text-[12px] text-muted">{cartMeta(i)}</div>
             </div>
             <div className="shrink-0 text-right">
@@ -78,7 +78,7 @@ export default function CartPage() {
               )}
             </Card>
 
-            <SectionTitle>결제 수단 (목업)</SectionTitle>
+            <SectionTitle>결제 수단</SectionTitle>
             <select className={selectCls} value={payment} onChange={(e) => setPayment(e.target.value)}>
               {PAYMENTS.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>

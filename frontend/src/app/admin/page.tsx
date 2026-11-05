@@ -1,17 +1,17 @@
 "use client";
-// A1 대시보드 + 숙박 승인 — GET /admin/dashboard (AD-01), GET /admin/bookings?type=dorm&status=requested (AD-02), PATCH /bookings/{id}/items/{itemId} (BK-04)
+// 대시보드 + 숙박 승인 대기
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { get, patch, won, USE_MOCK } from "@/lib/api";
 import type { AdminBookingRow, Dashboard, ListResponse } from "@/lib/types";
 import { Button, Card, KpiTile, Spinner } from "@/components/ui";
-import { AdminGate, AdminHeader, EmptyRow, ErrorText, Note, ROOM_LABEL, SectionLabel, Table, Td, Tr, adminInput, errMsg, linkCls, smallBtn } from "@/components/admin/shell";
+import { AdminGate, AdminHeader, EmptyRow, ErrorText, ROOM_LABEL, SectionLabel, Table, Td, Tr, adminInput, errMsg, linkCls, smallBtn } from "@/components/admin/shell";
 
 const PERIODS = [
   { key: "winter", label: "1/5 – 2/20", from: "2027-01-05", to: "2027-02-20" },
   { key: "jan", label: "1/5 – 1/31", from: "2027-01-05", to: "2027-01-31" },
 ];
-const NIGHT_PRICE = 35000; // 2인실 1박 가정값 — KPI 부제 "72박 × ₩35,000"
+const NIGHT_PRICE = 35000; // 2인실 1박 단가 — KPI 부제 "72박 × ₩35,000"
 const STATUS_ROWS: { key: string; label: string; cls: string }[] = [
   { key: "requested", label: "신청", cls: "text-orange" },
   { key: "approved", label: "승인", cls: "text-navy" },
@@ -19,7 +19,7 @@ const STATUS_ROWS: { key: string; label: string; cls: string }[] = [
   { key: "cancelled", label: "취소", cls: "text-muted" },
 ];
 
-/** 승인한 금액만큼 KPI 를 올려서 보여준다 (데모 포인트: 목 대시보드는 고정 응답이라 로컬에서 가산) */
+/** 승인한 금액만큼 KPI 를 올려서 보여준다 (대시보드 응답은 바로 갱신되지 않아 로컬에서 가산) */
 interface Adjust { revenue: number; nights: number; approved: number; rejected: number }
 const ZERO: Adjust = { revenue: 0, nights: 0, approved: 0, rejected: 0 };
 function applyAdjust(d: Dashboard, a: Adjust): Dashboard {
@@ -112,11 +112,11 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KpiTile label="겨울방학 예약" value={dash ? `${dash.bookings}건` : "—"} sub={dash ? `승인 대기 ${dash.pending}건` : undefined} />
         <KpiTile label="숙박 매출 (학교)" value={dash ? won(dash.dorm_revenue) : "—"} sub={dash ? `${dash.nights}박 × ${won(NIGHT_PRICE)}` : undefined} />
-        <KpiTile label="플랫폼 수수료" value={dash ? won(dash.platform_fee) : "—"} sub={dash ? `수수료율 ${Math.round(dash.fee_rate * 100)}% 가정` : undefined} accent />
+        <KpiTile label="플랫폼 수수료" value={dash ? won(dash.platform_fee) : "—"} sub={dash ? `수수료율 ${Math.round(dash.fee_rate * 100)}%` : undefined} accent />
       </div>
 
       {/* 숙박 승인 대기 */}
-      <SectionLabel right="PATCH /bookings/{id}/items/{itemId} (BK-04)">숙박 승인 대기</SectionLabel>
+      <SectionLabel>숙박 승인 대기</SectionLabel>
       {!rows ? <Spinner /> : (
         <Table cols={[{ label: "신청자" }, { label: "국적" }, { label: "기간" }, { label: "객실" }, { label: "금액" }, { label: "" }]}>
           {rows.length === 0 && <EmptyRow cols={6}>승인 대기 중인 숙박 신청이 없어요.</EmptyRow>}
@@ -141,7 +141,7 @@ export default function AdminDashboardPage() {
       )}
 
       {/* 최근 예약 흐름 */}
-      <SectionLabel>최근 예약 흐름 (샘플 20~30건 · 상태 섞어서)</SectionLabel>
+      <SectionLabel>최근 예약 흐름</SectionLabel>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
         <Card>
           <div className="flex items-center justify-between mb-3">
@@ -174,7 +174,6 @@ export default function AdminDashboardPage() {
           </table>
         </Card>
       </div>
-      <Note className="mt-4">객실 단가는 방학 중 기숙사를 일반에 개방한 국내 대학 사례(2인실 1박 3만5천 원)를 참고한 가정값. 수수료율도 가정값.</Note>
     </AdminGate>
   );
 }

@@ -17,8 +17,8 @@ function BuddyCard({ b, reason }: { b: Buddy; reason?: string }) {
       <Card className="flex items-center gap-3 p-3">
         <div className="h-11 w-11 shrink-0 rounded-full bg-navy-bg flex items-center justify-center text-[16px] font-semibold text-navy">{b.name[0]}</div>
         <div className="min-w-0 flex-1">
-          <div className="text-[14px] font-semibold text-ink truncate">{b.name} · {b.university.replace("학교", "")} {b.major} {b.year}학년</div>
-          <div className="text-[12px] text-muted truncate">{langsShort(b.languages)} · {interestsLabel(b.interests)} · ★ {b.rating} ({b.review_count})</div>
+          <div className="text-[14px] font-semibold text-ink break-keep">{b.name} · {b.university.replace("학교", "")} {b.major} {b.year}학년</div>
+          <div className="text-[12px] text-muted break-keep">{langsShort(b.languages)} · {interestsLabel(b.interests)} · ★ {b.rating} ({b.review_count})</div>
           {reason && <div className="text-[12px] text-green-dark mt-0.5">AI · {reason}</div>}
         </div>
         <span className="text-muted">›</span>

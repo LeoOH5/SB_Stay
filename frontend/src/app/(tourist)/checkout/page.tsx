@@ -1,5 +1,5 @@
 "use client";
-// T10 여행자 정보 입력 — BK-01 POST /bookings (traveler), BK-06 POST /bookings/{id}/pay (목업)
+// 여행자 정보 입력 → 예약 신청 · 결제
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -82,7 +82,7 @@ export default function CheckoutPage() {
         <Field label="특이사항 (선택)"><textarea className={textareaCls} value={form.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder="Vegetarian, late check-in…" /></Field>
         <div className="flex items-end justify-between pt-1"><span className="text-[13px] text-muted">합계 ({cart.items.length}개)</span><span className="text-[22px] font-bold text-navy">{won(cart.total)}</span></div>
         <ErrorBox message={err} />
-        <Button type="submit" disabled={busy}>{busy ? "신청 중…" : "다음 → 결제 (목업)"}</Button>
+        <Button type="submit" disabled={busy}>{busy ? "신청 중…" : "다음 → 결제"}</Button>
         {cart.items.length === 0 && <p className="text-[12px] text-muted text-center">장바구니가 비어 있어요. 정보만 저장돼요. <Link href="/cart" className="text-navy">장바구니</Link></p>}
       </form>
     </>

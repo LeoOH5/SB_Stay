@@ -19,7 +19,7 @@ export default function ToursPage() {
   const { lang } = useLang();
   const [theme, setTheme] = useState<string>("");
   const [date, setDate] = useState<string>(DEFAULT_TOUR_DATE);
-  const [useDate, setUseDate] = useState(true);
+  const [useDate, setUseDate] = useState(false);
   const [language, setLanguage] = useState<string>("");
   const [price, setPrice] = useState("all");
   const [showMap, setShowMap] = useState(false);

@@ -1,5 +1,5 @@
 "use client";
-// T0 온보딩 · 언어 선택 / 로그인 — AU-01 (구글, 목업), AU-05 (이메일 데모 계정)
+// 온보딩 · 언어 선택 / 로그인 (구글 · 이메일)
 import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -64,7 +64,7 @@ export default function LoginPage() {
         </div>
 
         <Button variant="ghost" className="mt-3" onClick={loginGoogle} disabled={busy !== null}>
-          {busy === "google" ? "로그인 중…" : googleConfigured() ? "G  Continue with Google" : "G  Continue with Google (목업)"}
+          {busy === "google" ? "로그인 중…" : "G  Continue with Google"}
         </Button>
 
         <form className="space-y-3 pt-2" onSubmit={(e) => { e.preventDefault(); void loginEmail(); }}>
@@ -79,7 +79,7 @@ export default function LoginPage() {
         </form>
         <p className="text-center text-[14px]"><Link href="/signup" className="text-navy font-semibold">Sign up with email</Link></p>
 
-        <SectionTitle>데모 계정 (심사용)</SectionTitle>
+        <SectionTitle>데모 계정</SectionTitle>
         <div className="space-y-1.5">
           {DEMO_ACCOUNTS.map((a) => (
             <button key={a.email} type="button" onClick={() => { setEmail(a.email); setPassword(DEMO_PASSWORD); setErr(null); }}

@@ -11,7 +11,7 @@ const MENU = [
   { href: "/admin/bookings", label: "예약 관리" },
   { href: "/admin/members", label: "회원 관리 (버디 승인)" },
   { href: "/admin/tours", label: "투어 코스 관리" },
-  { href: "/admin/settlements", label: "정산 관리 (목업)" },
+  { href: "/admin/settlements", label: "정산 관리" },
 ];
 
 export function AdminSidebar() {
@@ -26,7 +26,6 @@ export function AdminSidebar() {
           <Link key={m.href} href={m.href} className={cn("block rounded-lg px-3 py-2.5 text-[14px] border-l-4", active ? "bg-white/10 border-l-green font-semibold" : "border-l-transparent text-white/80 hover:bg-white/5")}>{m.label}</Link>
         ); })}
       </nav>
-      <div className="px-5 py-4 text-[11px] text-white/50">운영자 계정에서만: 정산 · 콘텐츠 · 전체 대학</div>
     </aside>
   );
 }

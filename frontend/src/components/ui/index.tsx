@@ -35,7 +35,7 @@ export function ListRow({ icon, title, meta, right, onClick, className }: { icon
     <div onClick={onClick} className={cn("flex items-center gap-3 py-3", onClick && "cursor-pointer", className)}>
       {icon && <div className="h-11 w-11 shrink-0 rounded-xl bg-navy-bg flex items-center justify-center text-navy font-semibold">{icon}</div>}
       <div className="min-w-0 flex-1">
-        <div className="text-[14px] font-semibold text-ink truncate">{title}</div>
+        <div className="text-[14px] font-semibold text-ink break-keep">{title}</div>
         {meta && <div className="text-[12px] text-muted mt-0.5">{meta}</div>}
       </div>
       {right && <div className="shrink-0 text-right">{right}</div>}
@@ -54,7 +54,7 @@ export function Button({ children, variant = "primary", className, full = true, 
 
 export function Chip({ children, selected, onClick, className }: { children: ReactNode; selected?: boolean; onClick?: () => void; className?: string }) {
   return (
-    <button type="button" onClick={onClick} className={cn("h-9 rounded-full px-3.5 text-[13px] font-medium border transition", selected ? "bg-navy text-white border-navy" : "bg-white text-ink border-line hover:border-navy", className)}>
+    <button type="button" onClick={onClick} className={cn("h-9 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13px] font-medium border transition", selected ? "bg-navy text-white border-navy" : "bg-white text-ink border-line hover:border-navy", className)}>
       {children}
     </button>
   );
@@ -63,14 +63,14 @@ export function Chip({ children, selected, onClick, className }: { children: Rea
 const PILL: Record<string, string> = { approved: "bg-green-dark text-white", confirmed: "bg-green-dark text-white", requested: "bg-orange text-white", pending: "bg-orange text-white", rejected: "bg-gray-400 text-white", cancelled: "bg-gray-400 text-white", suspended: "bg-gray-400 text-white", info: "bg-navy text-white", partially_approved: "bg-orange text-white", paid: "bg-green-dark text-white" };
 export const STATUS_LABEL: Record<string, string> = { requested: "신청", approved: "승인됨", rejected: "거절됨", confirmed: "확정", cancelled: "취소됨", partially_approved: "일부 승인", pending: "대기", suspended: "제재", paid: "정산 완료" };
 export function StatusPill({ status, label, className }: { status: string; label?: string; className?: string }) {
-  return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold", PILL[status] ?? "bg-navy text-white", className)}>{label ?? STATUS_LABEL[status] ?? status}</span>;
+  return <span className={cn("inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold", PILL[status] ?? "bg-navy text-white", className)}>{label ?? STATUS_LABEL[status] ?? status}</span>;
 }
 
 export function KpiTile({ label, value, sub, accent }: { label: string; value: ReactNode; sub?: string; accent?: boolean }) {
   return (
     <Card className="p-4">
       <div className="text-[12px] text-muted">{label}</div>
-      <div className={cn("mt-1 text-[26px] font-bold leading-none", accent ? "text-navy" : "text-ink")}>{value}</div>
+      <div className={cn("mt-1 whitespace-nowrap text-[clamp(20px,6.5vw,26px)] font-bold leading-none", accent ? "text-navy" : "text-ink")}>{value}</div>
       {sub && <div className="mt-1.5 text-[12px] text-muted">{sub}</div>}
     </Card>
   );
@@ -111,7 +111,9 @@ export function TabBar({ tabs, hideOn = [] }: { tabs: { href: string; label: str
     <nav className="sticky bottom-0 z-20 mt-auto border-t border-line bg-white/95 backdrop-blur px-3 pb-[max(env(safe-area-inset-bottom),8px)] pt-2">
       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
         {tabs.map((t) => {
-          const active = path === t.href || (t.href !== "/" && path.startsWith(t.href));
+          // 가장 긴 prefix가 일치하는 탭 하나만 활성 (예: /buddy 와 /buddy/requests 중 후자)
+          const best = tabs.filter((x) => path === x.href || path.startsWith(x.href + "/")).sort((a, b) => b.href.length - a.href.length)[0];
+          const active = best?.href === t.href;
           return (
             <Link key={t.href} href={t.href} className={cn("h-10 rounded-full flex items-center justify-center text-[13px] font-semibold", active ? "bg-navy text-white" : "text-muted")}>{t.label}</Link>
           );

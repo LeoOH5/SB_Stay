@@ -111,7 +111,7 @@ export default function HomePage() {
                 {selItems.map((i) => (
                   <Card key={`${i.type}-${i.ref_id}`} className="flex items-center gap-3 p-3">
                     <TypeBadge type={i.type} />
-                    <div className="min-w-0 flex-1"><div className="text-[14px] font-semibold text-ink truncate">{i.title}</div><div className="text-[12px] text-muted">{i.meta}</div></div>
+                    <div className="min-w-0 flex-1"><div className="text-[14px] font-semibold text-ink break-keep">{i.title}</div><div className="text-[12px] text-muted">{i.meta}</div></div>
                     <div className="text-[14px] font-semibold text-ink">{won(i.price)}</div>
                   </Card>
                 ))}

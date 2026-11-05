@@ -57,7 +57,7 @@ export default function StayDetailPage() {
             </Card>
             <div>
               <span className="block text-[12px] text-muted mb-1.5">날짜 선택</span>
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <input type="date" className={inputCls} value={from} min={dorm.open_from} max={dorm.open_to} onChange={(e) => { setFrom(e.target.value); setAdded(false); }} />
                 <span className="text-muted">–</span>
                 <input type="date" className={inputCls} value={to} min={dorm.open_from} max={dorm.open_to} onChange={(e) => { setTo(e.target.value); setAdded(false); }} />
