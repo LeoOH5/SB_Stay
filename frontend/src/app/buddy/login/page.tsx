@@ -56,15 +56,14 @@ export default function Page() {
       <Hero title="Seongbuk Stay for Buddies" sub="대학생 버디 · 해설사 로그인" />
 
       <div className="px-5">
-        <Button variant="ghost" className="mt-4" onClick={google} disabled={busy}>G  구글로 로그인</Button>
-        <div className="my-4 flex items-center gap-3 text-[12px] text-muted"><span className="h-px flex-1 bg-line" />또는 학교 이메일<span className="h-px flex-1 bg-line" /></div>
-
-        <form onSubmit={login} className="space-y-3">
-          <Field label="학교 이메일"><input className={inputCls} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jiwoo@a-univ.ac.kr" /></Field>
-          <Field label="비밀번호" hint="데모: jiwoo@a-univ.ac.kr / demo1234 · 해설사: guide.park@example.com / demo1234"><input className={inputCls} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" /></Field>
+        <form onSubmit={login} className="space-y-3 pt-5">
+          <Field label="학교 이메일"><input className={inputCls} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@univ.ac.kr" /></Field>
+          <Field label="비밀번호"><input className={inputCls} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" /></Field>
           {error && <p className="text-[12px] text-orange">{error}</p>}
           <Button type="submit" disabled={busy || !email || !password}>{busy ? "로그인 중…" : "로그인"}</Button>
         </form>
+        <div className="my-4 flex items-center gap-3 text-[12px] text-muted"><span className="h-px flex-1 bg-line" />또는<span className="h-px flex-1 bg-line" /></div>
+        <Button variant="ghost" onClick={google} disabled={busy}>G  구글로 로그인</Button>
 
         <SectionTitle>버디 신청 · 학교 이메일 인증</SectionTitle>
         <Card className="space-y-3 bg-gray-bg ring-0">

@@ -37,7 +37,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
     return (
       <Card accent="orange" className="max-w-md">
         <div className="text-[15px] font-bold text-ink">대학 담당자 계정으로 로그인하세요</div>
-        <p className="mt-1 text-[13px] text-muted">어드민 화면은 univ_admin · operator 역할만 사용할 수 있어요. (데모 계정: admin@a-univ.ac.kr / demo1234)</p>
+        <p className="mt-1 text-[13px] text-muted">어드민 화면은 대학 담당자·운영자 계정만 사용할 수 있어요.</p>
         <Link href="/login" className="inline-block mt-3"><Button full={false} className="h-10 min-h-0 px-4 text-[14px]">로그인 →</Button></Link>
       </Card>
     );
