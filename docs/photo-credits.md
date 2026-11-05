@@ -13,13 +13,13 @@
 | frontend/public/dorms/seokyeong.jpg | 서경대학교 | hyolee2 | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Seokyeong_University.JPG |
 | frontend/public/dorms/karts.jpg | 한국예술종합학교 석관동 캠퍼스 | Younghopark7 | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:한국예술종합학교.jpg |
 
-동덕여자대학교는 자유 라이선스 사진이 없어 학교 제공 보도 사진을 아래 저장소 제외 폴더에 둡니다.
+동덕여자대학교는 학교 제공 사진을 씁니다 (아래 표).
 
 기숙사 건물명 중 고려대 프런티어관·CJ인터내셔널하우스, 성신여대 성미료·성미관, 동덕여대 제1·제2생활관은 실제 이름입니다. 건물 사진이 없는 곳은 같은 캠퍼스 사진을 쓰고, 사진 아래 출처에 실제 피사체를 적었습니다. 서경대 생활관 3동, 국민대 정릉·길음생활관, 한성대 상상빌리지, 한예종 천장관도 실제 이름이고, 가격·객실 수는 모두 가정값입니다.
 
-## 학교 공식 홈페이지 사진 (저장소 제외)
+## 학교 제공 사진
 
-아래 사진은 각 대학에 저작권이 있어 `frontend/public/dorms/official/`에 두고 git에서 제외했습니다. 파일이 없으면 화면에 아이콘 타일이 나옵니다. 공개 배포 전에는 학교 허락을 받아야 합니다.
+아래 사진은 각 대학에 저작권이 있으며, 학교 측 사용 허락을 받아 `frontend/public/dorms/official/`에 넣었습니다.
 
 | 파일 | 건물 | 출처 페이지 |
 |---|---|---|
@@ -33,6 +33,6 @@
 | dongduk-campus.jpg | 동덕여대 본관 (학교 사진) | https://www.munhwa.com/article/11569891 (동덕여대 제공) |
 | dongduk-2.jpg | 동덕여대 제2생활관 | https://ddpress.dongduk.ac.kr/news/articleView.html?idxno=1925 (동덕여대학보) |
 | kookmin-gireum.jpg | 국민대 길음생활관 | https://iat.kookmin.ac.kr/admission/dormitory |
-| seokyeong-dorm.jpg | 서경대 생활관 3동 | 나무위키 "서경대학교/캠퍼스" 게시 사진 (라이선스 확인 안 됨). 같은 건물이 https://www.skuniv.ac.kr/campus-map 에 "생활관 3동"으로 나옴 |
+| seokyeong-dorm.jpg | 서경대 생활관 3동 | https://www.skuniv.ac.kr/campus-map (원본 400px) |
 
 사진을 못 찾은 건물: 한예종 천장관. 석관동 캠퍼스 정문 사진(karts.jpg)으로 대신합니다.

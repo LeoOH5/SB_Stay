@@ -202,7 +202,7 @@ export const PHOTO_CREDITS: Record<string, string> = {
   "/dorms/official/dongduk-campus.jpg": "동덕여대 본관 · © 동덕여자대학교",
   "/dorms/official/dongduk-2.jpg": "제2생활관 · © 동덕여대학보",
   "/dorms/official/kookmin-gireum.jpg": "길음생활관 · © 국민대학교",
-  "/dorms/official/seokyeong-dorm.jpg": "서경대학교 생활관 3동 · 나무위키 게시 사진",
+  "/dorms/official/seokyeong-dorm.jpg": "생활관 3동 · © 서경대학교",
   "/dorms/official/dongduk-1.jpg": "제1생활관(목화관) · © 동덕여자대학교 생활관",
   "/dorms/karts.jpg": "한국예술종합학교 석관동 캠퍼스 · Younghopark7 · Wikimedia Commons · CC BY-SA 3.0",
 };
