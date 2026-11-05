@@ -2,7 +2,7 @@
 // A1 대시보드 + 숙박 승인 — GET /admin/dashboard (AD-01), GET /admin/bookings?type=dorm&status=requested (AD-02), PATCH /bookings/{id}/items/{itemId} (BK-04)
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { get, patch, won } from "@/lib/api";
+import { get, patch, won, USE_MOCK } from "@/lib/api";
 import type { AdminBookingRow, Dashboard, ListResponse } from "@/lib/types";
 import { Button, Card, KpiTile, Spinner } from "@/components/ui";
 import { AdminGate, AdminHeader, EmptyRow, ErrorText, Note, ROOM_LABEL, SectionLabel, Table, Td, Tr, adminInput, errMsg, linkCls, smallBtn } from "@/components/admin/shell";
@@ -92,7 +92,8 @@ export default function AdminDashboardPage() {
     }
   }
 
-  const dash = raw ? applyAdjust(raw, adjust) : null;
+  // 실제 백엔드는 재조회 값에 이미 반영돼 있으므로 목 모드에서만 로컬 가산
+  const dash = raw ? (USE_MOCK ? applyAdjust(raw, adjust) : raw) : null;
   const maxDaily = dash ? Math.max(1, ...dash.daily.map((d) => d.bookings)) : 1;
 
   return (

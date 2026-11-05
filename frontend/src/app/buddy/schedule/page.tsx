@@ -2,6 +2,7 @@
 // B3 일정 관리 · 가능한 날짜 캘린더 + 구글 캘린더 연동
 // API: GET/PUT /buddy/availability (BD-04), GET /buddy/schedule (BD-06), GET /buddy/requests?status=requested (BD-05),
 //      POST/DELETE /auth/google/calendar (AU-07)
+import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Empty, Hero, SectionTitle, Spinner, StatusPill } from "@/components/ui";
 import { del, get, post, put } from "@/lib/api";
@@ -61,7 +62,11 @@ export default function Page() {
     setCalBusy(true);
     try {
       if (connected) { await del<CalendarOut>("/auth/google/calendar"); session.update({ calendar_connected: false }); show("구글 캘린더 연동을 해제했어요"); }
-      else { await post<CalendarOut>("/auth/google/calendar", { code: "mock" }); session.update({ calendar_connected: true }); show("구글 캘린더에 연동됐어요"); }
+      else {
+        let body: { code: string; redirect_uri?: string } = { code: "mock" };
+        if (googleConfigured()) { const code = await requestGoogleCode("calendar", user?.email); if (!code) return; body = googleBody(code); }
+        await post<CalendarOut>("/auth/google/calendar", body); session.update({ calendar_connected: true }); show("구글 캘린더에 연동됐어요");
+      }
     } catch (e) { show(e instanceof Error ? e.message : "연동에 실패했어요"); }
     finally { setCalBusy(false); }
   };

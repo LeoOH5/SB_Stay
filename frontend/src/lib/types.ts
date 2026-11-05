@@ -61,7 +61,7 @@ export interface ContentDoc { key: string; language: Lang; title: string; body: 
 
 // 버디 측
 export interface BuddyRequest {
-  item_id: number; booking_code: string; tourist: { name: string; nationality: string; language: string };
+  item_id: number; booking_id: number; booking_code: string; tourist: { name: string; nationality: string; language: string };
   date: string; time: string; duration_min: number; interests: string[]; status: ItemStatus; ai_brief?: string;
 }
 export interface BuddyEarning { date: string; tourist: string; activity: string; amount: number; status: "pending" | "paid" }
