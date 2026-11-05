@@ -41,7 +41,7 @@ export default function StayDetailPage() {
 
   return (
     <>
-      <TopBar back="/stay" title="객실 상세" />
+      <TopBar back={dorm ? `/stay/univ/${dorm.university.id}` : "/stay"} title="객실 상세" />
       <Hero title={dorm ? `${univ} ${dorm.building}` : "객실 상세"} sub={dorm ? `${ROOM_LABEL[dorm.room_type]} · 1박 ${won(dorm.price_per_night)}` : undefined} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <ErrorBox message={err} />

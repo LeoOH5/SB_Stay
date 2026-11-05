@@ -5,6 +5,8 @@
 | 파일 | 내용 | 작성자 | 라이선스 | 원본 |
 |---|---|---|---|---|
 | frontend/public/dorms/korea.jpg | 고려대 안암학사 프런티어관 | Mimacds | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:프런티어관.jpg |
+| frontend/public/dorms/korea-campus.jpg | 고려대 안암캠퍼스 본관 (CJ인터내셔널하우스 카드에 사용) | Mannaa mohamed | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Korea_University_Anam_Campus.jpg |
+| frontend/public/dorms/sungshin-campus.jpg | 성신여대 캠퍼스 (성미관 카드에 사용) | Sungshin | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Sungshin_image_05.jpg |
 | frontend/public/dorms/kookmin.jpg | 국민대학교 정문 | hyolee2 | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Kookmin_Univ_10.JPG |
 | frontend/public/dorms/sungshin.jpg | 성신여대 돈암수정캠퍼스 | Sungshinpr | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:돈암수정캠퍼스_전경.jpg |
 | frontend/public/dorms/hansung.jpg | 한성대 캠퍼스 안 삼군부 총무당 | 오모군 | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Samgunbu_Chongmudang.jpg |
@@ -13,4 +15,4 @@
 
 동덕여자대학교는 자유 라이선스 사진이 없어 아이콘 타일로 표시합니다. 학교 홍보실에서 사용 허락을 받은 사진으로 바꾸는 것이 좋습니다.
 
-기숙사 건물명 중 고려대 프런티어관, 성신여대 성미료, 동덕여대 제1생활관은 실제 이름입니다. 나머지 "생활관"은 일반 명칭이고, 가격·객실 수는 모두 가정값입니다.
+기숙사 건물명 중 고려대 프런티어관·CJ인터내셔널하우스, 성신여대 성미료·성미관, 동덕여대 제1·제2생활관은 실제 이름입니다. 건물 사진이 없는 곳은 같은 캠퍼스 사진을 쓰고, 사진 아래 출처에 실제 피사체를 적었습니다. 나머지 "생활관"은 일반 명칭이고, 가격·객실 수는 모두 가정값입니다.

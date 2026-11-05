@@ -23,12 +23,19 @@ export const users: Record<string, User> = {
 export const dorms: DormRoom[] = [
   { id: 10, university: universities[0], building: "프런티어관", room_type: "double", price_per_night: 35000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 12, photos: ["/dorms/korea.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "취사 금지, 공용 주방 이용", "외부인 출입 불가, 23:00 이후 정숙", "여권 정보는 예약 시점에만 입력"] },
   { id: 11, university: universities[0], building: "프런티어관", room_type: "single", price_per_night: 40000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 9, photos: ["/dorms/korea.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "취사 금지", "23:00 이후 정숙"] },
-  { id: 12, university: universities[1], building: "생활관", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 20, photos: ["/dorms/kookmin.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "공용 세탁실 이용"] },
-  { id: 13, university: universities[2], building: "성미료", room_type: "double", price_per_night: 32000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 10, photos: ["/dorms/sungshin.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "국제학생과 같은 건물 이용"] },
-  { id: 14, university: universities[3], building: "생활관", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 8, photos: ["/dorms/hansung.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "공용 세탁실 이용"] },
-  { id: 15, university: universities[4], building: "생활관", room_type: "single", price_per_night: 33000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 6, photos: ["/dorms/seokyeong.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "취사 금지"] },
-  { id: 16, university: universities[5], building: "제1생활관", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 11, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "여성 전용"] },
-  { id: 17, university: universities[6], building: "석관동 생활관", room_type: "double", price_per_night: 31000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 7, photos: ["/dorms/karts.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "연습실 이용은 별도 신청"] },
+  { id: 18, university: universities[0], building: "CJ인터내셔널하우스", room_type: "double", price_per_night: 38000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 8, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "국제학생 기숙사, 공용 라운지"] },
+  { id: 21, university: universities[0], building: "CJ인터내셔널하우스", room_type: "single", price_per_night: 45000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 3, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "국제학생 기숙사, 공용 라운지"] },
+  { id: 22, university: universities[0], building: "안암인터내셔널하우스", room_type: "double", price_per_night: 36000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 10, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "국제학생 기숙사"] },
+  { id: 12, university: universities[1], building: "정릉생활관", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 20, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "공용 세탁실 이용"] },
+  { id: 23, university: universities[1], building: "길음생활관", room_type: "double", price_per_night: 29000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 7, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "캠퍼스 밖 기숙사, 셔틀 이용"] },
+  { id: 19, university: universities[2], building: "성미관", room_type: "double", price_per_night: 34000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 5, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "여성 전용, 피트니스룸·스터디룸"] },
+  { id: 13, university: universities[2], building: "성미료", room_type: "double", price_per_night: 32000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 10, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "여성 전용, 국제학생과 같은 건물"] },
+  { id: 14, university: universities[3], building: "상상빌리지", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 8, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "공동취사장·세탁실 이용"] },
+  { id: 24, university: universities[3], building: "상상빌리지", room_type: "single", price_per_night: 36000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 1, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "공동취사장·세탁실 이용"] },
+  { id: 15, university: universities[4], building: "생활관", room_type: "single", price_per_night: 33000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 6, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "취사 금지"] },
+  { id: 16, university: universities[5], building: "제1생활관(목화관)", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 11, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "여성 전용"] },
+  { id: 20, university: universities[5], building: "제2생활관", room_type: "single", price_per_night: 32000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 4, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "여성 전용, 캠퍼스 밖 (종암로)"] },
+  { id: 17, university: universities[6], building: "천장관", room_type: "double", price_per_night: 31000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 7, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "연습실 이용은 별도 신청"] },
 ];
 
 export const places: Place[] = [
@@ -86,13 +93,13 @@ export const bookings: Booking[] = [
   { id: 480, code: "SB-2026-1120", status: "confirmed", total_price: 95000, platform_fee: 9500, created_at: "2026-11-10T09:00:00Z", paid_at: "2026-11-10T09:02:00Z",
     traveler: { name: "Emma Clark", nationality: "US", email: "emma@example.com", guests: 1 },
     items: [
-      { id: 11, type: "dorm", ref_id: 12, title: "성신여자대학교 성미료 2박", meta: "11/20 – 11/22", status: "confirmed", price: 60000, date_from: "2026-11-20", date_to: "2026-11-22" },
+      { id: 11, type: "dorm", ref_id: 12, title: "국민대학교 정릉생활관 2박", meta: "11/20 – 11/22", status: "confirmed", price: 60000, date_from: "2026-11-20", date_to: "2026-11-22" },
       { id: 12, type: "tour", ref_id: 5, title: "정릉과 성곽길", meta: "11/21 10:00", status: "confirmed", price: 25000, date_from: "2026-11-21", time: "10:00" },
       { id: 13, type: "buddy", ref_id: 32, title: "민호와 캠퍼스 걷기", meta: "11/21 14:00", status: "confirmed", price: 10000, date_from: "2026-11-21", time: "14:00" },
     ] },
   { id: 470, code: "SB-2026-0812", status: "cancelled", total_price: 70000, platform_fee: 7000, created_at: "2026-08-01T09:00:00Z",
     traveler: { name: "Emma Clark", nationality: "US", email: "emma@example.com", guests: 1 },
-    items: [{ id: 21, type: "dorm", ref_id: 12, title: "국민대학교 생활관 2박", meta: "8/12 – 8/14", status: "cancelled", price: 60000 }, { id: 22, type: "tour", ref_id: 5, title: "성곽길 투어", meta: "8/13 10:00", status: "cancelled", price: 10000 }] },
+    items: [{ id: 21, type: "dorm", ref_id: 12, title: "국민대학교 정릉생활관 2박", meta: "8/12 – 8/14", status: "cancelled", price: 60000 }, { id: 22, type: "tour", ref_id: 5, title: "성곽길 투어", meta: "8/13 10:00", status: "cancelled", price: 10000 }] },
 ];
 
 export const notifications: Notification[] = [
@@ -136,7 +143,7 @@ export const adminBookings: AdminBookingRow[] = [
   { booking_id: 501, item_id: 3, code: "SB-2027-0112", tourist: "Emma Clark", nationality: "미국", type: "buddy", title: "지우 · 동네 걷기", schedule: "1/13 14:00", price: 30000, status: "requested", university_id: 1 },
   { booking_id: 502, item_id: 4, code: "SB-2027-0114", tourist: "Yuki Sato", nationality: "일본", type: "dorm", title: "고려대 프런티어관 1인실", schedule: "1/14 – 1/16", price: 80000, status: "requested", university_id: 1 },
   { booking_id: 503, item_id: 5, code: "SB-2027-0116", tourist: "Lucas Martin", nationality: "프랑스", type: "buddy", title: "지우 · 한옥 골목", schedule: "1/16 11:00", price: 30000, status: "approved", university_id: 1 },
-  { booking_id: 504, item_id: 6, code: "SB-2027-0119", tourist: "김민지", nationality: "한국", type: "dorm", title: "국민대 생활관 2인실", schedule: "1/19 – 1/26", price: 245000, status: "requested", university_id: 2 },
+  { booking_id: 504, item_id: 6, code: "SB-2027-0119", tourist: "김민지", nationality: "한국", type: "dorm", title: "국민대 정릉생활관 2인실", schedule: "1/19 – 1/26", price: 245000, status: "requested", university_id: 2 },
   { booking_id: 505, item_id: 7, code: "SB-2027-0108", tourist: "Mia Wong", nationality: "호주", type: "tour", title: "정릉과 성곽길", schedule: "1/8 10:00", price: 25000, status: "cancelled" },
 ];
 

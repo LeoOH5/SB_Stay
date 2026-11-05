@@ -7,9 +7,9 @@ def test_list_dorms_and_filter(client):
     r = client.get("/api/v1/dorms")
     assert r.status_code == 200
     items = r.json()["items"]
-    assert len(items) == 8 and len({i["university"]["id"] for i in items}) == 7 and items[0]["university"]["name"] == "고려대학교"
+    assert len(items) == 15 and len({i["university"]["id"] for i in items}) == 7 and items[0]["university"]["name"] == "고려대학교"
     r = client.get("/api/v1/dorms", params={"university_id": 2})
-    assert [i["id"] for i in r.json()["items"]] == [12]
+    assert [i["id"] for i in r.json()["items"]] == [12, 23]
 
 
 def test_list_dorms_outside_open_period(client):
@@ -41,4 +41,4 @@ def test_admin_dorm_crud_scoped(client, univ_admin, operator, tourist, reset_db)
     r = client.patch("/api/v1/admin/universities/1", json={"open_from": "2027-01-04"}, headers=univ_admin)
     assert r.status_code == 200 and r.json()["open_from"] == "2027-01-04"
     assert client.patch("/api/v1/admin/universities/2", json={"open_from": "2027-01-04"}, headers=univ_admin).status_code == 403
-    assert len(client.get("/api/v1/admin/dorms", headers=univ_admin).json()["items"]) == 3
+    assert len(client.get("/api/v1/admin/dorms", headers=univ_admin).json()["items"]) == 6  # 고려대 시드 5개 + 새로 만든 1개

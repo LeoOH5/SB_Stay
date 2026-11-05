@@ -2,7 +2,7 @@
 // 공용 UI — 와이어프레임 v3 컴포넌트 언어(히어로·카드·칩·상태 알약·KPI·탭바·AI 블록)와 1:1
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 export const cn = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
@@ -67,17 +67,17 @@ export function LinkButton({ href, children, variant = "primary", className, ful
 export function CategoryTiles() {
   const items = [
     { href: "/stay", title: "숙박", desc: "방학 중 대학 기숙사", icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 20V9l9-5 9 5v11" /><path d="M9 20v-6h6v6" /></svg>) },
+      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 20V9l9-5 9 5v11" /><path d="M9 20v-6h6v6" /></svg>) },
     { href: "/tours", title: "역사 투어", desc: "해설사와 걷는 성북", icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" /><path d="M9 4v14M15 6v14" /></svg>) },
+      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" /><path d="M9 4v14M15 6v14" /></svg>) },
     { href: "/buddies", title: "대학생 버디", desc: "동네를 같이 걸어요", icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><circle cx="17" cy="9" r="2.6" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3.3 0 6 2.2 6 5.5" /></svg>) },
+      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><circle cx="17" cy="9" r="2.6" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3.3 0 6 2.2 6 5.5" /></svg>) },
   ];
   return (
     <div className="grid grid-cols-3 gap-2">
       {items.map((i) => (
         <Link key={i.href} href={i.href} className="flex flex-col items-center gap-1.5 rounded-[14px] bg-white px-2 py-3.5 text-center ring-1 ring-line/60 shadow-[0_1px_3px_rgba(31,42,68,0.08)] active:scale-[0.98] transition">
-          <span className="mb-0.5 flex h-11 w-11 items-center justify-center rounded-xl bg-navy-bg text-navy">{i.icon}</span>
+          <span className="mb-0.5 flex h-9 items-center justify-center text-navy">{i.icon}</span>
           <span className="text-[14px] font-bold text-ink leading-tight">{i.title}</span>
           <span className="text-[11.5px] leading-snug text-muted">{i.desc}</span>
         </Link>
@@ -191,17 +191,30 @@ export const PHOTO_CREDITS: Record<string, string> = {
   "/dorms/sungshin.jpg": "성신여대 수정캠퍼스 · Sungshinpr · Wikimedia Commons · CC BY-SA 4.0",
   "/dorms/hansung.jpg": "한성대 삼군부 총무당 · 오모군 · Wikimedia Commons · CC BY 4.0",
   "/dorms/seokyeong.jpg": "서경대학교 · hyolee2 · Wikimedia Commons · CC BY-SA 3.0",
+  "/dorms/korea-campus.jpg": "고려대 안암캠퍼스 본관 · Mannaa mohamed · Wikimedia Commons · CC BY-SA 4.0",
+  "/dorms/sungshin-campus.jpg": "성신여대 캠퍼스 · Sungshin · Wikimedia Commons · CC BY-SA 3.0",
   "/dorms/karts.jpg": "한국예술종합학교 석관동 캠퍼스 · Younghopark7 · Wikimedia Commons · CC BY-SA 3.0",
 };
 
-/** 대학 사진. 없으면 아이콘 타일 */
+/** 숙박 첫 화면에 쓰는 학교(캠퍼스) 사진. university_id 기준 */
+export const UNIV_PHOTOS: Record<number, string> = {
+  1: "/dorms/korea-campus.jpg",
+  2: "/dorms/kookmin.jpg",
+  3: "/dorms/sungshin.jpg",
+  4: "/dorms/hansung.jpg",
+  5: "/dorms/seokyeong.jpg",
+  7: "/dorms/karts.jpg",
+};
+
+/** 대학 사진. 없거나 못 불러오면 아이콘 타일 */
 export function DormPhoto({ src, className, label, credit = false }: { src?: string; className?: string; label?: string; credit?: boolean }) {
-  if (!src) return <PhotoTile className={className} label={label} />;
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!src || failed === src) return <PhotoTile className={className} label={label} />;
   return (
     <figure className={cn("relative overflow-hidden rounded-[14px] bg-gray-bg", className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={label ?? ""} className="h-full w-full object-cover" loading="lazy" />
-      {credit && PHOTO_CREDITS[src] && <figcaption className="absolute inset-x-0 bottom-0 bg-black/45 px-2 py-0.5 text-[10px] text-white/90">사진: {PHOTO_CREDITS[src]}</figcaption>}
+      <img src={src} alt={label ?? ""} className="h-full w-full object-cover" loading="lazy" onError={() => setFailed(src)} />
+      {credit && PHOTO_CREDITS[src] && <figcaption className="absolute inset-x-0 bottom-0 truncate bg-black/45 px-2 py-0.5 text-[10px] text-white/90">사진: {PHOTO_CREDITS[src]}</figcaption>}
     </figure>
   );
 }
