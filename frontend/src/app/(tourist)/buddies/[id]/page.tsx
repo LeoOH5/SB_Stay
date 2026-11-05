@@ -2,7 +2,7 @@
 // T4c 버디 상세 — BD-02 GET /buddies/{id}, 리뷰 GET /buddies/{id}/reviews, 동행 요청(장바구니)
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Card, Chip, Hero, SectionTitle, Spinner, TopBar } from "@/components/ui";
+import { Button, Card, Chip, Hero, SectionTitle, Spinner } from "@/components/ui";
 import { ErrorBox, Notice, Stars } from "@/components/tourist";
 import { errMsg, interestsLabel, langsShort, md, okv } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -38,8 +38,7 @@ export default function BuddyDetailPage() {
 
   return (
     <>
-      <TopBar back="/buddies" title="버디 상세" />
-      <Hero title={buddy ? `${buddy.name} · ${buddy.university.replace("학교", "")} ${buddy.major} ${buddy.year}학년` : "버디 상세"} sub={buddy ? `${langsShort(buddy.languages)} · ★ ${buddy.rating} (${buddy.review_count})` : undefined} />
+      <Hero back="/buddies" title={buddy ? `${buddy.name} · ${buddy.university.replace("학교", "")} ${buddy.major} ${buddy.year}학년` : "버디 상세"} sub={buddy ? `${langsShort(buddy.languages)} · ★ ${buddy.rating} (${buddy.review_count})` : undefined} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <ErrorBox message={err} />
         {!buddy && !err && <Spinner />}

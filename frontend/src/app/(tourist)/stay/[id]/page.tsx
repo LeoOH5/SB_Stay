@@ -2,7 +2,7 @@
 // T4b 객실 상세 — DM-03 GET /dorms/{id}, 장바구니 담기
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Card, Hero, DormPhoto, Spinner, TopBar, inputCls } from "@/components/ui";
+import { Button, Card, Hero, DormPhoto, Spinner, inputCls } from "@/components/ui";
 import { ErrorBox, Notice } from "@/components/tourist";
 import { DEFAULT_FROM, DEFAULT_TO, errMsg, md, nightsBetween, okv, ROOM_LABEL, ymd } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -41,8 +41,7 @@ export default function StayDetailPage() {
 
   return (
     <>
-      <TopBar back={dorm ? `/stay/univ/${dorm.university.id}` : "/stay"} title="객실 상세" />
-      <Hero title={dorm ? `${univ} ${dorm.building}` : "객실 상세"} sub={dorm ? `${ROOM_LABEL[dorm.room_type]} · 1박 ${won(dorm.price_per_night)}` : undefined} />
+      <Hero back={dorm ? `/stay/univ/${dorm.university.id}` : "/stay"} title={dorm ? `${univ} ${dorm.building}` : "객실 상세"} sub={dorm ? `${ROOM_LABEL[dorm.room_type]} · 1박 ${won(dorm.price_per_night)}` : undefined} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <ErrorBox message={err} />
         {!dorm && !err && <Spinner />}

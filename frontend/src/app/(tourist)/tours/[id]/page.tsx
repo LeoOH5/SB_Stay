@@ -2,7 +2,7 @@
 // T4 투어 상세 + AI 역사 스토리 — TR-02 GET /tours/{id}, AI-02 POST /ai/story, TR-04 GET /tours/{id}/reviews
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AiBlock, Button, Card, Chip, Hero, MapEmbed, SectionTitle, Spinner, TopBar, inputCls } from "@/components/ui";
+import { AiBlock, Button, Card, Chip, Hero, MapEmbed, SectionTitle, Spinner, inputCls } from "@/components/ui";
 import { ErrorBox, Notice, Stars } from "@/components/tourist";
 import { daysLabel, DEFAULT_TOUR_DATE, dowKey, errMsg, langsCode, md, okv } from "@/components/tourist/format";
 import { get, post, won } from "@/lib/api";
@@ -70,8 +70,7 @@ export default function TourDetailPage() {
 
   return (
     <>
-      <TopBar back="/tours" title="투어 상세" />
-      <Hero title={title || "투어 상세"} sub={tour ? `해설사 ${tour.guide.name} · ${tour.guide.license} · ${tour.duration_min / 60}h · ${won(tour.price)} · ${daysLabel(tour.operating_days)} · ${langsCode(tour.languages)}` : undefined} />
+      <Hero back="/tours" title={title || "투어 상세"} sub={tour ? `해설사 ${tour.guide.name} · ${tour.guide.license} · ${tour.duration_min / 60}h · ${won(tour.price)} · ${daysLabel(tour.operating_days)} · ${langsCode(tour.languages)}` : undefined} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <ErrorBox message={err} />
         {!tour && !err && <Spinner />}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, Card, Chip, Field, Hero, inputCls, TopBar } from "@/components/ui";
+import { Button, Card, Chip, Field, Hero, inputCls } from "@/components/ui";
 import { ErrorBox, Notice, selectCls, textareaCls } from "@/components/tourist";
 import { submitBooking } from "@/components/tourist/booking";
 import { errMsg, SS_TRAVELER } from "@/components/tourist/format";
@@ -52,8 +52,7 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <TopBar back="/cart" title="여행자 정보" />
-      <Hero title="Traveler info" sub="숙박 승인·체크인에 필요한 정보를 한 번만 입력해요." right={<span className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">1 / 2</span>} />
+      <Hero back="/cart" title="Traveler info" sub="숙박 승인·체크인에 필요한 정보를 한 번만 입력해요." right={<span className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">1 / 2</span>} />
       <form className="px-5 pb-6 pt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         {!filled && (
           <Card tint className="flex items-center justify-between gap-3">

@@ -6,9 +6,14 @@ import { useState, type ReactNode } from "react";
 
 export const cn = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
-export function Hero({ title, sub, right, children, className }: { title: string; sub?: string; right?: ReactNode; children?: ReactNode; className?: string }) {
+export function Hero({ title, sub, right, children, className, back }: { title: string; sub?: string; right?: ReactNode; children?: ReactNode; className?: string; back?: string }) {
   return (
-    <header className={cn("bg-navy text-white px-5 pt-5 pb-5", className)}>
+    <header className={cn("bg-navy text-white px-5 pb-5", back ? "pt-2" : "pt-5", className)}>
+      {back && (
+        <Link href={back} aria-label="뒤로" className="-ml-2.5 mb-1 flex h-11 w-11 items-center justify-center rounded-full text-white hover:bg-white/10">
+          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>
+        </Link>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-bold leading-tight">{title}</h1>

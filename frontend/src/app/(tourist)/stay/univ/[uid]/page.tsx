@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DormPhoto, Hero, Spinner, TopBar } from "@/components/ui";
+import { DormPhoto, Hero, Spinner } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { errMsg, md, ROOM_LABEL } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -27,8 +27,7 @@ export default function UnivDormsPage() {
 
   return (
     <>
-      <TopBar back="/stay" title="건물 선택" />
-      <Hero title={univ ? (lang === "en" ? univ.name_en : univ.name) : "숙박"} sub={rooms?.[0] ? `개방 ${md(rooms[0].open_from)} – ${md(rooms[0].open_to)} · 건물 ${buildings.length}곳` : undefined} />
+      <Hero back="/stay" title={univ ? (lang === "en" ? univ.name_en : univ.name) : "숙박"} sub={rooms?.[0] ? `개방 ${md(rooms[0].open_from)} – ${md(rooms[0].open_to)} · 건물 ${buildings.length}곳` : undefined} />
       <div className="px-5 pb-6 pt-4 space-y-4">
         <ErrorBox message={err} />
         {!rooms && !err && <Spinner />}
