@@ -1,0 +1,32 @@
+[
+ {
+  "id": 21,
+  "user_id": 4,
+  "license": "관광통역안내사",
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "intro": "성북동 문인 코스 전문"
+ },
+ {
+  "id": 22,
+  "user_id": 7,
+  "license": "관광통역안내사",
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "intro": "독립운동사"
+ },
+ {
+  "id": 23,
+  "user_id": 8,
+  "license": "문화관광해설사",
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "intro": "조선 왕릉·한양도성"
+ }
+]

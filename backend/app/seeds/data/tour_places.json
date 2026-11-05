@@ -1,0 +1,68 @@
+[
+ {
+  "tour_id": 3,
+  "place_id": 101,
+  "seq": 1,
+  "stay_min": 20
+ },
+ {
+  "tour_id": 3,
+  "place_id": 102,
+  "seq": 2,
+  "stay_min": 30
+ },
+ {
+  "tour_id": 3,
+  "place_id": 103,
+  "seq": 3,
+  "stay_min": 25
+ },
+ {
+  "tour_id": 3,
+  "place_id": 104,
+  "seq": 4,
+  "stay_min": 40
+ },
+ {
+  "tour_id": 4,
+  "place_id": 103,
+  "seq": 1,
+  "stay_min": 30
+ },
+ {
+  "tour_id": 4,
+  "place_id": 107,
+  "seq": 2,
+  "stay_min": 60
+ },
+ {
+  "tour_id": 5,
+  "place_id": 105,
+  "seq": 1,
+  "stay_min": 50
+ },
+ {
+  "tour_id": 5,
+  "place_id": 106,
+  "seq": 2,
+  "stay_min": 40
+ },
+ {
+  "tour_id": 5,
+  "place_id": 107,
+  "seq": 3,
+  "stay_min": 60
+ },
+ {
+  "tour_id": 6,
+  "place_id": 104,
+  "seq": 1,
+  "stay_min": 40
+ },
+ {
+  "tour_id": 6,
+  "place_id": 106,
+  "seq": 2,
+  "stay_min": 40
+ }
+]

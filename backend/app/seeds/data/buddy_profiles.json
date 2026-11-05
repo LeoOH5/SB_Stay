@@ -1,0 +1,120 @@
+[
+ {
+  "id": 31,
+  "user_id": 3,
+  "university_id": 1,
+  "major": "국어국문",
+  "year": 3,
+  "languages": [
+   "ko",
+   "en",
+   "ja"
+  ],
+  "interests": [
+   "literature",
+   "walking",
+   "cafe"
+  ],
+  "intro": "성북동 골목이랑 캠퍼스 맛집을 같이 걸어요. 역사 해설은 해설사·AI가, 저는 친구가 되어 드려요.",
+  "avatar": "illust_01",
+  "status": "approved",
+  "hourly_fee": 15000
+ },
+ {
+  "id": 32,
+  "user_id": 9,
+  "university_id": 2,
+  "major": "사학과",
+  "year": 2,
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "interests": [
+   "independence",
+   "photo"
+  ],
+  "intro": "성북동 답사 동아리에서 활동해요.",
+  "avatar": "illust_02",
+  "status": "approved",
+  "hourly_fee": 15000
+ },
+ {
+  "id": 33,
+  "user_id": 10,
+  "university_id": 1,
+  "major": "관광학",
+  "year": 4,
+  "languages": [
+   "ko",
+   "en",
+   "zh"
+  ],
+  "interests": [
+   "food",
+   "cafe"
+  ],
+  "intro": "교환학생 버디 경험 2회.",
+  "avatar": "illust_03",
+  "status": "pending",
+  "hourly_fee": 15000
+ },
+ {
+  "id": 34,
+  "user_id": 11,
+  "university_id": 1,
+  "major": "경영",
+  "year": 2,
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "interests": [
+   "walking",
+   "sports"
+  ],
+  "intro": "캠퍼스 투어와 야경 산책 담당.",
+  "avatar": "illust_04",
+  "status": "pending",
+  "hourly_fee": 15000
+ },
+ {
+  "id": 35,
+  "user_id": 12,
+  "university_id": 2,
+  "major": "영문학",
+  "year": 3,
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "interests": [
+   "literature",
+   "craft"
+  ],
+  "intro": "영어 토론 동아리.",
+  "avatar": "illust_05",
+  "status": "approved",
+  "hourly_fee": 15000
+ },
+ {
+  "id": 36,
+  "user_id": 13,
+  "university_id": 1,
+  "major": "건축학",
+  "year": 4,
+  "languages": [
+   "ko",
+   "en",
+   "ja"
+  ],
+  "interests": [
+   "hanok",
+   "architecture"
+  ],
+  "intro": "근대 건축과 한옥 이야기를 좋아해요.",
+  "avatar": "illust_06",
+  "status": "approved",
+  "hourly_fee": 15000
+ }
+]

@@ -1,0 +1,100 @@
+[
+ {
+  "id": 1,
+  "booking_id": 501,
+  "type": "dorm",
+  "ref_id": 10,
+  "date_from": "2027-01-12",
+  "date_to": "2027-01-15",
+  "guests": 1,
+  "price": 105000,
+  "status": "approved",
+  "decided_by": 5,
+  "decided_at": "2027-01-06T09:00:00Z"
+ },
+ {
+  "id": 2,
+  "booking_id": 501,
+  "type": "tour",
+  "ref_id": 3,
+  "date_from": "2027-01-13",
+  "time": "10:00",
+  "price": 20000,
+  "status": "confirmed"
+ },
+ {
+  "id": 3,
+  "booking_id": 501,
+  "type": "buddy",
+  "ref_id": 31,
+  "date_from": "2027-01-13",
+  "time": "14:00",
+  "duration_min": 120,
+  "price": 30000,
+  "status": "requested"
+ },
+ {
+  "id": 11,
+  "booking_id": 480,
+  "type": "dorm",
+  "ref_id": 12,
+  "date_from": "2026-11-20",
+  "date_to": "2026-11-22",
+  "guests": 1,
+  "price": 60000,
+  "status": "confirmed"
+ },
+ {
+  "id": 12,
+  "booking_id": 480,
+  "type": "tour",
+  "ref_id": 5,
+  "date_from": "2026-11-21",
+  "time": "10:00",
+  "price": 25000,
+  "status": "confirmed"
+ },
+ {
+  "id": 13,
+  "booking_id": 480,
+  "type": "buddy",
+  "ref_id": 32,
+  "date_from": "2026-11-21",
+  "time": "14:00",
+  "duration_min": 120,
+  "price": 10000,
+  "status": "confirmed"
+ },
+ {
+  "id": 21,
+  "booking_id": 470,
+  "type": "dorm",
+  "ref_id": 12,
+  "date_from": "2026-08-12",
+  "date_to": "2026-08-14",
+  "guests": 1,
+  "price": 60000,
+  "status": "cancelled"
+ },
+ {
+  "id": 22,
+  "booking_id": 470,
+  "type": "tour",
+  "ref_id": 5,
+  "date_from": "2026-08-13",
+  "time": "10:00",
+  "price": 10000,
+  "status": "cancelled"
+ },
+ {
+  "id": 4,
+  "booking_id": 502,
+  "type": "dorm",
+  "ref_id": 11,
+  "date_from": "2027-01-14",
+  "date_to": "2027-01-16",
+  "guests": 1,
+  "price": 80000,
+  "status": "requested"
+ }
+]

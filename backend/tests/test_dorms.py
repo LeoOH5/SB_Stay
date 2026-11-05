@@ -22,7 +22,7 @@ def test_get_dorm(client):
     r = client.get("/api/v1/dorms/10")
     assert r.status_code == 200
     j = r.json()
-    assert j["price_per_night"] == 35000 and j["available_rooms"] == 40 and len(j["rules"]) == 4
+    assert j["price_per_night"] == 35000 and j["available_rooms"] == 39 and len(j["rules"]) == 4  # 시드 예약 1건 점유
     assert client.get("/api/v1/dorms/999").status_code == 404
 
 
