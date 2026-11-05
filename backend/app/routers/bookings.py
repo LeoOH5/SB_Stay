@@ -1,5 +1,6 @@
 """예약 — BK-01 신청 · BK-02 내 예약 · BK-03 상세 · BK-04 승인/거절 · BK-05 취소 · BK-06~10 목업 (B 담당)"""
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,8 @@ from app.models.user import User
 from app.schemas.bookings import BookingCreateIn, BookingItemOut, BookingOut, DecideIn
 from app.schemas.common import ListResponse
 from app.services import booking_state as bs
+from app.services import payments as ps
+from app.services import paypal, toss
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -67,16 +70,27 @@ def decide(booking_id: int, item_id: int, body: DecideIn, user: User = Depends(g
     return out
 
 
+class CancelIn(BaseModel):
+    reason: str | None = None
+
+
 @router.post("/{booking_id}/cancel", response_model=BookingOut)
-def cancel(booking_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> BookingOut:
-    """BK-05"""
+def cancel(booking_id: int, body: CancelIn | None = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> BookingOut:
+    """BK-05: 취소 + 환불 규정(7일 전 100% · 3일 전 50% · 이후 0%)대로 결제 환불"""
     b = _get_booking(db, booking_id)
+    if user.role != "operator" and b.tourist_id != user.id:
+        raise api_error(403, "FORBIDDEN", "본인 예약만 취소할 수 있습니다")
+    if b.status == "cancelled":
+        raise api_error(409, "CONFLICT", "이미 취소된 예약입니다")
+    try:
+        ps.refund_on_cancel(db, b, body.reason if body else None)
+    except ps.PaymentError as e:
+        raise api_error(e.status, e.code, e.message) from e
     _wrap(lambda: bs.cancel_booking(db, user, b))
     return bs.booking_out(db, b)
 
 
 # ---------- 목업·보조 (BK-06~09). 경로·형식은 명세와 같고 내부 로직만 단순.
-from datetime import UTC, datetime
 
 from pydantic import BaseModel
 
@@ -92,15 +106,17 @@ class ReviewIn(BaseModel):
 
 @router.post("/{booking_id}/pay")
 def pay(booking_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
-    """BK-06 (목업): 결제 성공 처리만. 실제 PG 없음."""
+    """BK-06: 토스 키가 없을 때만 즉시 결제(목업). 키가 있으면 PM-01·02 결제창 흐름을 써야 한다."""
     b = _get_booking(db, booking_id)
     if b.tourist_id != user.id and user.role != "operator":
         raise api_error(403, "FORBIDDEN", "본인 예약만 결제할 수 있습니다")
-    if b.status == "cancelled":
-        raise api_error(409, "CONFLICT", "취소된 예약입니다")
-    b.paid_at = b.paid_at or datetime.now(UTC)
-    db.commit()
-    return {"id": b.id, "status": "paid", "paid_at": b.paid_at, "payment": {"method": "mock", "amount": b.total_price}}
+    if toss.enabled() or paypal.enabled():
+        raise api_error(409, "USE_PAYMENT_WIDGET", "결제창(토스 또는 PayPal)으로 결제해 주세요")
+    try:
+        p = ps.mock_pay(db, b)
+    except ps.PaymentError as e:
+        raise api_error(e.status, e.code, e.message) from e
+    return {"id": b.id, "status": "paid", "paid_at": b.paid_at, "payment": {"method": p.method, "amount": p.amount}}
 
 
 @router.get("/{booking_id}/checkin-guide")

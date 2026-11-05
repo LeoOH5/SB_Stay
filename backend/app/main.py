@@ -1,9 +1,13 @@
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.errors import http_exception_handler, validation_exception_handler
+from app.jobs import auto_refund
 from app.routers import (
     admin,
     ai,
@@ -14,12 +18,23 @@ from app.routers import (
     contents,
     dorms,
     notifications,
+    payments,
     tours,
 )
 
 settings = get_settings()
 
-app = FastAPI(title="SB Stay API", version="0.1.0", docs_url="/docs", openapi_url="/openapi.json")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # 테스트 결제 자동 환불 (AUTO_REFUND_AFTER_HOURS > 0 일 때만)
+    task = asyncio.create_task(auto_refund.loop()) if settings.auto_refund_after_hours > 0 else None
+    yield
+    if task:
+        task.cancel()
+
+
+app = FastAPI(title="SB Stay API", version="0.1.0", docs_url="/docs", openapi_url="/openapi.json", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -40,6 +55,7 @@ app.include_router(buddy_me.router, prefix=API)
 app.include_router(ai.router, prefix=API)
 app.include_router(bookings.router, prefix=API)
 app.include_router(notifications.router, prefix=API)
+app.include_router(payments.router, prefix=API)
 app.include_router(admin.router, prefix=API)
 
 
