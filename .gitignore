@@ -23,9 +23,6 @@ backend/.venv/
 # data
 postgres-data/
 *.log
-# local tooling
-.omc/
-.claude/
 # 로컬 전용 자산 (깃허브 제외)
 design/
 img/
