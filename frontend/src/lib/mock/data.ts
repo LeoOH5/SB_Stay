@@ -35,7 +35,7 @@ export const dorms: DormRoom[] = [
   { id: 15, university: universities[4], building: "생활관 3동", room_type: "single", price_per_night: 33000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 6, photos: ["/dorms/official/seokyeong-dorm.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "취사 금지"] },
   { id: 16, university: universities[5], building: "제1생활관(목화관)", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 11, photos: ["/dorms/official/dongduk-1.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "여성 전용"] },
   { id: 20, university: universities[5], building: "제2생활관", room_type: "single", price_per_night: 32000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 4, photos: ["/dorms/official/dongduk-2.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "여성 전용, 캠퍼스 밖 (종암로)"] },
-  { id: 17, university: universities[6], building: "천장관", room_type: "double", price_per_night: 31000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 7, photos: ["/dorms/karts.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "연습실 이용은 별도 신청"] },
+  { id: 17, university: universities[6], building: "천장관", room_type: "double", price_per_night: 31000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 7, photos: ["/dorms/official/karts-dorm.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "연습실 이용은 별도 신청"] },
 ];
 
 export const places: Place[] = [

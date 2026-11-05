@@ -35,4 +35,4 @@
 | kookmin-gireum.jpg | 국민대 길음생활관 | https://iat.kookmin.ac.kr/admission/dormitory |
 | seokyeong-dorm.jpg | 서경대 생활관 3동 | https://www.skuniv.ac.kr/campus-map (원본 400px) |
 
-사진을 못 찾은 건물: 한예종 천장관. 석관동 캠퍼스 정문 사진(karts.jpg)으로 대신합니다.
+| karts-dorm.jpg | 한예종 천장관 | https://blog.naver.com/baba101203/223300554554 (개인 블로그 사진, 작성자 baba101203) |
