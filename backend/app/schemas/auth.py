@@ -33,6 +33,14 @@ class DemoLoginIn(BaseModel):
 
 class RoleIn(BaseModel):
     role: str  # tourist | buddy | guide
+    university_id: int | None = None  # buddy·guide는 소속 대학
+
+
+class SignupIn(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    language: str = "en"
 
 
 class MeUpdateIn(BaseModel):
