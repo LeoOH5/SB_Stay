@@ -16,3 +16,19 @@
 동덕여자대학교는 자유 라이선스 사진이 없어 아이콘 타일로 표시합니다. 학교 홍보실에서 사용 허락을 받은 사진으로 바꾸는 것이 좋습니다.
 
 기숙사 건물명 중 고려대 프런티어관·CJ인터내셔널하우스, 성신여대 성미료·성미관, 동덕여대 제1·제2생활관은 실제 이름입니다. 건물 사진이 없는 곳은 같은 캠퍼스 사진을 쓰고, 사진 아래 출처에 실제 피사체를 적었습니다. 나머지 "생활관"은 일반 명칭이고, 가격·객실 수는 모두 가정값입니다.
+
+## 학교 공식 홈페이지 사진 (저장소 제외)
+
+아래 사진은 각 대학에 저작권이 있어 `frontend/public/dorms/official/`에 두고 git에서 제외했습니다. 파일이 없으면 화면에 아이콘 타일이 나옵니다. 공개 배포 전에는 학교 허락을 받아야 합니다.
+
+| 파일 | 건물 | 출처 페이지 |
+|---|---|---|
+| korea-cj.jpg | 고려대 CJ인터내셔널하우스 | https://dorm.korea.ac.kr/front/content/4 |
+| korea-aih.jpg | 고려대 안암인터내셔널하우스 | https://dorm.korea.ac.kr/front/content/5 |
+| kookmin-jeongneung.jpg | 국민대 정릉생활관 | https://dormitory.kookmin.ac.kr/intro/installation?tab=1 |
+| sungshin-seongmigwan.jpg | 성신여대 성미관 | https://www.sungshin.ac.kr/dormitory/17648/subview.do |
+| sungshin-seongmiryo.jpg | 성신여대 성미료 | https://www.sungshin.ac.kr/dormitory/19307/subview.do |
+| hansung-sangsang.jpg | 한성대 상상빌리지 (조감도) | https://dorm.hansung.ac.kr/kor/dormitory/panorama.do |
+| dongduk-1.jpg | 동덕여대 제1생활관(목화관) | https://dorm.dongduk.ac.kr/00/0000.do |
+
+사진을 못 찾은 건물: 국민대 길음생활관, 서경대 생활관, 동덕여대 제2생활관, 한예종 천장관.

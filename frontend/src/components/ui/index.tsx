@@ -193,6 +193,13 @@ export const PHOTO_CREDITS: Record<string, string> = {
   "/dorms/seokyeong.jpg": "서경대학교 · hyolee2 · Wikimedia Commons · CC BY-SA 3.0",
   "/dorms/korea-campus.jpg": "고려대 안암캠퍼스 본관 · Mannaa mohamed · Wikimedia Commons · CC BY-SA 4.0",
   "/dorms/sungshin-campus.jpg": "성신여대 캠퍼스 · Sungshin · Wikimedia Commons · CC BY-SA 3.0",
+  "/dorms/official/korea-cj.jpg": "CJ인터내셔널하우스 · © 고려대학교 안암학사",
+  "/dorms/official/korea-aih.jpg": "안암인터내셔널하우스 · © 고려대학교 안암학사",
+  "/dorms/official/kookmin-jeongneung.jpg": "정릉생활관 · © 국민대학교 생활관",
+  "/dorms/official/sungshin-seongmigwan.jpg": "성미관 · © 성신여자대학교 기숙사",
+  "/dorms/official/sungshin-seongmiryo.jpg": "성미료 · © 성신여자대학교 기숙사",
+  "/dorms/official/hansung-sangsang.jpg": "상상빌리지 조감도 · © 한성대학교 생활관",
+  "/dorms/official/dongduk-1.jpg": "제1생활관(목화관) · © 동덕여자대학교 생활관",
   "/dorms/karts.jpg": "한국예술종합학교 석관동 캠퍼스 · Younghopark7 · Wikimedia Commons · CC BY-SA 3.0",
 };
 
