@@ -100,10 +100,10 @@ export const contents: ContentDoc[] = [
 ];
 
 export const buddyRequests: BuddyRequest[] = [
-  { item_id: 3, booking_code: "SB-2027-0112", tourist: { name: "Emma", nationality: "미국", language: "영어" }, date: "2027-01-13", time: "14:00", duration_min: 120, interests: ["한국 문학", "독립운동"], status: "requested", ai_brief: "오전에 심우장·수연산방 투어를 들었어요. 시집 이야기로 시작하면 좋아요." },
-  { item_id: 41, booking_code: "SB-2027-0116", tourist: { name: "Lucas", nationality: "프랑스", language: "영어" }, date: "2027-01-16", time: "11:00", duration_min: 120, interests: ["한옥", "로컬 음식"], status: "requested", ai_brief: "길상사·성북동 한옥 골목 추천. 점심은 성북동 국수 골목." },
-  { item_id: 38, booking_code: "SB-2027-0113", tourist: { name: "Yuki", nationality: "일본", language: "영어" }, date: "2027-01-13", time: "17:00", duration_min: 90, interests: ["산책"], status: "confirmed" },
-  { item_id: 30, booking_code: "SB-2026-1220", tourist: { name: "Mia", nationality: "호주", language: "영어" }, date: "2026-12-20", time: "10:00", duration_min: 120, interests: ["카페"], status: "rejected", },
+  { item_id: 3, booking_id: 501, booking_code: "SB-2027-0112", tourist: { name: "Emma", nationality: "미국", language: "영어" }, date: "2027-01-13", time: "14:00", duration_min: 120, interests: ["한국 문학", "독립운동"], status: "requested", ai_brief: "오전에 심우장·수연산방 투어를 들었어요. 시집 이야기로 시작하면 좋아요." },
+  { item_id: 41, booking_id: 503, booking_code: "SB-2027-0116", tourist: { name: "Lucas", nationality: "프랑스", language: "영어" }, date: "2027-01-16", time: "11:00", duration_min: 120, interests: ["한옥", "로컬 음식"], status: "requested", ai_brief: "길상사·성북동 한옥 골목 추천. 점심은 성북동 국수 골목." },
+  { item_id: 38, booking_id: 506, booking_code: "SB-2027-0113", tourist: { name: "Yuki", nationality: "일본", language: "영어" }, date: "2027-01-13", time: "17:00", duration_min: 90, interests: ["산책"], status: "confirmed" },
+  { item_id: 30, booking_id: 460, booking_code: "SB-2026-1220", tourist: { name: "Mia", nationality: "호주", language: "영어" }, date: "2026-12-20", time: "10:00", duration_min: 120, interests: ["카페"], status: "rejected", },
 ];
 
 export const buddyEarnings: BuddyEarning[] = [
