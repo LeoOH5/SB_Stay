@@ -181,3 +181,30 @@ def admin_tours(user: User = Depends(ADMIN), db: Session = Depends(get_db)) -> L
         guide = db.get(Guide, t.guide_id)
         rows.append(AdminTourRow(id=t.id, title=t.title, title_en=t.title_en, theme=t.theme, guide=db.get(User, guide.user_id).name if guide else "", duration_min=t.duration_min, price=t.price, operating_days=t.operating_days or [], languages=t.languages or []))
     return ListResponse(items=rows)
+
+
+# ---------- AD-08 외국인 숙박신고 내보내기 (운영자) — 운영 단계 기능이지만 CSV는 바로 만들 수 있어 포함
+import csv
+import io
+
+from fastapi.responses import StreamingResponse
+
+
+@router.get("/export/foreign-guests")
+def export_foreign_guests(from_: date | None = None, to: date | None = None, user: User = Depends(OPERATOR), db: Session = Depends(get_db)) -> StreamingResponse:
+    f, t = from_ or DEMO_FROM, to or DEMO_TO
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["booking_code", "name", "nationality", "passport_no", "check_in", "check_out", "university", "building"])
+    for it in db.scalars(select(BookingItem).where(BookingItem.type == "dorm", BookingItem.status.in_(OK)).order_by(BookingItem.date_from)).all():
+        if not (f <= it.date_from <= t):
+            continue
+        b = db.get(Booking, it.booking_id)
+        trav = b.traveler or {}
+        if (trav.get("nationality") or "KR").upper() in ("KR", "한국", "KOREA"):
+            continue
+        room = db.get(DormRoom, it.ref_id)
+        uni = db.get(University, room.university_id)
+        w.writerow([b.code, trav.get("name", ""), trav.get("nationality", ""), trav.get("passport_no", ""), it.date_from, it.date_to, uni.name, room.building])
+    buf.seek(0)
+    return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=foreign-guests.csv"})
