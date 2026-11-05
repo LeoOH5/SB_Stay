@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://sbstay:sbstay@localhost:5432/sbstay"
     jwt_secret: str = "change-me"
     jwt_expire_minutes: int = 60 * 24 * 7
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,http://localhost:3100"
 
     # 구글 OAuth (로그인 + 캘린더 증분 인증)
     google_client_id: str = ""

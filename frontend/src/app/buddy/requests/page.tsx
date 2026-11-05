@@ -39,7 +39,7 @@ export default function Page() {
   const decide = async (req: BuddyRequest, action: DecideAction, reason?: string) => {
     setBusy(req.item_id);
     try {
-      await patch(`/bookings/0/items/${req.item_id}`, { action, reason });
+      await patch(`/bookings/${req.booking_id}/items/${req.item_id}`, { action, reason });
       if (action === "reject" && reason) setReasons((m) => ({ ...m, [req.item_id]: reason }));
       show(action === "approve" ? `${req.tourist.name} 요청을 수락했어요 · 관광객 T6에 '확정' 표시` : `${req.tourist.name} 요청을 거절했어요`);
       setByTab({}); reloadAll(); reloadTab(tab);

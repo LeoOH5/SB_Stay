@@ -116,7 +116,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     state.bookings.unshift(booking);
     for (const it of booking.items) {
       state.adminBookings.unshift({ booking_id: id, item_id: it.id, code: booking.code, tourist: booking.traveler?.name ?? "", nationality: booking.traveler?.nationality ?? "", type: it.type, title: it.title, schedule: it.meta, price: it.price, status: it.status, university_id: 1 });
-      if (it.type === "buddy") state.buddyRequests.unshift({ item_id: it.id, booking_code: booking.code, tourist: { name: booking.traveler?.name ?? "", nationality: booking.traveler?.nationality ?? "", language: "영어" }, date: it.date_from ?? "", time: it.time ?? "", duration_min: 120, interests: ["한국 문학"], status: "requested", ai_brief: "새 요청이에요. 관심사 기준으로 동선을 준비해 보세요." });
+      if (it.type === "buddy") state.buddyRequests.unshift({ item_id: it.id, booking_id: id, booking_code: booking.code, tourist: { name: booking.traveler?.name ?? "", nationality: booking.traveler?.nationality ?? "", language: "영어" }, date: it.date_from ?? "", time: it.time ?? "", duration_min: 120, interests: ["한국 문학"], status: "requested", ai_brief: "새 요청이에요. 관심사 기준으로 동선을 준비해 보세요." });
     }
     return booking;
   }
