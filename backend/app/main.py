@@ -4,7 +4,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.errors import http_exception_handler, validation_exception_handler
-from app.routers import admin, ai, auth, bookings, buddies, buddy_me, contents, dorms, tours
+from app.routers import (
+    admin,
+    ai,
+    auth,
+    bookings,
+    buddies,
+    buddy_me,
+    contents,
+    dorms,
+    notifications,
+    tours,
+)
 
 settings = get_settings()
 
@@ -28,6 +39,7 @@ app.include_router(buddies.router, prefix=API)
 app.include_router(buddy_me.router, prefix=API)
 app.include_router(ai.router, prefix=API)
 app.include_router(bookings.router, prefix=API)
+app.include_router(notifications.router, prefix=API)
 app.include_router(admin.router, prefix=API)
 
 
