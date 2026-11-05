@@ -1,5 +1,6 @@
 "use client";
 // T7 투어 코스 목록 (필터) — TR-01 GET /tours
+import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, Chip, Hero, MapEmbed, Spinner, StatusPill, inputCls } from "@/components/ui";
@@ -42,10 +43,10 @@ export default function ToursPage() {
 
   return (
     <>
-      <Hero title="Tours" sub="해설사와 걷는 성북 역사 코스 · 예약 즉시 확정"
-        right={<button type="button" onClick={() => setShowMap((v) => !v)} className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">{showMap ? "지도 닫기" : "지도 보기"}</button>} />
+      <Hero title="Tours" sub="해설사와 걷는 성북 역사 코스 · 예약 즉시 확정" right={<HeaderActions />} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <div className="flex flex-wrap gap-2">
+          <Chip selected={showMap} onClick={() => setShowMap((v) => !v)}>지도</Chip>
           <Chip selected={useDate} onClick={() => pick(() => setUseDate((v) => !v))}>{useDate ? `날짜 ${md(date)}` : "날짜 전체"}</Chip>
           <Chip selected={language === "en"} onClick={() => pick(() => setLanguage((v) => (v === "en" ? "" : "en")))}>EN</Chip>
           <Chip selected={language === "ko"} onClick={() => pick(() => setLanguage((v) => (v === "ko" ? "" : "ko")))}>KO</Chip>

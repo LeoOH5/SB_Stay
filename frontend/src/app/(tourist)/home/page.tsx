@@ -1,5 +1,6 @@
 "use client";
 // T1 홈 — HM-01 GET /packages, 패키지 담기용 DM-03·TR-02·BD-02
+import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -63,7 +64,7 @@ export default function HomePage() {
 
   return (
     <>
-      <Hero title={user ? `${user.name.split(" ")[0]} 님, 반가워요` : "Seongbuk Stay"} sub="성북 대학 기숙사에 머물며 걷는 역사 여행" />
+      <Hero title={user ? `${user.name.split(" ")[0]} 님, 반가워요` : "Seongbuk Stay"} sub="성북 대학 기숙사에 머물며 걷는 역사 여행" right={<HeaderActions />} />
       <div className="px-5 pb-8 pt-4 space-y-3">
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-navy-bg to-green-bg p-5 ring-0">
           <div className="text-[12px] font-semibold text-green-dark">AI 여행 설계</div>

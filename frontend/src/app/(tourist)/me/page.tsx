@@ -1,9 +1,10 @@
 "use client";
-// T8 마이페이지 · 설정 · 고객센터 — AU-03 (세션), CM-01 GET /contents/{key}. 언어·알림은 상단 바
+// T8 마이페이지 · 고객센터 — AU-03 (세션), CM-01 GET /contents/{key}. 언어·알림은 상단 바
+import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, Card, Chip, Hero, SectionTitle, Spinner } from "@/components/ui";
+import { Button, Card, Hero, SectionTitle, Spinner } from "@/components/ui";
 import { BottomSheet, ErrorBox, LoginRequired } from "@/components/tourist";
 import { errMsg, okv, ROLE_LABEL } from "@/components/tourist/format";
 import { get } from "@/lib/api";
@@ -23,7 +24,6 @@ export default function MePage() {
   const router = useRouter();
   const { user } = useUser();
   const { lang } = useLang();
-  const [currency, setCurrency] = useState<"KRW" | "USD">("KRW");
   const [doc, setDoc] = useState<ContentDoc | null>(null);
   const [docKey, setDocKey] = useState<string | null>(null);
   const [docErr, setDocErr] = useState<string | null>(null);
@@ -36,12 +36,12 @@ export default function MePage() {
   const logout = () => { session.clear(); router.push("/login"); };
 
   if (!user) {
-    return (<><Hero title="My page" /><div className="px-5 pb-6 pt-4"><LoginRequired what="마이페이지" /></div></>);
+    return (<><Hero title="My page" right={<HeaderActions />} /><div className="px-5 pb-6 pt-4"><LoginRequired what="마이페이지" /></div></>);
   }
 
   return (
     <>
-      <Hero title="My page" />
+      <Hero title="My page" right={<HeaderActions />} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <Card className="flex items-center gap-3">
           <div className="h-12 w-12 shrink-0 rounded-full bg-navy-bg flex items-center justify-center text-[16px] font-semibold text-navy">{user.name[0]}</div>
@@ -52,13 +52,6 @@ export default function MePage() {
           <Link href="/checkout" className="text-[13px] text-navy font-semibold">수정</Link>
         </Card>
 
-        <SectionTitle>설정</SectionTitle>
-        <div className="flex items-center gap-3">
-          <span className="w-10 text-[14px] text-ink">통화</span>
-          <Chip selected={currency === "KRW"} onClick={() => setCurrency("KRW")}>KRW</Chip>
-          <Chip selected={currency === "USD"} onClick={() => setCurrency("USD")}>USD</Chip>
-          <span className="text-[12px] text-muted">결제는 원화로 진행돼요</span>
-        </div>
 
         <SectionTitle>고객센터 · 약관</SectionTitle>
         {DOCS.map((d) => (

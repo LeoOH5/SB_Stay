@@ -1,5 +1,6 @@
 "use client";
 // T4b 숙박 — 대학 선택 (DM-02 GET /dorms 를 대학별로 묶음)
+import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, DormPhoto, Hero, Spinner, UNIV_PHOTOS } from "@/components/ui";
@@ -40,7 +41,7 @@ export default function StayPage() {
 
   return (
     <>
-      <Hero title="Dorm stays" sub={`${ymd(openFrom)} – ${ymd(openTo).slice(5)} 겨울방학 개방 · 성북구 대학 ${groups.length || 7}곳`} />
+      <Hero title="Dorm stays" sub={`${ymd(openFrom)} – ${ymd(openTo).slice(5)} 겨울방학 개방 · 성북구 대학 ${groups.length || 7}곳`} right={<HeaderActions />} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <ErrorBox message={err} />
         {!dorms && !err && <Spinner />}

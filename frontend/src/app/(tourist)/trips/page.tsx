@@ -1,5 +1,6 @@
 "use client";
 // T6 내 여행 · 예약 상태 + T11 지난 예약·취소 — BK-02 GET /bookings/me, BK-07 체크인 안내, BK-09 채팅, BK-05 취소, BK-08 리뷰
+import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button, Card, Chip, Hero, LinkButton, Spinner, StatusPill } from "@/components/ui";
@@ -82,12 +83,12 @@ export default function TripsPage() {
   const shown = tab === "upcoming" ? upcoming : past;
 
   if (!user) {
-    return (<><Hero title="My trips" /><div className="px-5 pb-6 pt-4"><LoginRequired what="내 여행" /></div></>);
+    return (<><Hero title="My trips" right={<HeaderActions />} /><div className="px-5 pb-6 pt-4"><LoginRequired what="내 여행" /></div></>);
   }
 
   return (
     <>
-      <Hero title="My trips" sub={user.name} />
+      <Hero title="My trips" sub={user.name} right={<HeaderActions />} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <div className="flex gap-2">
           <Chip selected={tab === "upcoming"} onClick={() => setTab("upcoming")}>예정 ({upcoming.length})</Chip>
