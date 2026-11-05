@@ -1,7 +1,7 @@
 def test_dashboard_scoped(client, univ_admin, operator, tourist):
     assert client.get("/api/v1/admin/dashboard", headers=tourist).status_code == 403
     a = client.get("/api/v1/admin/dashboard", headers=univ_admin).json()
-    # A대학: 501 숙박(approved, 3박 105,000) + 502 숙박(requested)
+    # 고려대: 501 숙박(approved, 3박 105,000) + 502 숙박(requested)
     assert a["bookings"] == 2 and a["pending"] == 1 and a["nights"] == 3 and a["dorm_revenue"] == 105000 and a["platform_fee"] == 10500
     assert a["by_status"] == {"approved": 1, "requested": 1}
     assert a["daily"][0]["date"] == "2027-01-12"
@@ -25,7 +25,7 @@ def test_buddy_approve_scoped(client, univ_admin, reset_db):
     assert {r["name"] for r in rows} == {"하린", "도윤"}
     r = client.patch("/api/v1/admin/buddies/33", json={"action": "approve"}, headers=univ_admin)
     assert r.status_code == 200 and r.json()["status"] == "approved"
-    assert client.patch("/api/v1/admin/buddies/32", json={"action": "approve"}, headers=univ_admin).status_code == 403  # B대 버디
+    assert client.patch("/api/v1/admin/buddies/32", json={"action": "approve"}, headers=univ_admin).status_code == 403  # 국민대 버디
     assert client.patch("/api/v1/admin/buddies/33", json={"action": "x"}, headers=univ_admin).status_code == 422
 
 
@@ -35,7 +35,7 @@ def test_users_and_settlements_operator_only(client, univ_admin, operator):
     assert len(users) == 6
     s = client.get("/api/v1/admin/settlements", headers=operator).json()
     targets = {r["target"]: r for r in s["items"]}
-    assert targets["A대학교 국제관"]["revenue"] == 105000 and targets["A대학교 국제관"]["payout"] == 94500
+    assert targets["고려대학교 프런티어관"]["revenue"] == 105000 and targets["고려대학교 프런티어관"]["payout"] == 94500
     assert "해설사 박해설" in targets and s["total"] == sum(r["revenue"] for r in s["items"])
 
 

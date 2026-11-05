@@ -1,18 +1,18 @@
 "use client";
-// A2 대학 / 객실 관리 + 개방 기간 — GET /admin/dorms, POST /admin/dorms (DM-04), PATCH /admin/dorms/{id} (DM-05), PATCH /admin/universities/{id} (DM-06)
+// 대학 / 객실 관리 + 개방 기간
 import { useEffect, useState } from "react";
 import { get, patch, post, won } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import type { DormRoom, ListResponse, University } from "@/lib/types";
 import { Button, Card, Spinner } from "@/components/ui";
-import { AdminGate, AdminHeader, EmptyRow, ErrorText, Note, ROOM_LABEL, SectionLabel, Table, Td, Tr, adminInput, errMsg, linkCls, smallBtn } from "@/components/admin/shell";
+import { AdminGate, AdminHeader, EmptyRow, ErrorText, ROOM_LABEL, SectionLabel, Table, Td, Tr, adminInput, errMsg, linkCls, smallBtn } from "@/components/admin/shell";
 
-// DM-04/05 에는 total_rooms·active 가 있지만 DormRoom(DM-01 응답)에는 없어 어드민 화면에서만 확장한다
+// 어드민 응답에는 total_rooms·active 가 있지만 DormRoom 에는 없어 어드민 화면에서만 확장한다
 type AdminRoom = DormRoom & { total_rooms?: number; active?: boolean };
 type RoomType = DormRoom["room_type"];
 interface RoomForm { building: string; room_type: RoomType; price_per_night: string; total_rooms: string; rules: string }
-const EMPTY_FORM: RoomForm = { building: "국제관", room_type: "double", price_per_night: "35000", total_rooms: "20", rules: "체크인 15:00 / 체크아웃 11:00, 취사 금지" };
-const UNIV_ID = 1; // 데모 대학(A대학교). univ_admin 은 본인 university_id 로 고정
+const EMPTY_FORM: RoomForm = { building: "프런티어관", room_type: "double", price_per_night: "35000", total_rooms: "20", rules: "체크인 15:00 / 체크아웃 11:00, 취사 금지" };
+const UNIV_ID = 1; // 데모 대학(고려대학교). univ_admin 은 본인 university_id 로 고정
 
 export default function AdminRoomsPage() {
   const { user } = useUser();
@@ -45,7 +45,7 @@ export default function AdminRoomsPage() {
     return () => { alive = false; };
   }, [univId]);
 
-  const univ: University = rooms?.[0]?.university ?? { id: univId, name: "A대학교", name_en: "A University" };
+  const univ: University = rooms?.[0]?.university ?? { id: univId, name: "고려대학교", name_en: "Korea University" };
 
   async function savePeriod() {
     setBusy(true); setPeriodMsg(null);
@@ -60,7 +60,7 @@ export default function AdminRoomsPage() {
     setBusy(true); setError(null);
     try {
       const body = {
-        university_id: univId, building: form.building.trim() || "국제관", room_type: form.room_type,
+        university_id: univId, building: form.building.trim() || "프런티어관", room_type: form.room_type,
         price_per_night: Number(form.price_per_night) || 0, total_rooms: Number(form.total_rooms) || 0,
         open_from: openFrom, open_to: openTo, rules: form.rules.split(",").map((s) => s.trim()).filter(Boolean), photos: [] as string[], active: true,
       };
@@ -96,12 +96,12 @@ export default function AdminRoomsPage() {
   return (
     <AdminGate>
       <AdminHeader
-        title={`${univ.name} ${rooms?.[0]?.building ?? "국제관"} · 객실 관리`}
+        title={`${univ.name} ${rooms?.[0]?.building ?? "프런티어관"} · 객실 관리`}
         right={<Button variant="primary" full={false} className="h-10 min-h-0 px-4 text-[14px]" onClick={() => setShowAdd((v) => !v)}>{showAdd ? "닫기" : "+ 객실 추가"}</Button>}
       />
       {error && <ErrorText>{error}</ErrorText>}
 
-      {/* 개방 기간 (DM-06) */}
+      {/* 개방 기간 */}
       <div className="text-[13px] text-muted mb-1.5">개방 기간</div>
       <div className="flex flex-wrap items-center gap-2">
         <input type="date" value={openFrom} onChange={(e) => setOpenFrom(e.target.value)} className={adminInput + " w-[200px] h-10"} aria-label="개방 시작일" />
@@ -112,10 +112,10 @@ export default function AdminRoomsPage() {
         {openTo < openFrom && <span className="text-[12px] text-orange">종료일이 시작일보다 빠릅니다</span>}
       </div>
 
-      {/* 객실 추가 인라인 폼 (DM-04) */}
+      {/* 객실 추가 인라인 폼 */}
       {showAdd && (
         <Card className="mt-4">
-          <div className="text-[14px] font-semibold text-ink mb-3">객실 추가 · POST /admin/dorms</div>
+          <div className="text-[14px] font-semibold text-ink mb-3">객실 추가</div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <label className="text-[12px] text-muted">건물명<input className={adminInput + " w-full mt-1"} value={form.building} onChange={(e) => setForm({ ...form, building: e.target.value })} /></label>
             <label className="text-[12px] text-muted">객실 유형
@@ -135,7 +135,7 @@ export default function AdminRoomsPage() {
       )}
 
       {/* 객실 표 */}
-      <SectionLabel right="GET /admin/dorms · PATCH /admin/dorms/{id} (DM-05)">객실 목록</SectionLabel>
+      <SectionLabel>객실 목록</SectionLabel>
       {!rooms ? <Spinner /> : (
         <Table cols={cols}>
           {rooms.length === 0 && <EmptyRow cols={7}>등록된 객실이 없어요. “+ 객실 추가”로 등록하세요.</EmptyRow>}
@@ -168,7 +168,6 @@ export default function AdminRoomsPage() {
           })}
         </Table>
       )}
-      <Note className="mt-3">객실별 수정은 1박 가격·총 객실 수·활성 여부(DM-05). 개방 기간은 대학 단위로 저장(DM-06). 남은 객실은 예약 집계값이라 수정하지 않는다.</Note>
     </AdminGate>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
-// T10 여행자 정보 입력 — BK-01 POST /bookings (traveler), BK-06 POST /bookings/{id}/pay (목업)
+// 여행자 정보 입력 → 예약 신청 · 결제
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, Card, Chip, Field, Hero, inputCls, TopBar } from "@/components/ui";
+import { Button, Card, Chip, Field, Hero, inputCls } from "@/components/ui";
 import { ErrorBox, Notice, selectCls, textareaCls } from "@/components/tourist";
 import { submitBooking } from "@/components/tourist/booking";
 import { errMsg, SS_TRAVELER } from "@/components/tourist/format";
@@ -52,8 +52,7 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <TopBar back="/cart" title="여행자 정보" />
-      <Hero title="Traveler info" sub="숙박 승인·체크인에 필요한 정보를 한 번만 입력해요." right={<span className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">1 / 2</span>} />
+      <Hero back="/cart" title="Traveler info" sub="숙박 승인·체크인에 필요한 정보를 한 번만 입력해요." right={<span className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">1 / 2</span>} />
       <form className="px-5 pb-6 pt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         {!filled && (
           <Card tint className="flex items-center justify-between gap-3">
@@ -71,7 +70,7 @@ export default function CheckoutPage() {
         <Field label={`여권번호 (선택${hasDorm ? " · 숙박 항목이 있을 때만" : ""})`}>
           <input className={inputCls} value={form.passport_no ?? ""} onChange={(e) => set("passport_no", e.target.value)} placeholder="C12345678" />
         </Field>
-        <Notice>승인 후 대학 담당자에게만 전달돼요. (최소 수집 원칙)</Notice>
+        <Notice>숙박 승인 후 대학 담당자에게만 전달돼요.</Notice>
         <Field label="긴급연락처"><input className={inputCls} value={form.emergency_contact ?? ""} onChange={(e) => set("emergency_contact", e.target.value)} placeholder="+1 555 0100 (Mother)" /></Field>
         <div>
           <span className="block text-[12px] text-muted mb-1.5">동행 인원</span>
@@ -82,7 +81,7 @@ export default function CheckoutPage() {
         <Field label="특이사항 (선택)"><textarea className={textareaCls} value={form.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder="Vegetarian, late check-in…" /></Field>
         <div className="flex items-end justify-between pt-1"><span className="text-[13px] text-muted">합계 ({cart.items.length}개)</span><span className="text-[22px] font-bold text-navy">{won(cart.total)}</span></div>
         <ErrorBox message={err} />
-        <Button type="submit" disabled={busy}>{busy ? "신청 중…" : "다음 → 결제 (목업)"}</Button>
+        <Button type="submit" disabled={busy}>{busy ? "신청 중…" : "다음 → 결제"}</Button>
         {cart.items.length === 0 && <p className="text-[12px] text-muted text-center">장바구니가 비어 있어요. 정보만 저장돼요. <Link href="/cart" className="text-navy">장바구니</Link></p>}
       </form>
     </>

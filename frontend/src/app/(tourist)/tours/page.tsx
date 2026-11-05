@@ -1,9 +1,10 @@
 "use client";
 // T7 투어 코스 목록 (필터) — TR-01 GET /tours
+import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button, Card, Chip, Hero, ImageBlock, inputCls, Spinner, StatusPill } from "@/components/ui";
-import { ErrorBox, Notice } from "@/components/tourist";
+import { Card, Chip, Hero, MapEmbed, Spinner, StatusPill, inputCls } from "@/components/ui";
+import { ErrorBox } from "@/components/tourist";
 import { daysLabel, DEFAULT_TOUR_DATE, dowKey, errMsg, langsCode, md, THEME_LABEL, THEMES } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
@@ -19,7 +20,7 @@ export default function ToursPage() {
   const { lang } = useLang();
   const [theme, setTheme] = useState<string>("");
   const [date, setDate] = useState<string>(DEFAULT_TOUR_DATE);
-  const [useDate, setUseDate] = useState(true);
+  const [useDate, setUseDate] = useState(false);
   const [language, setLanguage] = useState<string>("");
   const [price, setPrice] = useState("all");
   const [showMap, setShowMap] = useState(false);
@@ -42,10 +43,10 @@ export default function ToursPage() {
 
   return (
     <>
-      <Hero title="Tours" sub="해설사와 걷는 성북 역사 코스 · 예약 즉시 확정"
-        right={<button type="button" onClick={() => setShowMap((v) => !v)} className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">지도 보기</button>} />
+      <Hero title="Tours" sub="해설사와 걷는 성북 역사 코스 · 예약 즉시 확정" right={<HeaderActions />} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <div className="flex flex-wrap gap-2">
+          <Chip selected={showMap} onClick={() => setShowMap((v) => !v)}>지도</Chip>
           <Chip selected={useDate} onClick={() => pick(() => setUseDate((v) => !v))}>{useDate ? `날짜 ${md(date)}` : "날짜 전체"}</Chip>
           <Chip selected={language === "en"} onClick={() => pick(() => setLanguage((v) => (v === "en" ? "" : "en")))}>EN</Chip>
           <Chip selected={language === "ko"} onClick={() => pick(() => setLanguage((v) => (v === "ko" ? "" : "ko")))}>KO</Chip>
@@ -60,7 +61,7 @@ export default function ToursPage() {
             <input type="date" className={inputCls} value={date} min="2027-01-05" max="2027-02-20" onChange={(e) => pick(() => setDate(e.target.value))} />
           </div>
         )}
-        {showMap && <ImageBlock h="h-32" label={`지도 · 코스 시작점\n${shown.map((t) => `${t.title}: ${t.meeting_point}`).join("\n")}`} className="whitespace-pre-line text-[12px]" />}
+        {showMap && <MapEmbed points={shown.flatMap((t) => t.places.slice(0, 1).map((pl) => ({ lat: pl.lat, lng: pl.lng })))} />}
 
         <ErrorBox message={err} />
         {!tours && !err && <Spinner />}
@@ -81,9 +82,6 @@ export default function ToursPage() {
             </Card>
           </Link>
         ))}
-        <Notice>날짜를 고르면 그 요일에 운영하는 코스만 보여요.</Notice>
-        <Card tint><div className="text-[13px] text-navy leading-relaxed">코스 경로 지도 · 해설사 정보 · 장소별 AI 이야기는 상세에서. 예약은 즉시 확정(승인 없음).</div></Card>
-        <Button variant="secondary" onClick={() => setShowMap((v) => !v)} className="text-[14px]">{showMap ? "지도 닫기" : "지도로 코스 시작점 보기"}</Button>
       </div>
     </>
   );

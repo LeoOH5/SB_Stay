@@ -1,6 +1,6 @@
 "use client";
 // B2 요청함 · 새 요청 / 수락됨 / 거절됨
-// API: GET /buddy/requests?status= (BD-05), PATCH /bookings/{id}/items/{itemId} (BK-04)
+import { HeaderActions } from "@/components/tourist/header-actions";
 import { useCallback, useEffect, useState } from "react";
 import { Card, Chip, Empty, Hero, SectionTitle, Spinner, StatusPill } from "@/components/ui";
 import { get, patch } from "@/lib/api";
@@ -53,7 +53,7 @@ export default function Page() {
 
   return (
     <div className="pb-6">
-      <Hero title="요청함" sub={`새 요청 ${count("requested")} · 수락됨 ${count("confirmed")} · 거절됨 ${count("rejected")}`} />
+      <Hero title="요청함" sub={`새 요청 ${count("requested")} · 수락됨 ${count("confirmed")} · 거절됨 ${count("rejected")}`} right={<HeaderActions />} />
       <LoginGate />
 
       <div className="px-5">
@@ -79,7 +79,7 @@ export default function Page() {
               <Card key={r.item_id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="text-[14px] font-semibold text-ink">{r.tourist.name} · {r.tourist.nationality}</div>
-                  <div className="mt-0.5 truncate text-[12px] text-muted">
+                  <div className="mt-0.5 break-keep text-[12px] text-muted">
                     {fmtDate(r.date)} {r.status === "confirmed" ? timeRange(r.time, r.duration_min) : r.time} · {r.status === "rejected" ? (reasons[r.item_id] ?? "일정 겹침") : `${r.interests.join("·")} ${kind}`}
                   </div>
                 </div>

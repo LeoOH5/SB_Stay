@@ -1,5 +1,5 @@
 "use client";
-// A2 회원 관리 · 소속 버디 승인 (A-03) — GET /admin/buddies (AD-03), PATCH /admin/buddies/{id} (AD-04), GET /admin/users (AD-05 목업)
+// 회원 관리 · 소속 버디 승인
 import { useCallback, useEffect, useState } from "react";
 import { get, patch } from "@/lib/api";
 import type { AdminBuddyRow, ListResponse, User } from "@/lib/types";
@@ -40,10 +40,10 @@ export default function AdminMembersPage() {
 
   return (
     <AdminGate>
-      <AdminHeader title="회원 관리 · 소속 버디 승인 (A-03)" />
+      <AdminHeader title="회원 관리 · 소속 버디 승인" />
       {error && <ErrorText>{error}</ErrorText>}
 
-      <SectionLabel className="mt-0" right="GET /admin/buddies (AD-03) · PATCH /admin/buddies/{id} (AD-04)">소속 버디</SectionLabel>
+      <SectionLabel className="mt-0">소속 버디</SectionLabel>
       {!buddies ? <Spinner /> : (
         <Table cols={[{ label: "이름" }, { label: "학교 이메일" }, { label: "전공" }, { label: "언어" }, { label: "상태" }, { label: "" }]}>
           {buddies.length === 0 && <EmptyRow cols={6}>소속 버디가 없어요.</EmptyRow>}
@@ -66,12 +66,11 @@ export default function AdminMembersPage() {
         </Table>
       )}
 
-      {/* 관광객·해설사 목록 (AD-05 목업) */}
+      {/* 관광객·해설사 목록 */}
       <details className="mt-7 group">
         <summary className="cursor-pointer list-none flex items-center gap-2 text-[15px] font-bold text-ink">
           <span className="text-muted text-[12px] transition group-open:rotate-90">▶</span>
-          관광객·해설사 목록 (목업)
-          <span className="text-[12px] text-muted font-normal">GET /admin/users (AD-05) · 운영자만</span>
+          관광객·해설사 목록
         </summary>
         <div className="mt-2">
           {!users ? <Spinner /> : (
@@ -91,11 +90,7 @@ export default function AdminMembersPage() {
         </div>
       </details>
 
-      <Note className="mt-5">투어 코스 관리 (시드 데이터로 대체 · 조회만) · 정산 관리 (목업: 대학/버디/해설사별 정산 내역 숫자) · 외국인 숙박신고 내보내기(A-06, 운영 단계)</Note>
-      <Note tone="orange" className="mt-3">
-        권한 원칙: 대학 담당자는 university_id가 같은 객실·예약·버디만 조회·수정. 운영자는 전체.<br />
-        로그인 응답의 role·university_id로 메뉴와 데이터가 바뀐다.
-      </Note>
+      <Note tone="orange" className="mt-5">대학 담당자는 소속 대학의 객실·예약·버디만 조회·수정할 수 있어요. 운영자는 전체 대학을 관리해요.</Note>
     </AdminGate>
   );
 }

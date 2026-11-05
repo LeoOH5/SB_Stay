@@ -1,5 +1,5 @@
 "use client";
-// 작은 토스트 — 목업 동작(채팅 열기 등)과 저장 완료 안내용
+// 작은 토스트 — 저장 완료 등 짧은 안내용
 import { useCallback, useEffect, useState } from "react";
 
 export function useToast() {

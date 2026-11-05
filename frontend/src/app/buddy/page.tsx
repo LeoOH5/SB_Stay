@@ -1,7 +1,6 @@
 "use client";
-// B1 버디 홈 · 새 요청 + 오늘 일정
-// API: GET /buddy/requests?status=requested (BD-05), GET /buddy/schedule (BD-06), GET /buddy/profile (BD-03),
-//      PATCH /bookings/{id}/items/{itemId} (BK-04), POST /ai/buddy-brief (AI-04)
+// 버디 홈 · 새 요청 + 오늘 일정
+import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Card, Empty, Hero, SectionTitle, Spinner, StatusPill } from "@/components/ui";
@@ -58,7 +57,7 @@ export default function Page() {
   const name = user?.name ?? profile?.name ?? "지우";
   const sub = isGuide
     ? `해설사 · ${profile ? langsLabel(profile.languages) : ""}`
-    : profile ? `${profile.university} ${profile.major} ${profile.year}학년 · ${langsLabel(profile.languages)}` : "A대학교 국어국문 3학년 · 한/영/일";
+    : profile ? `${profile.university} ${profile.major} ${profile.year}학년 · ${langsLabel(profile.languages)}` : "고려대학교 국어국문 3학년 · 한/영/일";
 
   const today = schedule?.filter((s) => s.date === DEMO_TODAY) ?? [];
   const upcoming = schedule?.filter((s) => s.date > DEMO_TODAY).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)) ?? [];
@@ -66,7 +65,9 @@ export default function Page() {
 
   return (
     <div className="pb-6">
-      <Hero title={`안녕하세요, ${name} 님`} sub={sub} right={<StatusPill status="approved" label="승인됨" />} />
+      <Hero title={`안녕하세요, ${name} 님`} sub={sub} right={<HeaderActions />}>
+        <div className="mt-2.5"><StatusPill status="approved" label="승인됨" /></div>
+      </Hero>
       <LoginGate />
 
       <div className="px-5">
@@ -93,7 +94,7 @@ export default function Page() {
                 </div>
                 <div className="mt-2 flex items-center justify-between text-[12px]">
                   <span className="text-muted">{s.date !== DEMO_TODAY && `${fmtDate(s.date)} · `}{MEETING_POINT_FALLBACK}</span>
-                  <button type="button" className="font-semibold text-navy" onClick={() => show("채팅은 목업이에요 (BK-09) · T6·B1 안의 채팅 영역으로 대신")}>채팅 열기 →</button>
+                  <button type="button" className="font-semibold text-navy" onClick={() => show("채팅은 준비 중이에요")}>채팅 열기 →</button>
                 </div>
               </Card>
             ))}

@@ -1,10 +1,10 @@
 "use client";
-// 투어 코스 관리 — GET /admin/tours (AD-07 · 시드 데이터 조회만)
+// 투어 코스 관리 (조회)
 import { useEffect, useState } from "react";
 import { get, won } from "@/lib/api";
 import type { ListResponse, Tour } from "@/lib/types";
 import { Spinner } from "@/components/ui";
-import { AdminGate, AdminHeader, EmptyRow, ErrorText, Note, Table, Td, Tr, errMsg, langs } from "@/components/admin/shell";
+import { AdminGate, AdminHeader, EmptyRow, ErrorText, Table, Td, Tr, errMsg, langs } from "@/components/admin/shell";
 
 const THEME_LABEL: Record<string, string> = { literature: "문학", independence: "독립운동", royal: "왕릉·성곽", hanok: "한옥·사찰", history: "역사" };
 const DAY_LABEL: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
@@ -25,7 +25,7 @@ export default function AdminToursPage() {
 
   return (
     <AdminGate>
-      <AdminHeader title="투어 코스 관리" sub="GET /admin/tours (AD-07) · 시드 데이터 조회만" />
+      <AdminHeader title="투어 코스 관리" />
       {error && <ErrorText>{error}</ErrorText>}
       {!tours ? <Spinner /> : (
         <Table cols={[{ label: "제목" }, { label: "테마" }, { label: "해설사" }, { label: "시간" }, { label: "가격" }, { label: "요일" }, { label: "언어" }]}>
@@ -43,7 +43,6 @@ export default function AdminToursPage() {
           ))}
         </Table>
       )}
-      <Note className="mt-3">시드 데이터 조회만(AD-07). 등록·수정은 제외.</Note>
     </AdminGate>
   );
 }

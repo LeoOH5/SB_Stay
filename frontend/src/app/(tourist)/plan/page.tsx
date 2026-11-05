@@ -48,17 +48,16 @@ export default function PlanPage() {
 
   return (
     <>
-      <Hero title="Plan my stay" sub="선택형 버튼으로 간단히. 자유 입력은 한 칸만." />
+      <Hero title="Plan my stay" sub="기간·예산·관심사를 고르면 일정을 짜 드려요" />
       <form className="px-5 pb-6 pt-4 space-y-4" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <div>
           <span className="block text-[12px] text-muted mb-1.5">체류 기간</span>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <input type="date" className={inputCls} value={checkIn} min="2027-01-05" max="2027-02-20" onChange={(e) => setCheckIn(e.target.value)} />
             <span className="text-muted">–</span>
             <input type="date" className={inputCls} value={checkOut} min="2027-01-05" max="2027-02-20" onChange={(e) => setCheckOut(e.target.value)} />
-            <span className="shrink-0 text-[13px] font-semibold text-navy">{nights}박</span>
           </div>
-          <span className="block text-[12px] text-muted mt-1">겨울방학 개방 기간 2027.1.5 – 2.20</span>
+          <span className="block text-[12px] text-muted mt-1"><b className="text-navy">{nights}박</b> · 겨울방학 개방 기간 2027.1.5 – 2.20</span>
         </div>
         <Field label="총 예산">
           <select className={selectCls} value={budget} onChange={(e) => setBudget(Number(e.target.value))}>
@@ -86,7 +85,6 @@ export default function PlanPage() {
         </Field>
         <ErrorBox message={err} />
         <Button type="submit" disabled={busy}>{busy ? "AI가 일정을 짜는 중…" : "일정 만들기"}</Button>
-        <p className="text-[12px] text-muted">가격·운영시간·가능 날짜는 DB 값으로 먼저 거르고, AI는 선택·순서·설명만 해요.</p>
       </form>
     </>
   );

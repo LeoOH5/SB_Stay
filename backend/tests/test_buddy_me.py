@@ -3,7 +3,7 @@ from tests.conftest import login
 
 def test_profile_and_availability(client, buddy, reset_db):
     r = client.get("/api/v1/buddy/profile", headers=buddy)
-    assert r.status_code == 200 and r.json()["name"] == "지우" and r.json()["university"] == "A대학교"
+    assert r.status_code == 200 and r.json()["name"] == "지우" and r.json()["university"] == "고려대학교"
     r = client.put("/api/v1/buddy/profile", json={"intro": "새 소개", "languages": ["ko", "en"]}, headers=buddy)
     assert r.json()["intro"] == "새 소개" and r.json()["languages"] == ["ko", "en"]
     r = client.put("/api/v1/buddy/availability", json={"dates": ["2027-01-20", "2027-01-21", "2027-01-20"]}, headers=buddy)
