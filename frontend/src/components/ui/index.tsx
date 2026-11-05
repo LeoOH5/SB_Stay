@@ -76,8 +76,8 @@ export function CategoryTiles() {
   return (
     <div className="grid grid-cols-3 gap-2">
       {items.map((i) => (
-        <Link key={i.href} href={i.href} className="flex flex-col items-start gap-2 rounded-[14px] bg-white p-3 ring-1 ring-line/60 shadow-[0_1px_3px_rgba(31,42,68,0.08)] active:scale-[0.98] transition">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-bg text-navy">{i.icon}</span>
+        <Link key={i.href} href={i.href} className="flex flex-col items-center gap-1.5 rounded-[14px] bg-white px-2 py-3.5 text-center ring-1 ring-line/60 shadow-[0_1px_3px_rgba(31,42,68,0.08)] active:scale-[0.98] transition">
+          <span className="mb-0.5 flex h-11 w-11 items-center justify-center rounded-xl bg-navy-bg text-navy">{i.icon}</span>
           <span className="text-[14px] font-bold text-ink leading-tight">{i.title}</span>
           <span className="text-[11.5px] leading-snug text-muted">{i.desc}</span>
         </Link>
@@ -181,6 +181,28 @@ export function MapEmbed({ points, className, h = "h-44" }: { points: { lat: num
     <div className={cn("overflow-hidden rounded-[14px] ring-1 ring-line/60", h, className)}>
       <iframe title="지도" className="h-full w-full border-0" loading="lazy" src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${m.lat},${m.lng}`} />
     </div>
+  );
+}
+
+/** 대학 사진 출처 (Wikimedia Commons) */
+export const PHOTO_CREDITS: Record<string, string> = {
+  "/dorms/korea.jpg": "안암학사 프런티어관 · Mimacds · Wikimedia Commons · CC BY-SA 3.0",
+  "/dorms/kookmin.jpg": "국민대학교 정문 · hyolee2 · Wikimedia Commons · CC BY-SA 3.0",
+  "/dorms/sungshin.jpg": "성신여대 수정캠퍼스 · Sungshinpr · Wikimedia Commons · CC BY-SA 4.0",
+  "/dorms/hansung.jpg": "한성대 삼군부 총무당 · 오모군 · Wikimedia Commons · CC BY 4.0",
+  "/dorms/seokyeong.jpg": "서경대학교 · hyolee2 · Wikimedia Commons · CC BY-SA 3.0",
+  "/dorms/karts.jpg": "한국예술종합학교 석관동 캠퍼스 · Younghopark7 · Wikimedia Commons · CC BY-SA 3.0",
+};
+
+/** 대학 사진. 없으면 아이콘 타일 */
+export function DormPhoto({ src, className, label, credit = false }: { src?: string; className?: string; label?: string; credit?: boolean }) {
+  if (!src) return <PhotoTile className={className} label={label} />;
+  return (
+    <figure className={cn("relative overflow-hidden rounded-[14px] bg-gray-bg", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={label ?? ""} className="h-full w-full object-cover" loading="lazy" />
+      {credit && PHOTO_CREDITS[src] && <figcaption className="absolute inset-x-0 bottom-0 bg-black/45 px-2 py-0.5 text-[10px] text-white/90">사진: {PHOTO_CREDITS[src]}</figcaption>}
+    </figure>
   );
 }
 

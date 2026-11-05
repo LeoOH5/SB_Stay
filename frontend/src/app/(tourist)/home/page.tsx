@@ -1,5 +1,5 @@
 "use client";
-// T1 홈 — HM-01 GET /packages, CM-01 GET /contents/intro, 패키지 담기용 DM-03·TR-02·BD-02
+// T1 홈 — HM-01 GET /packages, 패키지 담기용 DM-03·TR-02·BD-02
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,7 +10,7 @@ import { get, won } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { useLang } from "@/lib/i18n";
-import type { Buddy, CartItem, ContentDoc, DormRoom, ListResponse, Package, Tour } from "@/lib/types";
+import type { Buddy, CartItem, DormRoom, ListResponse, Package, Tour } from "@/lib/types";
 
 /** 패키지 구성(dorm/tour/buddy)을 상세 조회해 CartItem 으로 변환 */
 async function packageItems(p: Package): Promise<CartItem[]> {
@@ -39,7 +39,6 @@ export default function HomePage() {
   const { user } = useUser();
   const cart = useCart();
   const [pkgs, setPkgs] = useState<Package[] | null>(null);
-  const [intro, setIntro] = useState<ContentDoc | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [sel, setSel] = useState<Package | null>(null);
   const [selItems, setSelItems] = useState<CartItem[] | null>(null);
@@ -50,11 +49,6 @@ export default function HomePage() {
     get<ListResponse<Package>>("/packages").then((r) => { if (alive) setPkgs(r.items); }).catch((e: unknown) => { if (alive) setErr(errMsg(e)); });
     return () => { alive = false; };
   }, []);
-  useEffect(() => {
-    let alive = true;
-    okv(get<ContentDoc>("/contents/intro", { lang })).then((c) => { if (alive) setIntro(c); }).catch(() => { /* 소개는 선택 */ });
-    return () => { alive = false; };
-  }, [lang]);
 
   const openPackage = (p: Package) => {
     setSel(p); setSelItems(null); setSheetErr(null);
@@ -93,14 +87,6 @@ export default function HomePage() {
           </Card>
         )}
 
-        {intro && (
-          <>
-            <SectionTitle>성북 소개</SectionTitle>
-            <Card accent="green">
-              <div className="text-[13px] leading-relaxed text-ink">{intro.body}</div>
-            </Card>
-          </>
-        )}
       </div>
 
       <BottomSheet open={sel !== null} onClose={() => setSel(null)} title={sel ? (lang === "en" ? sel.title_en : sel.title) : ""}>

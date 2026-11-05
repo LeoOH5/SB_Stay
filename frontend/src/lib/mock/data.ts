@@ -2,8 +2,13 @@
 import type { AdminBookingRow, AdminBuddyRow, Booking, Buddy, BuddyEarning, BuddyRequest, ContentDoc, Dashboard, DormRoom, Notification, Package, Place, Review, Tour, University, User } from "../types";
 
 export const universities: University[] = [
-  { id: 1, name: "A대학교", name_en: "A University", open_from: "2027-01-05", open_to: "2027-02-20" },
-  { id: 2, name: "B대학교", name_en: "B University", open_from: "2027-01-05", open_to: "2027-02-20" },
+  { id: 1, name: "고려대학교", name_en: "Korea University", open_from: "2027-01-05", open_to: "2027-02-20" },
+  { id: 2, name: "국민대학교", name_en: "Kookmin University", open_from: "2027-01-05", open_to: "2027-02-20" },
+  { id: 3, name: "성신여자대학교", name_en: "Sungshin Women's University", open_from: "2027-01-05", open_to: "2027-02-20" },
+  { id: 4, name: "한성대학교", name_en: "Hansung University", open_from: "2027-01-05", open_to: "2027-02-20" },
+  { id: 5, name: "서경대학교", name_en: "Seokyeong University", open_from: "2027-01-05", open_to: "2027-02-20" },
+  { id: 6, name: "동덕여자대학교", name_en: "Dongduk Women's University", open_from: "2027-01-05", open_to: "2027-02-20" },
+  { id: 7, name: "한국예술종합학교", name_en: "Korea National University of Arts", open_from: "2027-01-05", open_to: "2027-02-20" },
 ];
 
 export const users: Record<string, User> = {
@@ -11,14 +16,19 @@ export const users: Record<string, User> = {
   "yuki@example.com": { id: 2, name: "Yuki Sato", email: "yuki@example.com", role: "tourist", university_id: null, language: "en" },
   "jiwoo@a-univ.ac.kr": { id: 3, name: "지우", email: "jiwoo@a-univ.ac.kr", role: "buddy", university_id: 1, language: "ko", calendar_connected: false },
   "guide.park@example.com": { id: 4, name: "박해설", email: "guide.park@example.com", role: "guide", university_id: null, language: "ko" },
-  "admin@a-univ.ac.kr": { id: 5, name: "A대학교 국제관 담당자", email: "admin@a-univ.ac.kr", role: "univ_admin", university_id: 1, language: "ko" },
+  "admin@a-univ.ac.kr": { id: 5, name: "고려대학교 프런티어관 담당자", email: "admin@a-univ.ac.kr", role: "univ_admin", university_id: 1, language: "ko" },
   "operator@sbstay.app": { id: 6, name: "운영자", email: "operator@sbstay.app", role: "operator", university_id: null, language: "ko" },
 };
 
 export const dorms: DormRoom[] = [
-  { id: 10, university: universities[0], building: "국제관", room_type: "double", price_per_night: 35000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 12, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "취사 금지, 공용 주방 이용", "외부인 출입 불가, 23:00 이후 정숙", "여권 정보는 예약 시점에만 입력 (최소 수집)"] },
-  { id: 11, university: universities[0], building: "국제관", room_type: "single", price_per_night: 40000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 9, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "취사 금지", "23:00 이후 정숙"] },
-  { id: 12, university: universities[1], building: "생활관", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 20, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "공용 세탁실 이용"] },
+  { id: 10, university: universities[0], building: "프런티어관", room_type: "double", price_per_night: 35000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 12, photos: ["/dorms/korea.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "취사 금지, 공용 주방 이용", "외부인 출입 불가, 23:00 이후 정숙", "여권 정보는 예약 시점에만 입력"] },
+  { id: 11, university: universities[0], building: "프런티어관", room_type: "single", price_per_night: 40000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 9, photos: ["/dorms/korea.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "취사 금지", "23:00 이후 정숙"] },
+  { id: 12, university: universities[1], building: "생활관", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 20, photos: ["/dorms/kookmin.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "공용 세탁실 이용"] },
+  { id: 13, university: universities[2], building: "성미료", room_type: "double", price_per_night: 32000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 10, photos: ["/dorms/sungshin.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "국제학생과 같은 건물 이용"] },
+  { id: 14, university: universities[3], building: "생활관", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 8, photos: ["/dorms/hansung.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "공용 세탁실 이용"] },
+  { id: 15, university: universities[4], building: "생활관", room_type: "single", price_per_night: 33000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 6, photos: ["/dorms/seokyeong.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "취사 금지"] },
+  { id: 16, university: universities[5], building: "제1생활관", room_type: "double", price_per_night: 30000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 11, photos: [], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "여성 전용"] },
+  { id: 17, university: universities[6], building: "석관동 생활관", room_type: "double", price_per_night: 31000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 7, photos: ["/dorms/karts.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "23:00 이후 정숙", "연습실 이용은 별도 신청"] },
 ];
 
 export const places: Place[] = [
@@ -46,12 +56,12 @@ export const stories: Record<number, { intro: string; qa: { q: string; a: string
 };
 
 export const buddies: Buddy[] = [
-  { id: 31, name: "지우", university: "A대학교", major: "국어국문", year: 3, languages: ["ko", "en", "ja"], interests: ["literature", "walking", "cafe"], intro: "성북동 골목이랑 캠퍼스 맛집을 같이 걸어요. 역사 해설은 해설사·AI가, 저는 친구가 되어 드려요.", avatar: "illust_01", available_dates: ["2027-01-13", "2027-01-14", "2027-01-16", "2027-01-17"], rating: 4.9, review_count: 12, hourly_fee: 15000 },
-  { id: 32, name: "민호", university: "B대학교", major: "사학과", year: 2, languages: ["ko", "en"], interests: ["independence", "photo"], intro: "성북동 답사 동아리에서 활동해요. 사진 찍기 좋은 골목을 알아요.", avatar: "illust_02", available_dates: ["2027-01-13", "2027-01-15"], rating: 4.7, review_count: 8, hourly_fee: 15000 },
-  { id: 33, name: "하린", university: "A대학교", major: "관광학", year: 4, languages: ["ko", "en", "zh"], interests: ["food", "cafe"], intro: "교환학생 버디 경험 2회. 성북동 국수 골목 안내해요.", avatar: "illust_03", available_dates: ["2027-01-14", "2027-01-16"], rating: 4.8, review_count: 15, hourly_fee: 15000 },
-  { id: 34, name: "도윤", university: "A대학교", major: "경영", year: 2, languages: ["ko", "en"], interests: ["walking", "sports"], intro: "캠퍼스 투어와 야경 산책 담당.", avatar: "illust_04", available_dates: ["2027-01-20", "2027-01-21"], rating: 4.5, review_count: 3, hourly_fee: 15000 },
-  { id: 35, name: "서연", university: "B대학교", major: "영문학", year: 3, languages: ["ko", "en"], interests: ["literature", "craft"], intro: "영어 토론 동아리. 공예 체험 같이 가요.", avatar: "illust_05", available_dates: ["2027-01-13", "2027-01-17"], rating: 4.9, review_count: 6, hourly_fee: 15000 },
-  { id: 36, name: "준서", university: "A대학교", major: "건축학", year: 4, languages: ["ko", "en", "ja"], interests: ["hanok", "architecture"], intro: "근대 건축과 한옥 이야기를 좋아해요.", avatar: "illust_06", available_dates: ["2027-01-14", "2027-01-15"], rating: 4.6, review_count: 9, hourly_fee: 15000 },
+  { id: 31, name: "지우", university: "고려대학교", major: "국어국문", year: 3, languages: ["ko", "en", "ja"], interests: ["literature", "walking", "cafe"], intro: "성북동 골목이랑 캠퍼스 맛집을 같이 걸어요. 역사 해설은 해설사·AI가, 저는 친구가 되어 드려요.", avatar: "illust_01", available_dates: ["2027-01-13", "2027-01-14", "2027-01-16", "2027-01-17"], rating: 4.9, review_count: 12, hourly_fee: 15000 },
+  { id: 32, name: "민호", university: "국민대학교", major: "사학과", year: 2, languages: ["ko", "en"], interests: ["independence", "photo"], intro: "성북동 답사 동아리에서 활동해요. 사진 찍기 좋은 골목을 알아요.", avatar: "illust_02", available_dates: ["2027-01-13", "2027-01-15"], rating: 4.7, review_count: 8, hourly_fee: 15000 },
+  { id: 33, name: "하린", university: "고려대학교", major: "관광학", year: 4, languages: ["ko", "en", "zh"], interests: ["food", "cafe"], intro: "교환학생 버디 경험 2회. 성북동 국수 골목 안내해요.", avatar: "illust_03", available_dates: ["2027-01-14", "2027-01-16"], rating: 4.8, review_count: 15, hourly_fee: 15000 },
+  { id: 34, name: "도윤", university: "고려대학교", major: "경영", year: 2, languages: ["ko", "en"], interests: ["walking", "sports"], intro: "캠퍼스 투어와 야경 산책 담당.", avatar: "illust_04", available_dates: ["2027-01-20", "2027-01-21"], rating: 4.5, review_count: 3, hourly_fee: 15000 },
+  { id: 35, name: "서연", university: "국민대학교", major: "영문학", year: 3, languages: ["ko", "en"], interests: ["literature", "craft"], intro: "영어 토론 동아리. 공예 체험 같이 가요.", avatar: "illust_05", available_dates: ["2027-01-13", "2027-01-17"], rating: 4.9, review_count: 6, hourly_fee: 15000 },
+  { id: 36, name: "준서", university: "고려대학교", major: "건축학", year: 4, languages: ["ko", "en", "ja"], interests: ["hanok", "architecture"], intro: "근대 건축과 한옥 이야기를 좋아해요.", avatar: "illust_06", available_dates: ["2027-01-14", "2027-01-15"], rating: 4.6, review_count: 9, hourly_fee: 15000 },
 ];
 
 export const packages: Package[] = [
@@ -69,24 +79,24 @@ export const bookings: Booking[] = [
   { id: 501, code: "SB-2027-0112", status: "partially_approved", total_price: 155000, platform_fee: 15500, created_at: "2027-01-05T10:00:00Z", paid_at: "2027-01-05T10:05:00Z",
     traveler: { name: "Emma Clark", nationality: "US", email: "emma@example.com", emergency_contact: "+1 555 0100", guests: 1 },
     items: [
-      { id: 1, type: "dorm", ref_id: 10, title: "A대학교 국제관 2인실", meta: "1/12 – 1/15 · 3박", status: "approved", price: 105000, date_from: "2027-01-12", date_to: "2027-01-15" },
+      { id: 1, type: "dorm", ref_id: 10, title: "고려대학교 프런티어관 2인실", meta: "1/12 – 1/15 · 3박", status: "approved", price: 105000, date_from: "2027-01-12", date_to: "2027-01-15" },
       { id: 2, type: "tour", ref_id: 3, title: "문인의 성북동 산책", meta: "1/13 10:00 · 해설사 박해설 · 한성대입구역 5번 출구", status: "confirmed", price: 20000, date_from: "2027-01-13", time: "10:00" },
       { id: 3, type: "buddy", ref_id: 31, title: "지우와 동네 걷기", meta: "1/13 14:00 · 2시간", status: "requested", price: 30000, date_from: "2027-01-13", time: "14:00" },
     ] },
   { id: 480, code: "SB-2026-1120", status: "confirmed", total_price: 95000, platform_fee: 9500, created_at: "2026-11-10T09:00:00Z", paid_at: "2026-11-10T09:02:00Z",
     traveler: { name: "Emma Clark", nationality: "US", email: "emma@example.com", guests: 1 },
     items: [
-      { id: 11, type: "dorm", ref_id: 12, title: "C대학교 생활관 2박", meta: "11/20 – 11/22", status: "confirmed", price: 60000, date_from: "2026-11-20", date_to: "2026-11-22" },
+      { id: 11, type: "dorm", ref_id: 12, title: "성신여자대학교 성미료 2박", meta: "11/20 – 11/22", status: "confirmed", price: 60000, date_from: "2026-11-20", date_to: "2026-11-22" },
       { id: 12, type: "tour", ref_id: 5, title: "정릉과 성곽길", meta: "11/21 10:00", status: "confirmed", price: 25000, date_from: "2026-11-21", time: "10:00" },
       { id: 13, type: "buddy", ref_id: 32, title: "민호와 캠퍼스 걷기", meta: "11/21 14:00", status: "confirmed", price: 10000, date_from: "2026-11-21", time: "14:00" },
     ] },
   { id: 470, code: "SB-2026-0812", status: "cancelled", total_price: 70000, platform_fee: 7000, created_at: "2026-08-01T09:00:00Z",
     traveler: { name: "Emma Clark", nationality: "US", email: "emma@example.com", guests: 1 },
-    items: [{ id: 21, type: "dorm", ref_id: 12, title: "B대학교 생활관 2박", meta: "8/12 – 8/14", status: "cancelled", price: 60000 }, { id: 22, type: "tour", ref_id: 5, title: "성곽길 투어", meta: "8/13 10:00", status: "cancelled", price: 10000 }] },
+    items: [{ id: 21, type: "dorm", ref_id: 12, title: "국민대학교 생활관 2박", meta: "8/12 – 8/14", status: "cancelled", price: 60000 }, { id: 22, type: "tour", ref_id: 5, title: "성곽길 투어", meta: "8/13 10:00", status: "cancelled", price: 10000 }] },
 ];
 
 export const notifications: Notification[] = [
-  { id: 1, type: "item_approved", title: "숙박 승인됨 · A대학교 국제관 1/12–1/15", read_at: null, created_at: "2027-01-06T09:00:00Z" },
+  { id: 1, type: "item_approved", title: "숙박 승인됨 · 고려대학교 프런티어관 1/12–1/15", read_at: null, created_at: "2027-01-06T09:00:00Z" },
   { id: 2, type: "item_confirmed", title: "투어 확정 · 문인의 성북동 산책 1/13 10:00", read_at: null, created_at: "2027-01-05T10:06:00Z" },
   { id: 3, type: "item_requested", title: "버디 요청 접수 · 지우 · 수락 대기", read_at: "2027-01-05T11:00:00Z", created_at: "2027-01-05T10:05:00Z" },
 ];
@@ -121,12 +131,12 @@ export const dashboard: Dashboard = {
 };
 
 export const adminBookings: AdminBookingRow[] = [
-  { booking_id: 501, item_id: 1, code: "SB-2027-0112", tourist: "Emma Clark", nationality: "미국", type: "dorm", title: "A대 국제관 2인실", schedule: "1/12 – 1/15", price: 105000, status: "approved", university_id: 1 },
+  { booking_id: 501, item_id: 1, code: "SB-2027-0112", tourist: "Emma Clark", nationality: "미국", type: "dorm", title: "고려대 프런티어관 2인실", schedule: "1/12 – 1/15", price: 105000, status: "approved", university_id: 1 },
   { booking_id: 501, item_id: 2, code: "SB-2027-0112", tourist: "Emma Clark", nationality: "미국", type: "tour", title: "문인의 성북동 산책", schedule: "1/13 10:00", price: 20000, status: "confirmed" },
   { booking_id: 501, item_id: 3, code: "SB-2027-0112", tourist: "Emma Clark", nationality: "미국", type: "buddy", title: "지우 · 동네 걷기", schedule: "1/13 14:00", price: 30000, status: "requested", university_id: 1 },
-  { booking_id: 502, item_id: 4, code: "SB-2027-0114", tourist: "Yuki Sato", nationality: "일본", type: "dorm", title: "A대 국제관 1인실", schedule: "1/14 – 1/16", price: 80000, status: "requested", university_id: 1 },
+  { booking_id: 502, item_id: 4, code: "SB-2027-0114", tourist: "Yuki Sato", nationality: "일본", type: "dorm", title: "고려대 프런티어관 1인실", schedule: "1/14 – 1/16", price: 80000, status: "requested", university_id: 1 },
   { booking_id: 503, item_id: 5, code: "SB-2027-0116", tourist: "Lucas Martin", nationality: "프랑스", type: "buddy", title: "지우 · 한옥 골목", schedule: "1/16 11:00", price: 30000, status: "approved", university_id: 1 },
-  { booking_id: 504, item_id: 6, code: "SB-2027-0119", tourist: "김민지", nationality: "한국", type: "dorm", title: "B대 생활관 2인실", schedule: "1/19 – 1/26", price: 245000, status: "requested", university_id: 2 },
+  { booking_id: 504, item_id: 6, code: "SB-2027-0119", tourist: "김민지", nationality: "한국", type: "dorm", title: "국민대 생활관 2인실", schedule: "1/19 – 1/26", price: 245000, status: "requested", university_id: 2 },
   { booking_id: 505, item_id: 7, code: "SB-2027-0108", tourist: "Mia Wong", nationality: "호주", type: "tour", title: "정릉과 성곽길", schedule: "1/8 10:00", price: 25000, status: "cancelled" },
 ];
 

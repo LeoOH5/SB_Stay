@@ -11,8 +11,8 @@ import { AdminGate, AdminHeader, EmptyRow, ErrorText, ROOM_LABEL, SectionLabel, 
 type AdminRoom = DormRoom & { total_rooms?: number; active?: boolean };
 type RoomType = DormRoom["room_type"];
 interface RoomForm { building: string; room_type: RoomType; price_per_night: string; total_rooms: string; rules: string }
-const EMPTY_FORM: RoomForm = { building: "국제관", room_type: "double", price_per_night: "35000", total_rooms: "20", rules: "체크인 15:00 / 체크아웃 11:00, 취사 금지" };
-const UNIV_ID = 1; // 데모 대학(A대학교). univ_admin 은 본인 university_id 로 고정
+const EMPTY_FORM: RoomForm = { building: "프런티어관", room_type: "double", price_per_night: "35000", total_rooms: "20", rules: "체크인 15:00 / 체크아웃 11:00, 취사 금지" };
+const UNIV_ID = 1; // 데모 대학(고려대학교). univ_admin 은 본인 university_id 로 고정
 
 export default function AdminRoomsPage() {
   const { user } = useUser();
@@ -45,7 +45,7 @@ export default function AdminRoomsPage() {
     return () => { alive = false; };
   }, [univId]);
 
-  const univ: University = rooms?.[0]?.university ?? { id: univId, name: "A대학교", name_en: "A University" };
+  const univ: University = rooms?.[0]?.university ?? { id: univId, name: "고려대학교", name_en: "Korea University" };
 
   async function savePeriod() {
     setBusy(true); setPeriodMsg(null);
@@ -60,7 +60,7 @@ export default function AdminRoomsPage() {
     setBusy(true); setError(null);
     try {
       const body = {
-        university_id: univId, building: form.building.trim() || "국제관", room_type: form.room_type,
+        university_id: univId, building: form.building.trim() || "프런티어관", room_type: form.room_type,
         price_per_night: Number(form.price_per_night) || 0, total_rooms: Number(form.total_rooms) || 0,
         open_from: openFrom, open_to: openTo, rules: form.rules.split(",").map((s) => s.trim()).filter(Boolean), photos: [] as string[], active: true,
       };
@@ -96,7 +96,7 @@ export default function AdminRoomsPage() {
   return (
     <AdminGate>
       <AdminHeader
-        title={`${univ.name} ${rooms?.[0]?.building ?? "국제관"} · 객실 관리`}
+        title={`${univ.name} ${rooms?.[0]?.building ?? "프런티어관"} · 객실 관리`}
         right={<Button variant="primary" full={false} className="h-10 min-h-0 px-4 text-[14px]" onClick={() => setShowAdd((v) => !v)}>{showAdd ? "닫기" : "+ 객실 추가"}</Button>}
       />
       {error && <ErrorText>{error}</ErrorText>}

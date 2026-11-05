@@ -9,7 +9,7 @@
 | 버디 | jiwoo@a-univ.ac.kr | `/buddy/login` 또는 `/login` | `/buddy` |
 | 버디 | minho@b-univ.ac.kr | `/buddy/login` | `/buddy` |
 | 해설사 | guide.park@example.com | `/buddy/login` | `/buddy` |
-| 대학 담당자 (A대학교) | admin@a-univ.ac.kr | `/login` | `/admin` |
+| 대학 담당자 (고려대학교) | admin@a-univ.ac.kr | `/login` | `/admin` |
 | 운영자 | operator@sbstay.app | `/login` | `/admin` |
 
 그 밖의 버디(하린·도윤·서연·준서)와 해설사(김해설·이해설) 계정은 `backend/app/seeds/data/users.json` 참고.

@@ -56,7 +56,7 @@ export default function Page() {
   const name = user?.name ?? profile?.name ?? "지우";
   const sub = isGuide
     ? `해설사 · ${profile ? langsLabel(profile.languages) : ""}`
-    : profile ? `${profile.university} ${profile.major} ${profile.year}학년 · ${langsLabel(profile.languages)}` : "A대학교 국어국문 3학년 · 한/영/일";
+    : profile ? `${profile.university} ${profile.major} ${profile.year}학년 · ${langsLabel(profile.languages)}` : "고려대학교 국어국문 3학년 · 한/영/일";
 
   const today = schedule?.filter((s) => s.date === DEMO_TODAY) ?? [];
   const upcoming = schedule?.filter((s) => s.date > DEMO_TODAY).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)) ?? [];

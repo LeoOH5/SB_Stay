@@ -17,7 +17,7 @@ const MENU = [
 export function AdminSidebar() {
   const path = usePathname();
   const { user } = useUser();
-  const who = user ? `${user.name} · ${ROLE_LABEL[user.role]}` : "A대학교 국제관 담당자";
+  const who = user ? `${user.name} · ${ROLE_LABEL[user.role]}` : "고려대학교 프런티어관 담당자";
   return (
     <aside className="w-60 shrink-0 bg-navy text-white flex flex-col">
       <div className="px-5 py-5"><div className="text-[15px] font-bold">SB Stay Admin</div><div className="text-[12px] text-white/60 mt-0.5 truncate">{who}</div></div>

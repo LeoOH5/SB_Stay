@@ -36,7 +36,7 @@
   "id": 5,
   "email": "admin@a-univ.ac.kr",
   "password": "demo1234",
-  "name": "A대학교 국제관 담당자",
+  "name": "고려대학교 프런티어관 담당자",
   "role": "univ_admin",
   "university_id": 1,
   "language": "ko"

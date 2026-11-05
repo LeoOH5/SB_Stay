@@ -34,7 +34,7 @@ function applyAdjust(d: Dashboard, a: Adjust): Dashboard {
   };
 }
 
-// 객실명("A대 국제관 2인실")에서 객실 유형만 뽑는다
+// 객실명("고려대 프런티어관 2인실")에서 객실 유형만 뽑는다
 function roomOf(title: string) {
   for (const l of Object.values(ROOM_LABEL)) if (title.includes(l)) return l;
   return title;

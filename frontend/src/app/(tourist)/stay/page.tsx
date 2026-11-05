@@ -2,7 +2,7 @@
 // T4b 숙박 목록 — DM-02 GET /dorms
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Card, Hero, ListRow, Spinner } from "@/components/ui";
+import { Card, DormPhoto, Hero, Spinner } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { errMsg, ROOM_LABEL, ymd } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -26,20 +26,25 @@ export default function StayPage() {
 
   return (
     <>
-      <Hero title="Dorm stays" sub={`${ymd(openFrom)} – ${ymd(openTo).slice(5)} 겨울방학 개방 · 성북구 대학 ${univCount || 3}곳`} />
+      <Hero title="Dorm stays" sub={`${ymd(openFrom)} – ${ymd(openTo).slice(5)} 겨울방학 개방 · 성북구 대학 ${univCount || 7}곳`} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <ErrorBox message={err} />
         {!dorms && !err && <Spinner />}
         {dorms && (
-          <Card className="divide-y divide-line/60 py-0">
+          <div className="space-y-3">
             {dorms.map((d) => (
-              <Link key={d.id} href={`/stay/${d.id}`} className="block">
-                <ListRow icon={<svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 20V9l9-5 9 5v11" /><path d="M9 20v-6h6v6" /></svg>} title={`${lang === "en" ? d.university.name_en : d.university.name} ${d.building}`}
-                  meta={`${ROOM_LABEL[d.room_type]} · 남은 객실 ${d.available_rooms} · 개방 ${ymd(d.open_from).slice(5)} – ${ymd(d.open_to).slice(5)}`}
-                  right={<div className="text-[14px] font-semibold text-navy">{won(d.price_per_night)}~</div>} />
+              <Link key={d.id} href={`/stay/${d.id}`} className="block overflow-hidden rounded-[14px] bg-white ring-1 ring-line/60 shadow-[0_1px_3px_rgba(31,42,68,0.08)] active:scale-[0.99] transition">
+                <DormPhoto src={d.photos[0]} label={d.university.name} className="h-36 rounded-none" />
+                <div className="flex items-start justify-between gap-3 p-3.5">
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-bold text-ink break-keep">{lang === "en" ? d.university.name_en : d.university.name}</div>
+                    <div className="mt-0.5 text-[13px] text-muted">{d.building} · {ROOM_LABEL[d.room_type]} · 남은 객실 {d.available_rooms}</div>
+                  </div>
+                  <div className="shrink-0 text-right"><div className="text-[15px] font-bold text-navy">{won(d.price_per_night)}</div><div className="text-[11px] text-muted">1박</div></div>
+                </div>
               </Link>
             ))}
-          </Card>
+          </div>
         )}
         <Card tint><div className="text-[13px] text-navy leading-relaxed">숙박 판매 주체는 각 대학이에요. 신청하면 대학 담당자가 승인한 뒤 확정됩니다.</div></Card>
       </div>

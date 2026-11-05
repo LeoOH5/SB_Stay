@@ -87,7 +87,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if (method === "POST" && path === "/ai/plan") {
     const plan: AiPlan = { plan_id: "pl_" + Math.random().toString(36).slice(2, 5), reason: "문학·독립운동 관심에 맞춰 한용운·이태준이 살던 성북동 코스를 넣었어요. 숙소에서 걸어서 20분.", total_price: 155000,
       days: [
-        { date: "2027-01-12", items: [{ time: "15:00", type: "dorm", ref_id: 10, title: "A대학교 국제관 체크인", price: 105000, meta: "숙박 · 2인실 · ₩35,000/박 · 3박" }] },
+        { date: "2027-01-12", items: [{ time: "15:00", type: "dorm", ref_id: 10, title: "고려대학교 프런티어관 체크인", price: 105000, meta: "숙박 · 2인실 · ₩35,000/박 · 3박" }] },
         { date: "2027-01-13", items: [{ time: "10:00", type: "tour", ref_id: 3, title: "문인의 성북동 산책", price: 20000, meta: "투어 · 해설사 · 2시간" }, { time: "14:00", type: "buddy", ref_id: 31, title: "버디와 캠퍼스·동네 걷기", price: 30000, meta: "버디 지우 · 한/영/일" }] },
         { date: "2027-01-14", items: [{ time: null, type: "free", ref_id: null, title: "정릉 · 선잠박물관 추천", price: 0, meta: "자유 일정 · AI 제안" }] },
         { date: "2027-01-15", items: [{ time: "11:00", type: "free", ref_id: null, title: "체크아웃", price: 0, meta: "숙박" }] },
@@ -133,7 +133,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     return bk ?? { id, status: "cancelled" };
   }
   if ((x = m(/^\/bookings\/(\d+)\/pay$/)) && method === "POST") { const bk = state.bookings.find((bk) => bk.id === Number(x![1])); if (bk) bk.paid_at = new Date().toISOString(); return { status: "paid", paid_at: bk?.paid_at }; }
-  if ((x = m(/^\/bookings\/(\d+)\/checkin-guide$/)) && method === "GET") return { building: "A대학교 국제관", address: "서울 성북구", checkin: "15:00", checkout: "11:00", wifi: "AUNIV-GUEST", steps: ["국제관 1층 안내데스크에서 이름 확인", "여권 제시 후 출입카드 수령", "3층 방 배정"], emergency: ["대학 담당자 02-000-0000", "운영자 010-0000-0000", "112 / 119 / 1330"] };
+  if ((x = m(/^\/bookings\/(\d+)\/checkin-guide$/)) && method === "GET") return { building: "고려대학교 프런티어관", address: "서울 성북구", checkin: "15:00", checkout: "11:00", wifi: "KU-GUEST", steps: ["국제관 1층 안내데스크에서 이름 확인", "여권 제시 후 출입카드 수령", "3층 방 배정"], emergency: ["대학 담당자 02-000-0000", "운영자 010-0000-0000", "112 / 119 / 1330"] };
   if ((x = m(/^\/bookings\/(\d+)\/reviews$/)) && method === "POST") return { id: state.nextId++, ...b, created_at: new Date().toISOString() };
   if ((x = m(/^\/bookings\/(\d+)\/chat$/)) && method === "GET") return list([{ id: 1, sender: "buddy", text: "내일 2시에 정문에서 봐요!", translated_text: "See you at the main gate at 2 tomorrow!", created_at: "2027-01-12T20:00:00Z" }, { id: 2, sender: "tourist", text: "See you there 😊", translated_text: "거기서 봐요 😊", created_at: "2027-01-12T20:05:00Z" }]);
   if ((x = m(/^\/bookings\/(\d+)$/)) && method === "GET") return state.bookings.find((bk) => bk.id === Number(x![1])) ?? err(404, "NOT_FOUND", "예약 없음");
@@ -154,7 +154,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if (method === "GET" && path === "/admin/buddies") return list(state.adminBuddies.filter((r) => !query?.status || r.status === query.status));
   if ((x = m(/^\/admin\/buddies\/(\d+)$/)) && method === "PATCH") { const r = state.adminBuddies.find((r) => r.id === Number(x![1])); if (r) r.status = b.action === "approve" ? "approved" : "suspended"; return r; }
   if (method === "GET" && path === "/admin/users") return list(Object.values(D.users));
-  if (method === "GET" && path === "/admin/settlements") return { total: 3105000, items: [{ target: "A대학교 국제관", count: 18, revenue: 1890000, fee: 189000, payout: 1701000, status: "지급 예정 2/28" }, { target: "B대학교 생활관", count: 6, revenue: 630000, fee: 63000, payout: 567000, status: "지급 예정 2/28" }, { target: "해설사 박해설", count: 9, revenue: 180000, fee: 18000, payout: 162000, status: "지급 완료" }] };
+  if (method === "GET" && path === "/admin/settlements") return { total: 3105000, items: [{ target: "고려대학교 프런티어관", count: 18, revenue: 1890000, fee: 189000, payout: 1701000, status: "지급 예정 2/28" }, { target: "국민대학교 생활관", count: 6, revenue: 630000, fee: 63000, payout: 567000, status: "지급 예정 2/28" }, { target: "해설사 박해설", count: 9, revenue: 180000, fee: 18000, payout: 162000, status: "지급 완료" }] };
   if (method === "GET" && path === "/admin/dorms") return list(D.dorms);
   if (method === "POST" && path === "/admin/dorms") return { id: state.nextId++, ...b };
   if ((x = m(/^\/admin\/dorms\/(\d+)$/)) && method === "PATCH") return { id: Number(x[1]), ...b };
