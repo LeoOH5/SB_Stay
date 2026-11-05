@@ -11,7 +11,7 @@ export const googleConfigured = () => GOOGLE_CLIENT_ID.length > 0;
 type CodeResponse = { code?: string; error?: string; error_description?: string };
 type CodeClient = { requestCode: () => void };
 type GoogleAccounts = {
-  accounts: { oauth2: { initCodeClient: (cfg: { client_id: string; scope: string; ux_mode: "popup"; access_type?: "offline"; prompt?: string; callback: (r: CodeResponse) => void; error_callback?: (e: { type: string }) => void }) => CodeClient } };
+  accounts: { oauth2: { initCodeClient: (cfg: { client_id: string; scope: string; ux_mode: "popup"; access_type?: "offline"; prompt?: string; hint?: string; callback: (r: CodeResponse) => void; error_callback?: (e: { type: string }) => void }) => CodeClient } };
 };
 declare global { interface Window { google?: GoogleAccounts } }
 
@@ -36,7 +36,8 @@ const LOGIN_SCOPE = "openid email profile";
 const CALENDAR_SCOPE = "openid email https://www.googleapis.com/auth/calendar.events";
 
 /** 팝업으로 authorization code를 받는다. 취소하면 null. */
-export async function requestGoogleCode(kind: "login" | "calendar"): Promise<string | null> {
+/** hint: 이미 로그인한 이메일을 주면 계정 선택 창을 건너뛰고 바로 권한 동의로 간다. */
+export async function requestGoogleCode(kind: "login" | "calendar", hint?: string): Promise<string | null> {
   await loadGis();
   return new Promise((resolve, reject) => {
     const client = window.google!.accounts.oauth2.initCodeClient({
@@ -45,6 +46,7 @@ export async function requestGoogleCode(kind: "login" | "calendar"): Promise<str
       ux_mode: "popup",
       access_type: "offline",
       prompt: kind === "calendar" ? "consent" : "select_account",
+      ...(hint ? { hint } : {}),
       callback: (r) => { if (r.code) resolve(r.code); else if (r.error === "access_denied") resolve(null); else reject(new Error(r.error_description ?? r.error ?? "구글 인증 실패")); },
       error_callback: (e) => { if (e.type === "popup_closed") resolve(null); else reject(new Error(`구글 팝업 오류: ${e.type}`)); },
     });
