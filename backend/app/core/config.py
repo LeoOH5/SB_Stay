@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # LLM / RAG
     llm_api_key: str = ""
     llm_model: str = ""  # 멘토 지원 LLM API의 모델명 (.env에서 지정)
+    llm_base_url: str = ""  # OpenAI 호환 API 주소. 비우면 OpenAI. 모델명이 claude- 로 시작하면 Anthropic
     llm_timeout_seconds: int = 20
 
     # 수수료율 (해커톤은 상수)
