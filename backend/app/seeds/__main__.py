@@ -5,7 +5,7 @@ data/*.json 을 테이블 순서대로 넣는다. 데모 날짜는 2027년 1월(
 import json
 from pathlib import Path
 
-from sqlalchemy import delete
+from sqlalchemy import delete, text
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
@@ -66,6 +66,11 @@ def main() -> None:
                 db.add(model(**row))
             db.flush()
             print(f"{fname}: {len(rows)}")
+        # 명시적 id로 넣었으니 시퀀스를 max(id)로 맞춘다
+        for _, model in ORDER:
+            table = model.__tablename__
+            if "id" in model.__table__.columns and model.__table__.columns["id"].type.python_type is int:
+                db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), COALESCE((SELECT MAX(id) FROM {table}), 0) + 1, false)"))
         db.commit()
     print("seed done")
 
