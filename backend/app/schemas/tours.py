@@ -58,6 +58,7 @@ class ReviewOut(BaseModel):
     id: int
     rating: int
     text: str | None = None
+    author: str = ""  # 프론트 Review 타입: 작성자 이름(성 제외)
     created_at: date
 
 

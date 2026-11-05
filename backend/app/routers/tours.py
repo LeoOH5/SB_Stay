@@ -10,20 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.errors import api_error
-from app.models import BookingItem, Guide, Place, Review, Tour, TourPlace, User
+from app.models import Guide, Place, Tour, TourPlace, User
 from app.schemas.common import ListResponse
-from app.schemas.tours import GuideBrief, PlaceOut, ReviewListOut, ReviewOut, TourOut, TourPlaceOut
+from app.schemas.tours import GuideBrief, PlaceOut, ReviewListOut, TourOut, TourPlaceOut
+from app.services.reviews import average, item_reviews
 
 router = APIRouter(tags=["tours"])
 
 WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-
-# TR-04: 실제 리뷰가 아직 없을 때 화면이 비지 않도록 보여 주는 고정 예시
-SAMPLE_REVIEWS = [
-    ReviewOut(id=1, rating=5, text="해설이 정말 좋았어요. 심우장 이야기가 기억에 남아요.", created_at=date(2027, 1, 20)),
-    ReviewOut(id=2, rating=5, text="The guide explained everything in English. Loved the hanok alleys.", created_at=date(2027, 1, 18)),
-    ReviewOut(id=3, rating=4, text="코스가 알차요. 언덕이 있어서 편한 신발 추천합니다.", created_at=date(2027, 1, 16)),
-]
 
 
 def _guide(db: Session, guide_id: int) -> GuideBrief:
@@ -88,13 +82,8 @@ def tour_reviews(tour_id: int, cursor: str | None = None, db: Session = Depends(
     """TR-04 (목업): BK-08로 남긴 실제 리뷰가 있으면 그것을, 없으면 고정 예시를 돌려준다."""
     if not db.get(Tour, tour_id):
         raise api_error(404, "NOT_FOUND", "투어 코스를 찾을 수 없습니다")
-    rows = db.scalars(
-        select(Review).join(BookingItem, BookingItem.id == Review.booking_item_id)
-        .where(BookingItem.type == "tour", BookingItem.ref_id == tour_id).order_by(Review.id.desc())
-    ).all()
-    items = [ReviewOut(id=r.id, rating=r.rating, text=r.text, created_at=r.created_at.date()) for r in rows] or SAMPLE_REVIEWS
-    avg = round(sum(r.rating for r in items) / len(items), 1)
-    return ReviewListOut(items=items, average_rating=avg)
+    items, _ = item_reviews(db, "tour", tour_id)
+    return ReviewListOut(items=items, average_rating=average(items))
 
 
 @router.get("/places/{place_id}", response_model=PlaceOut)
