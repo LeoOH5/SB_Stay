@@ -1,8 +1,113 @@
 [
-  {"id": 1, "email": "emma@example.com", "password": "demo1234", "name": "Emma Clark", "role": "tourist", "language": "en"},
-  {"id": 2, "email": "yuki@example.com", "password": "demo1234", "name": "Yuki Sato", "role": "tourist", "language": "en"},
-  {"id": 3, "email": "jiwoo@a-univ.ac.kr", "password": "demo1234", "name": "지우", "role": "buddy", "university_id": 1, "language": "ko"},
-  {"id": 4, "email": "guide.park@example.com", "password": "demo1234", "name": "박해설", "role": "guide", "language": "ko"},
-  {"id": 5, "email": "admin@a-univ.ac.kr", "password": "demo1234", "name": "A대학교 국제관 담당자", "role": "univ_admin", "university_id": 1, "language": "ko"},
-  {"id": 6, "email": "operator@sbstay.app", "password": "demo1234", "name": "운영자", "role": "operator", "language": "ko"}
+ {
+  "id": 1,
+  "email": "emma@example.com",
+  "password": "demo1234",
+  "name": "Emma Clark",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 2,
+  "email": "yuki@example.com",
+  "password": "demo1234",
+  "name": "Yuki Sato",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 3,
+  "email": "jiwoo@a-univ.ac.kr",
+  "password": "demo1234",
+  "name": "지우",
+  "role": "buddy",
+  "university_id": 1,
+  "language": "ko"
+ },
+ {
+  "id": 4,
+  "email": "guide.park@example.com",
+  "password": "demo1234",
+  "name": "박해설",
+  "role": "guide",
+  "language": "ko"
+ },
+ {
+  "id": 5,
+  "email": "admin@a-univ.ac.kr",
+  "password": "demo1234",
+  "name": "A대학교 국제관 담당자",
+  "role": "univ_admin",
+  "university_id": 1,
+  "language": "ko"
+ },
+ {
+  "id": 6,
+  "email": "operator@sbstay.app",
+  "password": "demo1234",
+  "name": "운영자",
+  "role": "operator",
+  "language": "ko"
+ },
+ {
+  "id": 7,
+  "email": "guide.kim@example.com",
+  "password": "demo1234",
+  "name": "김해설",
+  "role": "guide",
+  "language": "ko"
+ },
+ {
+  "id": 8,
+  "email": "guide.lee@example.com",
+  "password": "demo1234",
+  "name": "이해설",
+  "role": "guide",
+  "language": "ko"
+ },
+ {
+  "id": 9,
+  "email": "minho@b-univ.ac.kr",
+  "password": "demo1234",
+  "name": "민호",
+  "role": "buddy",
+  "university_id": 2,
+  "language": "ko"
+ },
+ {
+  "id": 10,
+  "email": "harin@a-univ.ac.kr",
+  "password": "demo1234",
+  "name": "하린",
+  "role": "buddy",
+  "university_id": 1,
+  "language": "ko"
+ },
+ {
+  "id": 11,
+  "email": "doyun@a-univ.ac.kr",
+  "password": "demo1234",
+  "name": "도윤",
+  "role": "buddy",
+  "university_id": 1,
+  "language": "ko"
+ },
+ {
+  "id": 12,
+  "email": "seoyeon@b-univ.ac.kr",
+  "password": "demo1234",
+  "name": "서연",
+  "role": "buddy",
+  "university_id": 2,
+  "language": "ko"
+ },
+ {
+  "id": 13,
+  "email": "junseo@a-univ.ac.kr",
+  "password": "demo1234",
+  "name": "준서",
+  "role": "buddy",
+  "university_id": 1,
+  "language": "ko"
+ }
 ]

@@ -1,0 +1,174 @@
+[
+ {
+  "id": 101,
+  "name": "최순우 옛집",
+  "name_en": "Choi Sunu House",
+  "lat": 37.5939,
+  "lng": 127.0103,
+  "address": "성북구 성북로15길 9",
+  "hours": "10:00–16:00",
+  "closed_days": [
+   "mon"
+  ],
+  "fee": 0,
+  "need_reservation": false,
+  "stay_min": 20,
+  "tags": [
+   "literature",
+   "hanok"
+  ],
+  "story_doc": "미술사학자 최순우가 살던 1930년대 한옥. '무량수전 배흘림기둥에 기대서서'를 쓴 곳.",
+  "sources": [
+   {
+    "title": "내셔널트러스트 문화유산기금"
+   }
+  ]
+ },
+ {
+  "id": 102,
+  "name": "수연산방",
+  "name_en": "Suyeon Sanbang",
+  "lat": 37.5947,
+  "lng": 127.0076,
+  "address": "성북구 성북로26길 8",
+  "hours": "11:30–18:00",
+  "closed_days": [
+   "mon"
+  ],
+  "fee": 0,
+  "need_reservation": false,
+  "stay_min": 30,
+  "tags": [
+   "literature",
+   "cafe"
+  ],
+  "story_doc": "소설가 이태준이 1933년부터 살며 글을 쓴 집. 지금은 전통찻집.",
+  "sources": [
+   {
+    "title": "성북구 문화관광 자료"
+   }
+  ]
+ },
+ {
+  "id": 103,
+  "name": "심우장",
+  "name_en": "Simujang",
+  "lat": 37.5942,
+  "lng": 127.0063,
+  "address": "성북구 성북로29길 24",
+  "hours": "09:00–18:00",
+  "closed_days": [],
+  "fee": 0,
+  "need_reservation": false,
+  "stay_min": 25,
+  "tags": [
+   "independence",
+   "literature"
+  ],
+  "story_doc": "한용운이 1933년부터 살았던 집. 조선총독부를 마주하지 않으려고 북쪽을 향하게 지었다고 전해진다.",
+  "sources": [
+   {
+    "title": "성북구 문화관광 자료"
+   },
+   {
+    "title": "성북마을아카이브"
+   }
+  ]
+ },
+ {
+  "id": 104,
+  "name": "길상사",
+  "name_en": "Gilsangsa Temple",
+  "lat": 37.5998,
+  "lng": 127.0048,
+  "address": "성북구 선잠로5길 68",
+  "hours": "04:00–20:00",
+  "closed_days": [],
+  "fee": 0,
+  "need_reservation": false,
+  "stay_min": 40,
+  "tags": [
+   "temple",
+   "walk"
+  ],
+  "story_doc": "요정 대원각이 1997년 절이 된 곳. 시인 백석과 자야의 이야기가 전해진다.",
+  "sources": [
+   {
+    "title": "성북구 문화관광 자료"
+   }
+  ]
+ },
+ {
+  "id": 105,
+  "name": "정릉",
+  "name_en": "Jeongneung Royal Tomb",
+  "lat": 37.6023,
+  "lng": 127.0083,
+  "address": "성북구 아리랑로19길 116",
+  "hours": "09:00–17:30",
+  "closed_days": [
+   "mon"
+  ],
+  "fee": 1000,
+  "need_reservation": false,
+  "stay_min": 50,
+  "tags": [
+   "royal",
+   "unesco"
+  ],
+  "story_doc": "태조 이성계의 계비 신덕왕후의 능. 조선 최초의 왕릉으로 유네스코 세계유산.",
+  "sources": [
+   {
+    "title": "국가유산청 조선왕릉"
+   }
+  ]
+ },
+ {
+  "id": 106,
+  "name": "선잠박물관",
+  "name_en": "Seonjam Museum",
+  "lat": 37.5945,
+  "lng": 127.0098,
+  "address": "성북구 성북로 96",
+  "hours": "10:00–18:00",
+  "closed_days": [
+   "mon"
+  ],
+  "fee": 1000,
+  "need_reservation": false,
+  "stay_min": 40,
+  "tags": [
+   "royal",
+   "museum"
+  ],
+  "story_doc": "조선 왕비가 누에의 신 서릉씨에게 제사를 지내던 선잠단 터 옆 박물관.",
+  "sources": [
+   {
+    "title": "성북구 문화관광 자료"
+   }
+  ]
+ },
+ {
+  "id": 107,
+  "name": "한양도성 북악구간",
+  "name_en": "Hanyangdoseong (Bugak)",
+  "lat": 37.5969,
+  "lng": 126.9985,
+  "address": "성북구 성북동",
+  "hours": "07:00–17:00",
+  "closed_days": [],
+  "fee": 0,
+  "need_reservation": false,
+  "stay_min": 60,
+  "tags": [
+   "wall",
+   "walk"
+  ],
+  "story_doc": "서울 성곽 북쪽 구간. 성북동에서 혜화문까지 이어진다.",
+  "sources": [
+   {
+    "title": "서울 한양도성"
+   }
+  ]
+ }
+]

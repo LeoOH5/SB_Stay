@@ -1,0 +1,56 @@
+[
+ {
+  "key": "intro",
+  "language": "ko",
+  "title": "성북구 소개",
+  "body": "서울 도성 밖에서 문화재가 가장 많은 동네, 성북동. 정릉·심우장·길상사·수연산방·선잠박물관이 걸어서 닿는 거리에 있습니다."
+ },
+ {
+  "key": "intro",
+  "language": "en",
+  "title": "About Seongbuk",
+  "body": "The neighborhood outside Seoul's old city wall with the most heritage sites. Jeongneung, Simujang, Gilsangsa, Suyeon Sanbang and the Seonjam Museum are all within walking distance."
+ },
+ {
+  "key": "terms",
+  "language": "ko",
+  "title": "이용약관",
+  "body": "본 서비스는 숙박(대학)·투어(해설사)·교류(버디)를 연결하는 중개 플랫폼입니다. 숙박 판매 주체는 각 대학이며, 플랫폼은 예약·결제·연결을 담당합니다."
+ },
+ {
+  "key": "terms",
+  "language": "en",
+  "title": "Terms of Service",
+  "body": "SB Stay is a marketplace connecting dorm stays (universities), history tours (licensed guides) and buddy meetups (students). Universities are the sellers of accommodation; the platform handles booking, payment and matching."
+ },
+ {
+  "key": "refund",
+  "language": "ko",
+  "title": "환불 규정",
+  "body": "체크인 7일 전 100% · 3일 전 50% · 이후 0%. 투어·버디는 각 일정 48시간 전까지 100%."
+ },
+ {
+  "key": "refund",
+  "language": "en",
+  "title": "Refund Policy",
+  "body": "100% up to 7 days before check-in, 50% up to 3 days before, 0% after. Tours and buddy meetups: 100% up to 48 hours before."
+ },
+ {
+  "key": "support",
+  "language": "ko",
+  "title": "고객센터 · 긴급연락처",
+  "body": "운영자 +82-2-0000-0000 (09:00–18:00)\n긴급: 112 (경찰) · 119 (구급) · 1330 (관광 안내, 24시간 다국어)"
+ },
+ {
+  "key": "support",
+  "language": "en",
+  "title": "Support · Emergency",
+  "body": "Operator +82-2-0000-0000 (09:00–18:00)\nEmergency: 112 (police) · 119 (ambulance) · 1330 (tourist helpline, 24h multilingual)"
+ },
+ {
+  "key": "privacy",
+  "language": "ko",
+  "title": "개인정보 처리방침",
+  "body": "여권번호 등 민감정보는 예약 시점에만 입력받아 숙박 승인 처리에만 사용하며, 최소 수집 원칙을 지킵니다."
+ }
+]
