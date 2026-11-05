@@ -1,5 +1,6 @@
 "use client";
 // 버디 홈 · 새 요청 + 오늘 일정
+import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Card, Empty, Hero, SectionTitle, Spinner, StatusPill } from "@/components/ui";
@@ -64,7 +65,9 @@ export default function Page() {
 
   return (
     <div className="pb-6">
-      <Hero title={`안녕하세요, ${name} 님`} sub={sub} right={<StatusPill status="approved" label="승인됨" />} />
+      <Hero title={`안녕하세요, ${name} 님`} sub={sub} right={<HeaderActions />}>
+        <div className="mt-2.5"><StatusPill status="approved" label="승인됨" /></div>
+      </Hero>
       <LoginGate />
 
       <div className="px-5">

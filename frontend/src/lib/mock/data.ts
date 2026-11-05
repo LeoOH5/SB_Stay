@@ -108,6 +108,12 @@ export const notifications: Notification[] = [
   { id: 3, type: "item_requested", title: "버디 요청 접수 · 지우 · 수락 대기", read_at: "2027-01-05T11:00:00Z", created_at: "2027-01-05T10:05:00Z" },
 ];
 
+export const buddyNotifications: Notification[] = [
+  { id: 101, type: "item_requested", title: "새 동행 요청 · Emma · 1/13 14:00", read_at: null, created_at: "2027-01-05T10:05:00Z" },
+  { id: 102, type: "item_requested", title: "새 동행 요청 · Lucas · 1/16 11:30", read_at: null, created_at: "2027-01-06T08:20:00Z" },
+  { id: 103, type: "profile_approved", title: "버디 프로필 승인됨 · 고려대학교", read_at: "2027-01-02T09:00:00Z", created_at: "2027-01-02T09:00:00Z" },
+];
+
 export const contents: ContentDoc[] = [
   { key: "intro", language: "ko", title: "성북구 소개", body: "서울 도성 밖에서 문화재가 가장 많은 동네, 성북동. 정릉·심우장·길상사·수연산방·선잠박물관이 걸어서 닿는 거리에 있습니다." },
   { key: "intro", language: "en", title: "About Seongbuk", body: "The neighborhood outside Seoul's old city wall with the most heritage sites. Jeongneung, Simujang, Gilsangsa, Suyeon Sanbang and the Seonjam Museum are all within walking distance." },

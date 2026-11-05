@@ -1,5 +1,6 @@
 "use client";
 // B2 요청함 · 새 요청 / 수락됨 / 거절됨
+import { HeaderActions } from "@/components/tourist/header-actions";
 import { useCallback, useEffect, useState } from "react";
 import { Card, Chip, Empty, Hero, SectionTitle, Spinner, StatusPill } from "@/components/ui";
 import { get, patch } from "@/lib/api";
@@ -52,7 +53,7 @@ export default function Page() {
 
   return (
     <div className="pb-6">
-      <Hero title="요청함" sub={`새 요청 ${count("requested")} · 수락됨 ${count("confirmed")} · 거절됨 ${count("rejected")}`} />
+      <Hero title="요청함" sub={`새 요청 ${count("requested")} · 수락됨 ${count("confirmed")} · 거절됨 ${count("rejected")}`} right={<HeaderActions />} />
       <LoginGate />
 
       <div className="px-5">

@@ -1,5 +1,6 @@
 "use client";
 // B3 일정 관리 · 가능한 날짜 캘린더 + 구글 캘린더 연동
+import { HeaderActions } from "@/components/tourist/header-actions";
 import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Empty, Hero, SectionTitle, Spinner, StatusPill } from "@/components/ui";
@@ -76,7 +77,7 @@ export default function Page() {
 
   return (
     <div className="pb-6">
-      <Hero title="일정 관리" sub={`${ym.year}년 ${ym.month}월 · 날짜를 눌러 가능/불가를 바꿔요`} />
+      <Hero title="일정 관리" sub={`${ym.year}년 ${ym.month}월 · 날짜를 눌러 가능/불가를 바꿔요`} right={<HeaderActions />} />
       <LoginGate />
 
       <div className="px-5">

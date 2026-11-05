@@ -43,6 +43,11 @@ function decideItem(itemId: number, action: "approve" | "reject", reason?: strin
   if (a) a.status = action === "approve" ? (a.type === "buddy" ? "confirmed" : "approved") : "rejected";
 }
 
+/** 새로고침하면 목업 상태가 비므로, 저장된 로그인 사용자로 역할을 판단 */
+function storedUser(): User | null {
+  try { return JSON.parse(localStorage.getItem("sbstay.user") ?? "null") as User | null; } catch { return null; }
+}
+
 export async function mockHandlers(method: string, path: string, body?: unknown, query?: Record<string, string | number | undefined>): Promise<unknown> {
   const b = (body ?? {}) as Record<string, unknown>;
   const m = (re: RegExp) => path.match(re);
@@ -137,7 +142,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if ((x = m(/^\/bookings\/(\d+)\/reviews$/)) && method === "POST") return { id: state.nextId++, ...b, created_at: new Date().toISOString() };
   if ((x = m(/^\/bookings\/(\d+)\/chat$/)) && method === "GET") return list([{ id: 1, sender: "buddy", text: "내일 2시에 정문에서 봐요!", translated_text: "See you at the main gate at 2 tomorrow!", created_at: "2027-01-12T20:00:00Z" }, { id: 2, sender: "tourist", text: "See you there 😊", translated_text: "거기서 봐요 😊", created_at: "2027-01-12T20:05:00Z" }]);
   if ((x = m(/^\/bookings\/(\d+)$/)) && method === "GET") return state.bookings.find((bk) => bk.id === Number(x![1])) ?? err(404, "NOT_FOUND", "예약 없음");
-  if (method === "GET" && path === "/notifications") return list(state.notifications);
+  if (method === "GET" && path === "/notifications") return list(["buddy", "guide"].includes((state.currentUser ?? storedUser())?.role ?? "") ? D.buddyNotifications : state.notifications);
 
   // ---- 버디 측
   if (method === "GET" && path === "/buddy/requests") return list(state.buddyRequests.filter((r) => !query?.status || r.status === query.status));
