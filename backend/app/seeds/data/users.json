@@ -1,0 +1,8 @@
+[
+  {"id": 1, "email": "emma@example.com", "password": "demo1234", "name": "Emma Clark", "role": "tourist", "language": "en"},
+  {"id": 2, "email": "yuki@example.com", "password": "demo1234", "name": "Yuki Sato", "role": "tourist", "language": "en"},
+  {"id": 3, "email": "jiwoo@a-univ.ac.kr", "password": "demo1234", "name": "지우", "role": "buddy", "university_id": 1, "language": "ko"},
+  {"id": 4, "email": "guide.park@example.com", "password": "demo1234", "name": "박해설", "role": "guide", "language": "ko"},
+  {"id": 5, "email": "admin@a-univ.ac.kr", "password": "demo1234", "name": "A대학교 국제관 담당자", "role": "univ_admin", "university_id": 1, "language": "ko"},
+  {"id": 6, "email": "operator@sbstay.app", "password": "demo1234", "name": "운영자", "role": "operator", "language": "ko"}
+]

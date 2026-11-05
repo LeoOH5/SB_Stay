@@ -1,0 +1,31 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+# env
+.env
+.env.*
+!.env.example
+# node
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+*.tsbuildinfo
+npm-debug.log*
+# python
+__pycache__/
+*.pyc
+.venv/
+backend/.venv/
+.pytest_cache/
+.ruff_cache/
+# data
+postgres-data/
+*.log
+# local tooling
+.omc/
+.claude/
+# 로컬 전용 자산 (깃허브 제외)
+design/
+img/

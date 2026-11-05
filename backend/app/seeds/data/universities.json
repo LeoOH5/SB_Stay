@@ -1,0 +1,6 @@
+[
+  {"id": 1, "name": "A대학교", "name_en": "A University", "address": "서울 성북구", "lat": 37.5894, "lng": 127.0323, "open_from": "2027-01-05", "open_to": "2027-02-20",
+   "checkin_guide": {"building": "국제관", "checkin": "15:00", "checkout": "11:00", "wifi": "AUNIV-GUEST", "emergency": ["대학 담당자 02-000-0000", "운영자 010-0000-0000", "112 / 119"]}},
+  {"id": 2, "name": "B대학교", "name_en": "B University", "address": "서울 성북구", "lat": 37.5926, "lng": 127.0164, "open_from": "2027-01-05", "open_to": "2027-02-20",
+   "checkin_guide": {"building": "생활관", "checkin": "15:00", "checkout": "11:00", "wifi": "BUNIV-GUEST", "emergency": ["대학 담당자 02-000-0001", "운영자 010-0000-0000", "112 / 119"]}}
+]

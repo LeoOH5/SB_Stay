@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+/* 성북구 CI 전용색 기준 — 청색 PANTONE 533, 녹색 PANTONE 390 (design/README.md와 동일) */
+:root {
+  --sb-navy: #1f2a44;
+  --sb-navy-700: #2b3a5e;
+  --sb-navy-bg: #e9ecf4;
+  --sb-green: #b5bd00;
+  --sb-green-dark: #6f7a00;
+  --sb-green-bg: #f4f6d9;
+  --sb-orange: #c2410c;
+  --sb-orange-bg: #fff1e6;
+  --sb-ink: #1e1e1e;
+  --sb-muted: #6b7280;
+  --sb-line: #d1d5db;
+  --sb-gray-bg: #f3f4f6;
+  --background: #ffffff;
+  --foreground: var(--sb-ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-navy: var(--sb-navy);
+  --color-navy-700: var(--sb-navy-700);
+  --color-navy-bg: var(--sb-navy-bg);
+  --color-green: var(--sb-green);
+  --color-green-dark: var(--sb-green-dark);
+  --color-green-bg: var(--sb-green-bg);
+  --color-orange: var(--sb-orange);
+  --color-orange-bg: var(--sb-orange-bg);
+  --color-ink: var(--sb-ink);
+  --color-muted: var(--sb-muted);
+  --color-line: var(--sb-line);
+  --color-gray-bg: var(--sb-gray-bg);
+  --font-sans: var(--font-pretendard), "Pretendard", -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --radius-card: 14px;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--sb-gray-bg);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 모바일 웹 셸: 데스크톱에서는 390px 폰 프레임처럼 가운데 정렬 */
+.mobile-shell {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: #fff;
+  position: relative;
+  box-shadow: 0 0 0 1px var(--sb-line);
+}
