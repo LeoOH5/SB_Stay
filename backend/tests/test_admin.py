@@ -41,4 +41,4 @@ def test_users_and_settlements_operator_only(client, univ_admin, operator):
 
 def test_admin_tours(client, univ_admin):
     rows = client.get("/api/v1/admin/tours", headers=univ_admin).json()["items"]
-    assert len(rows) == 4 and rows[0]["guide"] == "박해설"
+    assert len(rows) == 5 and rows[0]["guide"] == "박해설"  # 시드 투어 5개 (A: 7번 왕릉과 산사 추가)
