@@ -104,8 +104,9 @@ export function SectionTitle({ children, right }: { children: ReactNode; right?:
   return <div className="flex items-center justify-between mt-6 mb-2"><h2 className="text-[15px] font-bold text-ink">{children}</h2>{right}</div>;
 }
 
-export function TabBar({ tabs }: { tabs: { href: string; label: string; icon?: ReactNode }[] }) {
+export function TabBar({ tabs, hideOn = [] }: { tabs: { href: string; label: string; icon?: ReactNode }[]; hideOn?: string[] }) {
   const path = usePathname();
+  if (hideOn.some((h) => path === h || path.startsWith(h + "/"))) return null;
   return (
     <nav className="sticky bottom-0 z-20 mt-auto border-t border-line bg-white/95 backdrop-blur px-3 pb-[max(env(safe-area-inset-bottom),8px)] pt-2">
       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>

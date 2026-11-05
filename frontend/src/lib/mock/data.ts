@@ -121,7 +121,7 @@ export const dashboard: Dashboard = {
 };
 
 export const adminBookings: AdminBookingRow[] = [
-  { booking_id: 501, item_id: 1, code: "SB-2027-0112", tourist: "Emma Clark", nationality: "미국", type: "dorm", title: "A대 국제관 2인실", schedule: "1/12 – 1/15", price: 105000, status: "requested", university_id: 1 },
+  { booking_id: 501, item_id: 1, code: "SB-2027-0112", tourist: "Emma Clark", nationality: "미국", type: "dorm", title: "A대 국제관 2인실", schedule: "1/12 – 1/15", price: 105000, status: "approved", university_id: 1 },
   { booking_id: 501, item_id: 2, code: "SB-2027-0112", tourist: "Emma Clark", nationality: "미국", type: "tour", title: "문인의 성북동 산책", schedule: "1/13 10:00", price: 20000, status: "confirmed" },
   { booking_id: 501, item_id: 3, code: "SB-2027-0112", tourist: "Emma Clark", nationality: "미국", type: "buddy", title: "지우 · 동네 걷기", schedule: "1/13 14:00", price: 30000, status: "requested", university_id: 1 },
   { booking_id: 502, item_id: 4, code: "SB-2027-0114", tourist: "Yuki Sato", nationality: "일본", type: "dorm", title: "A대 국제관 1인실", schedule: "1/14 – 1/16", price: 80000, status: "requested", university_id: 1 },

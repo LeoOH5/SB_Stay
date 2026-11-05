@@ -122,7 +122,16 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   }
   if (method === "GET" && path === "/bookings/me") return list(state.bookings);
   if ((x = m(/^\/bookings\/(\d+)\/items\/(\d+)$/)) && method === "PATCH") { decideItem(Number(x[2]), b.action as "approve" | "reject", b.reason as string | undefined); return state.bookings.find((bk) => bk.id === Number(x![1]))?.items.find((i) => i.id === Number(x![2])) ?? { ok: true }; }
-  if ((x = m(/^\/bookings\/(\d+)\/cancel$/)) && method === "POST") { const bk = state.bookings.find((bk) => bk.id === Number(x![1])); if (!bk) throw err(404, "NOT_FOUND", "예약 없음"); bk.items.forEach((i) => (i.status = "cancelled")); bk.status = "cancelled"; return bk; }
+  if ((x = m(/^\/bookings\/(\d+)\/cancel$/)) && method === "POST") {
+    const id = Number(x![1]);
+    const bk = state.bookings.find((bk) => bk.id === id);
+    if (bk) { bk.items.forEach((i) => (i.status = "cancelled")); bk.status = "cancelled"; }
+    const rows = state.adminBookings.filter((r) => r.booking_id === id);
+    if (!bk && rows.length === 0) throw err(404, "NOT_FOUND", "예약 없음");
+    rows.forEach((r) => (r.status = "cancelled"));
+    state.buddyRequests.filter((r) => rows.some((a) => a.item_id === r.item_id)).forEach((r) => (r.status = "cancelled"));
+    return bk ?? { id, status: "cancelled" };
+  }
   if ((x = m(/^\/bookings\/(\d+)\/pay$/)) && method === "POST") { const bk = state.bookings.find((bk) => bk.id === Number(x![1])); if (bk) bk.paid_at = new Date().toISOString(); return { status: "paid", paid_at: bk?.paid_at }; }
   if ((x = m(/^\/bookings\/(\d+)\/checkin-guide$/)) && method === "GET") return { building: "A대학교 국제관", address: "서울 성북구", checkin: "15:00", checkout: "11:00", wifi: "AUNIV-GUEST", steps: ["국제관 1층 안내데스크에서 이름 확인", "여권 제시 후 출입카드 수령", "3층 방 배정"], emergency: ["대학 담당자 02-000-0000", "운영자 010-0000-0000", "112 / 119 / 1330"] };
   if ((x = m(/^\/bookings\/(\d+)\/reviews$/)) && method === "POST") return { id: state.nextId++, ...b, created_at: new Date().toISOString() };
