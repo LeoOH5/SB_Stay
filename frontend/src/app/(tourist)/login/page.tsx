@@ -103,6 +103,9 @@ export default function LoginPage() {
           </button>
         ))}
       </div>
+      <p className="mt-8 text-center text-[12.5px] text-muted">
+        <Link href="/privacy" className="underline">개인정보처리방침</Link><span className="mx-2">·</span><Link href="/terms" className="underline">이용약관</Link>
+      </p>
     </div>
   );
 }
