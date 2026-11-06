@@ -19,11 +19,22 @@ def _ids(d, name, key="id"):
     return [r[key] for r in json.loads((d / name).read_text(encoding="utf-8"))]
 
 
+def _ensure_hyehwamun(d):
+    """실제 데이터에서 혜화문(112)을 이미 뺐을 수 있으니, 임시 복사본에 다시 넣어 두고 시험한다"""
+    f = d / "places.json"
+    places = json.loads(f.read_text(encoding="utf-8"))
+    if 112 not in [p["id"] for p in places]:
+        places.append({"id": 112, "name": "혜화문"})
+        f.write_text(json.dumps(places, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return len(places)
+
+
 def test_remove_hyehwamun(seed_dir, capsys):
+    n = _ensure_hyehwamun(seed_dir)
     before = {p.name: p.read_bytes() for p in seed_dir.glob("*.json")}
     assert rp.main(["112", "--data", str(seed_dir)]) == 0
     assert "112 혜화문" in capsys.readouterr().out
-    assert 112 not in _ids(seed_dir, "places.json") and len(_ids(seed_dir, "places.json")) == 24
+    assert 112 not in _ids(seed_dir, "places.json") and len(_ids(seed_dir, "places.json")) == n - 1
     raw = (seed_dir / "places.json").read_text(encoding="utf-8")
     assert raw.startswith("[\n  {\n") and raw.endswith("}\n]\n")  # 원래 들여쓰기 2칸 유지
     assert {p.name for p in seed_dir.glob("*.json") if p.read_bytes() != before[p.name]} == {"places.json"}
