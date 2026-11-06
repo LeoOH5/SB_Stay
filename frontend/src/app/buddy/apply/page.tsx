@@ -7,19 +7,11 @@ import { Suspense, useCallback, useEffect, useState, type ReactNode } from "reac
 import { ProfileFields, draftOf, type ProfileDraft } from "@/components/buddy/profile-fields";
 import { BottomBar } from "@/components/buddy/ui";
 import { Button, Icon, LinkButton, Spinner, StepDots, TopBar, cn, inputCls } from "@/components/ui";
-import { BUDDY_MIN_AGE, QUIZ_PASS, QUIZ_TOTAL } from "@/lib/codes";
+import { BUDDY_MIN_AGE, BUDDY_PROMISES as PROMISES, QUIZ_PASS, QUIZ_TOTAL } from "@/lib/codes";
 import { ApiError, get, post, put } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import type { BuddyApplyEmailOut, BuddyApplyStatus, BuddyProfile, QuizQuestion, QuizResult } from "@/lib/types";
 
-const PROMISES = [
-  "역사 해설은 하지 않아요. 이야기는 앱의 AI가 들려주고, 나는 친구로 같이 걸어요",
-  "앱 밖에서 돈이나 선물을 받지 않아요",
-  "예약된 날짜·시간·장소에서만 만나요",
-  "술을 권하지 않고, 늦은 밤 동행은 하지 않아요",
-  "여행자의 요청 사항(음식, 알레르기)을 꼭 확인해요",
-  "문제가 생기면 바로 앱에서 운영팀에 알려요",
-];
 const OTP_SECONDS = 5 * 60;
 const fieldCls = cn(inputCls, "h-[52px] text-[16px]");
 const errText = (e: unknown) => (e instanceof Error ? e.message : "다시 시도해 주세요");
@@ -318,7 +310,7 @@ function ReviewStep({ status: s }: { status: BuddyApplyStatus | null }) {
       </Title>
       <div className="px-5 pb-6 pt-7">
         <Check done={s.email_verified && s.age_ok} title="학교 메일 인증" sub={s.email_verified ? `${s.university ?? "학교"} · 만 ${BUDDY_MIN_AGE}세 이상` : "아직 안 했어요"} />
-        <Check done={s.code_agreed} title="버디 약속 동의" sub={s.code_agreed ? "6개 모두 확인" : "아직 안 했어요"} />
+        <Check done={s.code_agreed} title="버디 약속 동의" sub={s.code_agreed ? `${PROMISES.length}개 모두 확인` : "아직 안 했어요"} />
         <Check done={s.quiz_passed} title="교육 퀴즈 통과" sub={s.quiz_score != null ? `${s.quiz_score} / ${QUIZ_TOTAL}` : "아직 안 풀었어요"} />
         <Check done={approved} wait={!approved} last title="운영팀 승인" sub={approved ? "승인됐어요" : suspended ? "활동 멈춤" : "기다리는 중"} />
       </div>

@@ -54,7 +54,7 @@ def to_out(db: Session, b: BuddyProfile, detail: bool = False) -> BuddyOut | Bud
         id=b.id, name=user.name if user else "", university=uni.name if uni else "", university_id=b.university_id,
         major=b.major, year=b.year, languages=b.languages or [], interests=b.interests or [], intro=b.intro, avatar=b.avatar,
         hourly_fee=b.hourly_fee, available_dates=_dates(db, b.id), rating=average(reviews) or 0, review_count=len(reviews),
-        personality=b.personality or [], style=b.style or [], can_help=b.can_help or [],
+        personality=b.personality or [], style=b.style or [], can_help=b.can_help or [], can_drive=bool(b.can_drive),
         sub_scores=sub_score_average(reviews), tags_top=top_tags(reviews), walk_count=walk_count(db, b.id), verified=verified(b),
     )
     if not detail:

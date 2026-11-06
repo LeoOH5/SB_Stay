@@ -1,10 +1,11 @@
 "use client";
 // A05 정산 본문 — KPI 줄(총 거래액·대학 지급·버디 지급·여행자 식비 환불) + 지급 대상 표 (식비 열 포함)
+// + 수익 구조 (판매가 − 원가 = 이익, 식사 보증금은 통과 금액이라 뺀다)
 import { useEffect, useState } from "react";
 import { get, won } from "@/lib/api";
-import type { AdminMealClaimRow, ListResponse, SettlementRow, Settlements } from "@/lib/types";
+import type { AdminMealClaimRow, ListResponse, SettlementProfit, SettlementRow, Settlements } from "@/lib/types";
 import { Spinner, StatusPill } from "@/components/ui";
-import { EmptyRow, ErrorText, KpiStrip, Note, Table, Td, Tr, errMsg } from "./shell";
+import { EmptyRow, ErrorText, KpiStrip, Note, SectionLabel, Table, Td, Tr, errMsg } from "./shell";
 
 const sumBy = (rows: SettlementRow[], t: SettlementRow["party_type"], k: "payout" | "revenue" | "meals" | "fee") => rows.filter((r) => r.party_type === t).reduce((s, r) => s + r[k], 0);
 
@@ -13,6 +14,41 @@ function payDay(month: string): string {
   const [y, m] = month.split("-").map(Number);
   const last = new Date(Date.UTC(y, m + 1, 0));
   return `${last.getUTCMonth() + 1}월 ${last.getUTCDate()}일`;
+}
+
+const pct = (r: number) => `${(r * 100).toFixed(1)}%`;
+
+/** 수익 구조: 줄마다 판매가 − 원가 = 이익 */
+function ProfitTable({ p }: { p: SettlementProfit }) {
+  const rows = [
+    { label: "숙소비", sub: "대학 지급 90%", sales: p.sales_dorm, cost: p.cost_university },
+    { label: "버디비", sub: "버디 지급료 90% · 식비 제외", sales: p.sales_buddy, cost: p.cost_buddy },
+    { label: "앨범", sub: "전액 플랫폼", sales: p.sales_album, cost: 0 },
+    { label: "기타 원가", sub: "카드 수수료 등", sales: 0, cost: p.cost_other },
+  ];
+  const cost = p.cost_university + p.cost_buddy + p.cost_other;
+  return (
+    <>
+      <SectionLabel className="mt-10" right={`이익률 ${pct(p.margin)}`}>수익 구조</SectionLabel>
+      <p className="mb-1 text-[13px] text-muted">이익 = (숙소비 + 버디비 + 앨범) − (숙소 원가 + 버디 지급료 + 기타 원가)</p>
+      <Table cols={[{ label: "항목" }, { label: "판매가", className: "text-right" }, { label: "원가", className: "text-right" }, { label: "이익", className: "text-right" }]}>
+        {rows.map((r) => (
+          <Tr key={r.label}>
+            <Td><span className="font-semibold">{r.label}</span> <span className="ml-1.5 text-[13px] text-muted">{r.sub}</span></Td>
+            <Td className="text-right">{r.sales ? won(r.sales) : <span className="text-muted">–</span>}</Td>
+            <Td className="text-right text-muted">{r.cost ? won(r.cost) : "–"}</Td>
+            <Td className="text-right">{won(r.sales - r.cost)}</Td>
+          </Tr>
+        ))}
+        <Tr className="border-b-0 font-semibold">
+          <Td>합계</Td>
+          <Td className="text-right">{won(p.sales)}</Td>
+          <Td className="text-right">{won(cost)}</Td>
+          <Td className="text-right text-navy">{won(p.profit)}</Td>
+        </Tr>
+      </Table>
+    </>
+  );
 }
 
 export function SettlementSection({ month }: { month: string }) {
@@ -81,7 +117,8 @@ export function SettlementSection({ month }: { month: string }) {
           ))}
         </Table>
       )}
-      <Note className="mt-9">버디 지급액은 활동비에서 수수료 10%를 뺀 금액에 승인된 식비를 더해요. 외국인 숙박 신고용 내보내기는 운영 단계에서 열려요.</Note>
+      {data?.profit && <ProfitTable p={data.profit} />}
+      <Note className="mt-9">식사 보증금과 승인 식비는 여행자 돈을 대신 전하는 금액이라 판매가·원가에 넣지 않아요. 버디 지급액은 활동비에서 수수료 10%를 뺀 금액에 승인된 식비를 더해요. 외국인 숙박 신고용 내보내기는 운영 단계에서 열려요.</Note>
     </section>
   );
 }

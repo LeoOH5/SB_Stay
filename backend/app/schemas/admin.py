@@ -55,6 +55,7 @@ class AdminBuddyRow(BaseModel):
     quiz_score: int | None = None
     report_count: int = 0  # 기각 제외 신고 수
     can_help: list[str] = []
+    can_drive: bool = False
 
 
 class BuddyActionIn(BaseModel):
@@ -85,10 +86,24 @@ class SettlementRow(BaseModel):
     status: str  # pending | meal_pending | settled
 
 
+class SettlementProfit(BaseModel):
+    """판매가 − 원가 = 이익. 식사 보증금은 통과 금액이라 판매가에서 뺀다"""
+    sales: int  # sales_dorm + sales_buddy + sales_album
+    sales_dorm: int  # 숙박비
+    sales_buddy: int  # 버디 활동비 (앨범·보증금 제외)
+    sales_album: int  # 앨범 요금 (전액 플랫폼)
+    cost_university: int  # 대학 지급 (숙박비 × 90%)
+    cost_buddy: int  # 버디 지급료 (활동비 × 90%, 식비 제외)
+    cost_other: int = 0  # 기타 원가 (카드 수수료 등, 지금은 0)
+    profit: int  # sales − (cost_university + cost_buddy + cost_other)
+    margin: float  # profit / sales (소수 셋째 자리)
+
+
 class SettlementsOut(BaseModel):
     period: dict
     total: int
     meal_refund_total: int = 0  # 여행자에게 돌려줄 남은 식사 보증금 합
+    profit: SettlementProfit
     items: list[SettlementRow]
 
 

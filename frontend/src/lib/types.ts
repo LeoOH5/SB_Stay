@@ -58,6 +58,8 @@ export interface Buddy {
   interests: string[]; intro: string; avatar: string; available_dates: string[]; rating: number; review_count: number;
   hourly_fee?: number;
   personality: Personality[]; style: WalkStyle[]; can_help: CanHelp[];
+  /** 운전 가능 표시만. 차량 이동·유상 운송은 하지 않는다 (여객자동차 운수사업법 제81조) */
+  can_drive: boolean;
   /** 후기 세부 점수 평균. 후기가 없으면 null */
   sub_scores: SubScores | null;
   /** 많이 받은 후기 태그 최대 3개 */
@@ -226,7 +228,7 @@ export interface AdminBuddyRow {
   /** 만 나이 (생년월일 없으면 null) */
   age: number | null;
   school_email_verified: boolean; code_agreed: boolean; quiz_score: number | null; report_count: number; can_help: CanHelp[];
-  walk_count?: number; rating?: number;
+  can_drive: boolean; walk_count?: number; rating?: number;
 }
 export interface AdminCourseRow {
   id: number; title: string; theme: string; duration_min: number; places: string[]; place_count: number;
@@ -249,9 +251,19 @@ export interface SettlementRow {
   meals: number;
   payout: number; status: string;
 }
+/** 판매가 − 원가 = 이익. 식사 보증금은 통과 금액이라 판매가에 넣지 않는다 */
+export interface SettlementProfit {
+  sales: number; sales_dorm: number; sales_buddy: number; sales_album: number;
+  /** 대학 지급 (숙박비 × 90%) · 버디 지급료 (활동비 × 90%, 식비 제외) · 기타 원가 (카드 수수료 등, 지금은 0) */
+  cost_university: number; cost_buddy: number; cost_other: number;
+  profit: number;
+  /** profit / sales (소수 셋째 자리) */
+  margin: number;
+}
 export interface Settlements {
   period?: { from: string; to: string }; total: number; items: SettlementRow[];
   /** 여행자에게 돌려줄 남은 식비 보증금 합 */
   meal_refund_total: number;
+  profit: SettlementProfit;
 }
 export interface ListResponse<T> { items: T[]; next_cursor: string | null }

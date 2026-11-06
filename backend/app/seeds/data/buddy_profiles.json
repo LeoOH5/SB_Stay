@@ -36,7 +36,8 @@
   "school_email_verified_at": "2026-12-01T10:00:00Z",
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
-  "bank_account": "신한 110-123-456482"
+  "bank_account": "신한 110-123-456482",
+  "can_drive": false
  },
  {
   "id": 32,
@@ -72,7 +73,8 @@
   "school_email_verified_at": "2026-12-01T10:00:00Z",
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
-  "bank_account": "국민 123-45-678901"
+  "bank_account": "국민 123-45-678901",
+  "can_drive": true
  },
  {
   "id": 33,
@@ -107,7 +109,8 @@
   "school_email_verified_at": "2026-12-01T10:00:00Z",
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 7,
-  "bank_account": null
+  "bank_account": null,
+  "can_drive": false
  },
  {
   "id": 34,
@@ -141,7 +144,8 @@
   "school_email_verified_at": "2026-12-01T10:00:00Z",
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
-  "bank_account": null
+  "bank_account": null,
+  "can_drive": false
  },
  {
   "id": 35,
@@ -175,7 +179,8 @@
   "school_email_verified_at": "2026-12-01T10:00:00Z",
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
-  "bank_account": "우리 1002-345-678901"
+  "bank_account": "우리 1002-345-678901",
+  "can_drive": false
  },
  {
   "id": 36,
@@ -209,6 +214,7 @@
   "school_email_verified_at": "2026-12-01T10:00:00Z",
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
-  "bank_account": "하나 391-910-123456"
+  "bank_account": "하나 391-910-123456",
+  "can_drive": true
  }
 ]

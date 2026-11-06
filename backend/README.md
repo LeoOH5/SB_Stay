@@ -3,7 +3,7 @@
 ## 실행
 ```bash
 cp .env.example .env
-uv sync --extra dev
+uv sync --extra dev                 # dev 그룹(openpyxl)도 같이 설치
 uv run alembic upgrade head
 uv run python -m app.seeds          # 데모 데이터 (기존 삭제 후 재적재)
 uv run uvicorn app.main:app --reload --port 8000
@@ -14,8 +14,18 @@ Swagger: http://localhost:8000/docs · 헬스: `/health`
 별도 DB `sbstay_test`를 쓴다 (`CREATE DATABASE sbstay_test OWNER sbstay;`). 스키마는 테스트 시작 때 다시 만든다.
 ```bash
 uv run pytest -q
-uv run ruff check app tests
+uv run ruff check app tests scripts
 ```
+
+## 시드 데이터 엑셀 검토
+```bash
+uv run python scripts/export_seed_xlsx.py            # app/seeds/data/*.json → SBStay_seed_data.xlsx (깃 제외)
+uv run python scripts/import_seed_xlsx.py            # 엑셀 → JSON 되쓰기 (--check: 검사만)
+uv run python -m app.seeds                           # 고친 JSON을 DB에 다시 적재
+```
+시트: universities · dorm_rooms · places(+ place_stories: 이야기 자료·출처) · tours · tour_places · buddy_profiles(이름·메일은 참고용) · packages.
+목록은 `a|b|c`, 빈 목록 `[]`, JSON 객체는 JSON 글자, 빈칸은 null. id는 바꾸지 않는다(설명은 엑셀 `readme` 시트).
+형식이 틀린 셀이 있으면 시트·행·열을 출력하고 아무 파일도 쓰지 않는다. 고치지 않고 되돌리면 JSON은 바이트까지 같다.
 
 ## 구현 상태 (B 담당)
 | 그룹 | 상태 |

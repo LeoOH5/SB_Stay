@@ -14,6 +14,10 @@ def test_profile_and_availability(client, buddy, reset_db):
     r = client.put(f"{B}/profile", json=body, headers=buddy)
     assert r.json()["intro"] == "새 소개" and r.json()["personality"] == ["humor"] and r.json()["bank_account"] == "국민 000-00-000000"
     assert client.put(f"{B}/profile", json={"personality": ["grumpy"]}, headers=buddy).status_code == 422
+    assert j["can_drive"] is False and client.get("/api/v1/buddies/31").json()["can_drive"] is False
+    r = client.put(f"{B}/profile", json={"can_drive": True}, headers=buddy)  # 운전 가능은 표시만 (차량 동행 없음)
+    assert r.json()["can_drive"] is True and client.get(f"{B}/profile", headers=buddy).json()["can_drive"] is True
+    assert client.get("/api/v1/buddies/31").json()["can_drive"] is True and r.json()["intro"] == "새 소개"
     r = client.put(f"{B}/availability", json={"dates": ["2027-01-20", "2027-01-21", "2027-01-20"]}, headers=buddy)
     assert r.json()["dates"] == ["2027-01-20", "2027-01-21"]
     assert client.get(f"{B}/availability", headers=buddy).json()["dates"] == ["2027-01-20", "2027-01-21"]
@@ -99,6 +103,14 @@ def test_activities(client, buddy, reset_db):
     assert len(client.get("/api/v1/bookings/501/album", headers=login(client, "emma@example.com")).json()["items"][0]["photos"]) == 7
     pub = client.get("/api/v1/buddies/31/activities").json()["items"]
     assert len(pub) == 4 and set(pub[0]) == {"date", "places", "foods"}  # 메모·사진·여행자 없음
+
+
+def test_public_detail_can_drive(client):
+    """운전 가능은 표시만: 시드 민호(32) true, 지우(31) false. 차량·운송 요금 필드는 없다"""
+    minho = client.get("/api/v1/buddies/32").json()
+    assert minho["can_drive"] is True and client.get("/api/v1/buddies/31").json()["can_drive"] is False
+    assert not any("car" in k or "ride" in k for k in minho)
+    assert next(b for b in client.get("/api/v1/buddies").json()["items"] if b["id"] == 32)["can_drive"] is True
 
 
 def _new_buddy(client, email="new@korea.ac.kr"):

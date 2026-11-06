@@ -29,6 +29,7 @@ from app.schemas.admin import (
     DashboardOut,
     MealDecideIn,
     ReportActionIn,
+    SettlementProfit,
     SettlementRow,
     SettlementsOut,
 )
@@ -118,6 +119,7 @@ def _buddy_row(db: Session, prof: BuddyProfile) -> AdminBuddyRow:
         age=rules.age_on(u.birth_date, get_settings().today()) if u.birth_date else None,
         school_email_verified=prof.school_email_verified_at is not None, code_agreed=prof.code_agreed_at is not None,
         quiz_score=prof.quiz_score, report_count=reports.count_for(db, prof.id), can_help=prof.can_help or [],
+        can_drive=bool(prof.can_drive),
     )
 
 
@@ -177,12 +179,13 @@ def admin_users(role: str | None = None, user: User = Depends(OPERATOR), db: Ses
 def settlements(from_: date | None = None, to: date | None = None, user: User = Depends(OPERATOR), db: Session = Depends(get_db)) -> SettlementsOut:
     """AD-06 (운영자): 확정 항목을 대학·버디별로 집계. 수수료 10%는 숙박·활동비에만, 버디 지급 = 활동비×0.9 + 승인 식비.
     앨범(5,000)은 전액 플랫폼 수입이라 버디 행에 넣지 않는다.
-    meal_refund_total = 여행자에게 돌려줄 남은 식사 보증금 합. 지급 처리는 목업(전부 pending)."""
+    meal_refund_total = 여행자에게 돌려줄 남은 식사 보증금 합. 지급 처리는 목업(전부 pending).
+    profit = 판매가(숙박 + 활동비 + 앨범) − 원가(대학·버디 지급, 기타 0) — 식사 보증금은 통과 금액이라 뺀다."""
     f, t = from_ or DEMO_FROM, to or DEMO_TO
     fee_rate = get_settings().platform_fee_rate
     agg: dict[tuple[str, int], SettlementRow] = {}
     meal_pending: set[int] = set()
-    refund = 0
+    refund = album = 0
     for it in db.scalars(select(BookingItem).where(BookingItem.status.in_(OK), BookingItem.type.in_(("dorm", "buddy")))).all():
         if not it.date_from or not (f <= it.date_from <= t):
             continue
@@ -196,6 +199,7 @@ def settlements(from_: date | None = None, to: date | None = None, user: User = 
         row = agg.setdefault(key, SettlementRow(party_type=key[0], party_id=key[1], target=name, count=0, revenue=0, fee=0, payout=0, status="pending"))
         row.count += 1
         row.revenue += it.price - (it.meal_deposit or 0) - album_fee(it)
+        album += album_fee(it)
         if it.type == "buddy" and it.meal_deposit:
             used, approved = meal_sums(db, it.id)
             row.meals += approved
@@ -209,7 +213,19 @@ def settlements(from_: date | None = None, to: date | None = None, user: User = 
             row.status = "meal_pending"
     items = sorted(agg.values(), key=lambda r: -r.revenue)
     return SettlementsOut(period={"from": f.isoformat(), "to": t.isoformat()}, total=sum(r.revenue for r in items),
-                          meal_refund_total=refund, items=items)
+                          meal_refund_total=refund, profit=_profit(items, album), items=items)
+
+
+def _profit(items: list[SettlementRow], album: int, cost_other: int = 0) -> SettlementProfit:
+    """판매가 − 원가 = 이익 (원가 = 정산 행의 revenue − fee, 승인 식비는 통과 금액이라 제외)"""
+    def part(kind: str, attr: str) -> int:
+        return sum(getattr(r, attr) for r in items if r.party_type == kind)
+    dorm, buddy = part("university", "revenue"), part("buddy", "revenue")
+    c_uni, c_buddy = dorm - part("university", "fee"), buddy - part("buddy", "fee")
+    sales = dorm + buddy + album
+    profit = sales - (c_uni + c_buddy + cost_other)
+    return SettlementProfit(sales=sales, sales_dorm=dorm, sales_buddy=buddy, sales_album=album, cost_university=c_uni,
+                            cost_buddy=c_buddy, cost_other=cost_other, profit=profit, margin=round(profit / sales, 3) if sales else 0)
 
 
 @router.get("/tours", response_model=ListResponse[AdminTourRow])

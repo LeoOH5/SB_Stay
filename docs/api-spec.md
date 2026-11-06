@@ -278,3 +278,11 @@ AD-01 Response 200
 | PATCH | /admin/buddies/{id} | admin | 변경 | approve는 학교 메일·만 19세·약속 동의·퀴즈 8점 모두 필요, 아니면 409 `NOT_READY`(빠진 항목) |
 | GET | /admin/settlements | operator | 변경 | 해설사 행 삭제, 버디 행 + `meals`, `payout` = 활동비×0.9 + meals, 응답 + `meal_refund_total` |
 | GET | /admin/tours | admin | 변경 | 코스 행 `{id, title, theme, duration_min, places, place_count, story_ready, buddy_walks}` |
+
+### v3.1 추가
+| Method | Path | 역할 | 변경 | 내용 |
+|---|---|---|---|---|
+| GET | /buddies, /buddies/{id} | 공개 | 변경 | + `can_drive` (운전 가능 표시만. 차량 이동·차비 없음 — 자가용 유상 운송 금지) |
+| GET/PUT | /buddy/profile | buddy | 변경 | + `can_drive: bool` |
+| GET | /admin/buddies | admin | 변경 | + `can_drive` |
+| GET | /admin/settlements | operator | 변경 | + `profit {sales, sales_dorm, sales_buddy, sales_album, cost_university, cost_buddy, cost_other, profit, margin}`. 판매가 − 원가 = 이익, 식사 보증금·식비 제외 |

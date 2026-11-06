@@ -22,6 +22,7 @@ backend/.venv/
 .ruff_cache/
 # data
 postgres-data/
+backend/SBStay_seed_data.xlsx
 *.log
 # 로컬 전용 자산 (깃허브 제외)
 design/

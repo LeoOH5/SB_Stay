@@ -4,13 +4,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, get, patch } from "@/lib/api";
 import { useUser } from "@/lib/auth";
-import { CAN_HELP, QUIZ_PASS, QUIZ_TOTAL, REPORT_SUSPEND_AT, labels } from "@/lib/codes";
+import { BUDDY_PROMISES, CAN_HELP, QUIZ_PASS, QUIZ_TOTAL, REPORT_SUSPEND_AT, labels } from "@/lib/codes";
 import type { AdminBuddyRow, ListResponse } from "@/lib/types";
 import { Button, Spinner, StatusPill } from "@/components/ui";
 import { AdminGate, AdminHeader, EmptyRow, ErrorText, Note, SectionLabel, Table, Td, Tr, errMsg, langNames, linkCls, smallBtn, univShort } from "@/components/admin/shell";
 
-/** 버디 약속(행동 규칙) 항목 수 — 동의하면 6/6 */
-const CODE_ITEMS = 6;
+/** 버디 약속(행동 규칙) 항목 수 — 동의하면 7/7 */
+const CODE_ITEMS = BUDDY_PROMISES.length;
 type Action = "approve" | "reject" | "suspend" | "unsuspend";
 
 export default function AdminMembersPage() {
@@ -94,8 +94,8 @@ export default function AdminMembersPage() {
 
       <SectionLabel className="mt-10">활동 중인 버디</SectionLabel>
       {!buddies ? <Spinner /> : (
-        <Table cols={[{ label: "이름" }, { label: "학과" }, { label: "동행" }, { label: "평점" }, { label: "신고" }, { label: "상태" }, { label: "", className: "w-[160px]" }]}>
-          {active.length === 0 && <EmptyRow cols={7}>활동 중인 버디가 없어요.</EmptyRow>}
+        <Table cols={[{ label: "이름" }, { label: "학과" }, { label: "동행" }, { label: "평점" }, { label: "운전" }, { label: "신고" }, { label: "상태" }, { label: "", className: "w-[160px]" }]}>
+          {active.length === 0 && <EmptyRow cols={8}>활동 중인 버디가 없어요.</EmptyRow>}
           {active.map((b) => {
             const suspended = b.status === "suspended";
             const auto = suspended && b.report_count >= REPORT_SUSPEND_AT;
@@ -105,6 +105,7 @@ export default function AdminMembersPage() {
                 <Td title={b.university}>{b.major} {b.year ? `${b.year}학년` : ""}</Td>
                 <Td>{b.walk_count ?? 0}회</Td>
                 <Td>{b.rating ? b.rating.toFixed(1) : <span className="text-muted">—</span>}</Td>
+                <Td title="표시만 · 차량 동행 없음">{b.can_drive ? "가능" : <span className="text-muted">—</span>}</Td>
                 <Td className={b.report_count > 0 ? "font-semibold" : undefined}>{b.report_count}</Td>
                 <Td>
                   {!suspended ? <StatusPill status="approved" label="활동 중" />

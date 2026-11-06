@@ -95,7 +95,7 @@ body `{item_id, rating 1~5, text?, sub_scores?: {kind,talk,punctual,local}, tags
 `GET /bookings/{id}/album` (본인) → `{items: [{item_id, buddy_name, date, places: [str], photos: [url]}]}` — album=true인 버디 항목의 활동 기록 사진.
 
 ## 5. 버디 공개 정보 (BD-01·02)
-BuddyOut 추가: `personality[], style[], can_help[], sub_scores {kind,talk,punctual,local}(평균, 없으면 null), tags_top [코드 최대 3], walk_count, verified {school_email: bool, trained: bool}`
+BuddyOut 추가: `personality[], style[], can_help[], can_drive(v3.1, 표시만), sub_scores {kind,talk,punctual,local}(평균, 없으면 null), tags_top [코드 최대 3], walk_count, verified {school_email: bool, trained: bool}`
 BuddyDetailOut 추가: `recent_activities: [{date, places:[str], foods}]` 최대 3개 (여행자 이름 없음)
 BD-01 쿼리 추가: `personality`, `style`, `can_help`, `university_id`
 `GET /buddies/{id}/activities` → 공개 활동 기록 최대 10개.
@@ -106,7 +106,7 @@ BD-01 쿼리 추가: `personality`, `style`, `can_help`, `university_id`
 - **AI-04 `/ai/buddy-brief`**: 장소는 버디 항목의 `course_id` 코스 → 없으면 request.places → 없으면 관심사. 요청(식단·알레르기·속도)을 brief 템플릿 첫 문장에 넣는다 ("비건, 버섯 알레르기 요청이 있어요. 식당에서 꼭 확인해 주세요."). 투어 관련 문장 삭제.
 
 ## 7. 버디 본인 (BD-03~07, `/buddy/*`, role=buddy만)
-- PUT `/buddy/profile` 필드 추가: personality, style, can_help, bank_account
+- PUT `/buddy/profile` 필드 추가: personality, style, can_help, bank_account, can_drive(v3.1)
 - `GET /buddy/requests` 항목에 `request, course_title, meal_count, album` 추가 (본인 항목이므로 보임). traveler는 이름·국적만.
 - 식비: `POST /buddy/meal-claims {item_id, place, items, amount, receipt_url?}` → 201 MealClaimOut. 조건: 본인 항목, confirmed, meal_count>0, 청구 수 < meal_count. `GET /buddy/meal-claims`.
   MealClaimOut = `{id, item_id, booking_code, tourist, date, place, items, amount, limit:20000, over_limit(bool), status, reason, created_at}`
@@ -131,8 +131,9 @@ BD-01 쿼리 추가: `personality`, `style`, `can_help`, `university_id`
 
 ## 9. 관리자
 - AD-04 승인(`approve`)은 학교 메일 인증·만 19세·약속 동의·퀴즈 ≥8 모두 충족해야 함. 아니면 409 `NOT_READY` + message에 빠진 항목.
-- AdminBuddyRow 추가: `age, school_email_verified, code_agreed, quiz_score, report_count, can_help`
+- AdminBuddyRow 추가: `age, school_email_verified, code_agreed, quiz_score, report_count, can_help, can_drive(v3.1)`
 - AD-06 정산: 해설사 행 삭제. 버디 행에 `meals`(승인 식비) 추가, 지급액 = 활동비×0.9 + meals. 응답에 `meal_refund_total`(여행자에게 돌려줄 남은 보증금 합).
+  v3.1: `profit {sales, sales_dorm, sales_buddy, sales_album, cost_university, cost_buddy, cost_other(0), profit, margin}` — sales = 숙박 + 활동비 + 앨범, 원가 = 대학·버디 지급(×0.9), 식사 보증금·식비는 통과 금액이라 제외. margin = profit/sales (소수 셋째 자리).
 - 식비 심사: `GET /admin/meal-claims?status=` (operator) → MealClaimOut + `{buddy_name, deposit, deposit_left, request_summary}`; `PATCH /admin/meal-claims/{id} {action: approve|reject, reason?}`
 - AD-07 `/admin/tours` → 코스 행 `{id, title, theme, duration_min, places:[이름], place_count, story_ready(이야기 자료 있는 장소 수), buddy_walks(이 코스를 고른 버디 항목 수)}`
 

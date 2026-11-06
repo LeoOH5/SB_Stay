@@ -106,6 +106,7 @@ def _profile_out(db: Session, user: User, prof: BuddyProfile) -> BuddyProfileOut
         code_agreed=prof.code_agreed_at is not None, quiz_score=prof.quiz_score,
         rating=average(reviews) or 0, review_count=len(reviews),
         personality=prof.personality or [], style=prof.style or [], can_help=prof.can_help or [], bank_account=prof.bank_account,
+        can_drive=bool(prof.can_drive),
     )
 
 

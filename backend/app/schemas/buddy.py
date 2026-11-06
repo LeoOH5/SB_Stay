@@ -28,6 +28,7 @@ class BuddyProfileOut(BaseModel):
     style: list[str] = []
     can_help: list[str] = []
     bank_account: str | None = None  # 본인에게만 (정산 화면은 마스킹)
+    can_drive: bool = False  # 운전 가능 표시만. 차량 동행·유상 운송은 하지 않는다
 
 
 class BuddyProfileIn(BaseModel):
@@ -42,6 +43,7 @@ class BuddyProfileIn(BaseModel):
     style: list[str] | None = None
     can_help: list[str] | None = None
     bank_account: str | None = Field(default=None, max_length=100)
+    can_drive: bool | None = None
 
 
 class AvailabilityIn(BaseModel):

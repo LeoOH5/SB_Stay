@@ -122,6 +122,7 @@ class BuddyProfile(Base):
     code_agreed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     quiz_score: Mapped[int | None] = mapped_column(SmallInteger)
     bank_account: Mapped[str | None] = mapped_column(String(100))
+    can_drive: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")  # 표시만 (유상 운송 금지)
 
 
 class BuddyAvailability(Base):

@@ -1,5 +1,6 @@
 "use client";
 // T10 버디 상세 — BD-02 GET /buddies/{id} (성격·스타일·도와줄 수 있어요, 후기 세부 점수, 최근 활동), GET /buddies/{id}/activities
+// 운전 가능은 표시만 (자가용 유상 운송 금지 — 차량 이동 서비스 없음).
 // 날짜는 장바구니 숙박(또는 ?from&to) 기간 안에서만. "이 버디로 정하기" → 요청 단계(/buddies/[id]/request)
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -122,6 +123,12 @@ function Detail() {
             <InfoRow label="쓰는 말">{allLangs(buddy.languages)}</InfoRow>
             {buddy.interests.length > 0 && <InfoRow label="좋아하는 것">{buddy.interests.map((i) => INTEREST_LABEL[i] ?? i).join(", ")}</InfoRow>}
             <InfoRow label="동행">{buddy.walk_count}회</InfoRow>
+            {buddy.can_drive && (
+              <InfoRow label="운전">
+                <TagChip variant="outline">운전 가능</TagChip>
+                <span className="mt-1 block text-[13px] font-normal text-muted">차량 이동 서비스는 제공하지 않아요</span>
+              </InfoRow>
+            )}
           </div>
 
           <div className="mt-8 flex items-center justify-between">

@@ -273,7 +273,7 @@ function toAdminBuddy(id: number): AdminBuddyRow | null {
   const bd = buddyOf(id), info = state.adminInfo[id], st = statusOf(id);
   if (!bd || !info || st === "rejected") return null;
   return { id, name: bd.name, email: info.email, major: bd.major, year: bd.year, university: bd.university, university_id: bd.university_id, languages: bd.languages, status: st,
-    age: info.age, school_email_verified: info.school_email_verified, code_agreed: info.code_agreed, quiz_score: info.quiz_score, report_count: reportCount(id), can_help: bd.can_help, walk_count: bd.walk_count, rating: bd.rating };
+    age: info.age, school_email_verified: info.school_email_verified, code_agreed: info.code_agreed, quiz_score: info.quiz_score, report_count: reportCount(id), can_help: bd.can_help, can_drive: bd.can_drive, walk_count: bd.walk_count, rating: bd.rating };
 }
 
 function adminBookingRows(): AdminBookingRow[] {
@@ -576,7 +576,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if (method === "PUT" && path === "/buddy/profile") {
     const bd = buddyOf(myBuddyId())!;
     const { bank_account, ...rest } = b as Record<string, unknown> & { bank_account?: string };
-    const allowed = ["major", "year", "languages", "interests", "intro", "avatar", "hourly_fee", "personality", "style", "can_help"] as const;
+    const allowed = ["major", "year", "languages", "interests", "intro", "avatar", "hourly_fee", "personality", "style", "can_help", "can_drive"] as const;
     for (const k of allowed) if (k in rest) (bd as unknown as Record<string, unknown>)[k] = rest[k];
     if (isStr(bank_account)) state.bankAccount = bank_account;
     applyStateFor(myEmail()).profile_done = true;
@@ -653,7 +653,14 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
       if (sumClaims(it.id, ["requested"]) > 0) continue;
       refund += (it.meal_count ?? 0) * MEAL_LIMIT - sumClaims(it.id, ["approved"]);
     }
-    const out: Settlements = { period: { from: `${month}-01`, to: `${month}-31` }, total: items.reduce((s, r) => s + r.revenue + r.meals, 0), items, meal_refund_total: refund };
+    // 판매가 − 원가 = 이익 (원가 = 대학·버디 지급 = revenue − fee, 식비·보증금은 통과 금액이라 뺀다)
+    const part = (t: SettlementRow["party_type"], k: "revenue" | "fee") => items.filter((r) => r.party_type === t).reduce((s, r) => s + r[k], 0);
+    const albumSales = state.bookings.flatMap((bk) => bk.items).filter((it) => it.type === "buddy" && it.album && it.status === "confirmed" && (it.date_from ?? "").startsWith(month)).length * ALBUM_FEE;
+    const salesDorm = part("university", "revenue"), salesBuddy = part("buddy", "revenue");
+    const costUni = salesDorm - part("university", "fee"), costBuddy = salesBuddy - part("buddy", "fee");
+    const sales = salesDorm + salesBuddy + albumSales, profitAmt = sales - costUni - costBuddy;
+    const profit = { sales, sales_dorm: salesDorm, sales_buddy: salesBuddy, sales_album: albumSales, cost_university: costUni, cost_buddy: costBuddy, cost_other: 0, profit: profitAmt, margin: sales ? Math.round((profitAmt / sales) * 1000) / 1000 : 0 };
+    const out: Settlements = { period: { from: `${month}-01`, to: `${month}-31` }, total: items.reduce((s, r) => s + r.revenue + r.meals, 0), items, meal_refund_total: refund, profit };
     return out;
   }
   if (method === "GET" && path === "/admin/meal-claims") { requireOperator(); return list(state.mealClaims.filter((c) => !q("status") || c.status === q("status")).sort((a, c) => c.created_at.localeCompare(a.created_at)).map(toAdminMealClaim)); }

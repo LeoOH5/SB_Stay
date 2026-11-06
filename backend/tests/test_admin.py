@@ -49,6 +49,11 @@ def test_users_and_settlements_operator_only(client, univ_admin, operator):
     j = targets["버디 지우"]  # 1월 동행 4회 활동비 120,000 (앨범·보증금 제외) · 승인 식비 18,000 · 대기 1건
     assert (j["revenue"], j["fee"], j["meals"], j["payout"], j["status"]) == (120000, 12000, 18000, 126000, "meal_pending")
     assert s["meal_refund_total"] == 40000 + 2000 and s["total"] == sum(r["revenue"] for r in s["items"])
+    # 판매가(숙박 219,000 + 활동비 150,000 + 앨범 5,000) − 원가(대학 90% + 버디 90%) = 이익 (식비·보증금 제외)
+    p = s["profit"]
+    assert (p["sales_dorm"], p["sales_buddy"], p["sales_album"], p["sales"]) == (219000, 150000, 5000, 374000)
+    assert (p["cost_university"], p["cost_buddy"], p["cost_other"]) == (197100, 135000, 0)
+    assert p["profit"] == 41900 == 21900 + 15000 + 5000 and p["margin"] == 0.112
 
 
 def test_admin_courses(client, univ_admin):

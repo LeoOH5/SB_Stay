@@ -17,6 +17,16 @@ export const REPORT_SUSPEND_AT = 2;
 export const QUIZ_PASS = 8;
 export const QUIZ_TOTAL = 10;
 export const BUDDY_MIN_AGE = 19;
+/** 버디 약속 (B07 지원 2단계). 동의는 한 번에 받고(POST /buddy/apply/agree), 개수는 화면 표시용(A03 n/n) */
+export const BUDDY_PROMISES = [
+  "역사 해설은 하지 않아요. 이야기는 앱의 AI가 들려주고, 나는 친구로 같이 걸어요",
+  "앱 밖에서 돈이나 선물을 받지 않아요",
+  "예약된 날짜·시간·장소에서만 만나요",
+  "술을 권하지 않고, 늦은 밤 동행은 하지 않아요",
+  "여행자를 내 차에 태우지 않아요 (유상 운송 금지)",
+  "여행자의 요청 사항(음식, 알레르기)을 꼭 확인해요",
+  "문제가 생기면 바로 앱에서 운영팀에 알려요",
+] as const;
 /** 버디 요청: 더 보고 싶은 곳 최대 개수, 메모 최대 길이 */
 export const REQUEST_PLACES_MAX = 3;
 export const REQUEST_NOTE_MAX = 300;
