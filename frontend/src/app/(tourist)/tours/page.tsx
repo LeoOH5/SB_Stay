@@ -3,7 +3,8 @@
 import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Card, Chip, Hero, MapEmbed, Spinner, StatusPill, inputCls } from "@/components/ui";
+import { KakaoMap } from "@/components/kakao-map";
+import { Card, Chip, Hero, Spinner, StatusPill, inputCls } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { daysLabel, DEFAULT_TOUR_DATE, dowKey, errMsg, langsCode, md, THEME_LABEL, THEMES } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -61,7 +62,7 @@ export default function ToursPage() {
             <input type="date" className={inputCls} value={date} min="2027-01-05" max="2027-02-20" onChange={(e) => pick(() => setDate(e.target.value))} />
           </div>
         )}
-        {showMap && <MapEmbed points={shown.flatMap((t) => t.places.slice(0, 1).map((pl) => ({ lat: pl.lat, lng: pl.lng })))} />}
+        {showMap && <KakaoMap points={shown.flatMap((t) => t.places.slice(0, 1).map((pl) => ({ lat: pl.lat, lng: pl.lng, label: lang === "en" ? t.title_en : t.title })))} />}
 
         <ErrorBox message={err} />
         {!tours && !err && <Spinner />}
