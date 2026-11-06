@@ -5,7 +5,7 @@ from typing import NamedTuple
 
 MEAL_LIMIT = 20000  # 식사 1회 한도(2인), 보증금 = 횟수 × 한도
 MEAL_MAX = 4  # 버디 항목 1개당 식사 최대 횟수
-ALBUM_FEE = 5000
+ALBUM_FEE = 5000  # 여행 앨범(사진 기록). v3.6: 활동비처럼 버디 정산율로 나눈다
 REPORT_SUSPEND_AT = 2
 
 # ---- 돈 규칙: 금액은 원 단위 int, 비율은 퍼센트 int. 소수(float) 계산을 쓰지 않는다
@@ -28,8 +28,8 @@ def refund_percent(days_left: int) -> int:
 QUIZ_TOTAL, QUIZ_PASS = 10, 8
 BUDDY_MIN_AGE = 19
 
-# ---- v3.2 버디 등급·정산율
-# 운영 방학 (이름, 시작, 끝). 등급 평가 기간(현재 + 직전 방학)·휴면 일수는 이 기간만 센다
+# ---- 버디 등급·정산율 (v3.7: 매달 1일, 지난달 동행으로 평가)
+# 운영 방학 (이름, 시작, 끝). v3.7부터 등급 평가에는 쓰지 않고, 휴면 일수(운영 기간만 셈)에만 쓴다
 VACATIONS = [
     ("2025 겨울방학", date(2025, 12, 22), date(2026, 2, 28)),
     ("2026 여름방학", date(2026, 6, 22), date(2026, 8, 31)),
@@ -40,19 +40,32 @@ VACATIONS = [
 class Grade(NamedTuple):
     code: str
     label: str
-    rating: Decimal  # 평균 평점 이상
-    walks: int  # 완료 동행 이상
-    reviews: int  # 후기 이상
-    rate: Decimal  # 버디 정산율 (활동비 기준)
+    rating: Decimal  # 누적 평균 평점 이상
+    walks: int  # 지난달(평가 달) 완료 동행 이상 — 누적 아님
+    reviews: int  # 누적 후기 이상
+    rate: Decimal  # 버디 정산율 ((활동비 + 앨범) 기준)
 
 
-GRADES = [  # 높은 등급부터. 세 조건을 모두 채우는 가장 높은 등급
-    Grade("top", "우수", Decimal("4.5"), 15, 5, Decimal("0.800")),
-    Grade("growth", "성장", Decimal("4.3"), 5, 3, Decimal("0.750")),
+GRADES = [  # 높은 등급부터. 우수는 지금 성장(또는 우수)일 때만, 올라갈 때는 한 단계씩 (services/grades.decide)
+    Grade("top", "우수", Decimal("4.5"), 7, 5, Decimal("0.800")),
+    Grade("growth", "성장", Decimal("4.3"), 4, 3, Decimal("0.750")),
     Grade("basic", "기본", Decimal(0), 0, 0, Decimal("0.700")),
 ]
 GRADE_BY_CODE = {g.code: g for g in GRADES}
-DORMANT_DAYS = 30  # 운영 기간 중 이만큼 활동이 없으면 휴면(요청 받기 멈춤)
+GRADE_NOTE = "등급은 매달 1일, 지난달 동행으로 다시 정해요. 올라갈 때는 한 단계씩, 내려갈 때는 조건에 맞는 등급으로 바로 가요."
+DORMANT_DAYS = 30  # 운영 기간 중 이만큼 활동이 없으면 휴면(요청 받기 멈춤). 등급과는 상관없다
+
+# ---- v3.7 버디 자격 (지원 1단계) · 사전 교육
+ELIGIBILITY = {"school_email": "성북구 대학 메일", "residence": "성북구 거주"}
+# 사전 교육 영상 (id, 제목, 다루는 것, 길이 초). 데모: 영상 파일은 아직 없다(화면은 '영상 준비 중')
+EDUCATION_VIDEOS = [
+    ("seongbuk_overview", "성북구 한눈에 보기", "주요 장소와 동네: 성북동·정릉·안암·돈암·길음", 180),
+    ("getting_around", "길 안내와 교통", "지하철 4·6호선·우이신설선, 마을버스, 택시 부르기", 150),
+    ("safety", "안전과 응급", "가까운 병원·약국·화장실, 112·119·1330", 160),
+    ("history_basics", "역사 기본 상식", "한양도성·성북동 문인·독립운동 — 해설이 아니라 기본 상식", 200),
+    ("promises", "버디 약속과 하지 말 것", "유료 해설·차량 동행 금지, 앱 밖에서 돈 받지 않기", 120),
+]
+EDUCATION_IDS = [v[0] for v in EDUCATION_VIDEOS]
 
 DIET = {"vegan": "비건", "vegetarian": "채식", "halal": "할랄", "no_pork": "돼지고기 X", "no_beef": "소고기 X", "no_alcohol": "술 X"}
 ALLERGIES = {"mushroom": "버섯", "nuts": "견과류", "seafood": "해산물", "dairy": "유제품", "egg": "달걀", "gluten": "밀"}
@@ -73,6 +86,11 @@ FREE_AI_QUESTIONS = 3  # 무료 이용자가 하루에 AI-02에 할 수 있는 �
 SURVEY_PAIN = {"ads": "광고가 귀찮았어요", "question_limit": "질문 3번이 모자랐어요",
                "route_fit": "동선이 내 숙소·시간과 안 맞았어요", "no_help": "길을 잃었을 때 물어볼 사람이 없었어요",
                "none": "딱히 없었어요"}
+
+# ---- v3.5 코스 걷는 시간 (services/courses.py). 둘 다 추정값: 실제 길·언덕·걸음 빠르기에 따라 달라진다
+WALK_DETOUR_PERCENT = 130  # 직선거리 × 1.3 = 실제 걷는 길 (골목·언덕을 돌아가는 몫, 추정)
+WALK_M_PER_HOUR = 4000  # 걷는 속도 4 km/h (언덕이 많은 성북동 보통 걸음, 추정)
+DURATION_STEP_MIN = 10  # 코스 전체 시간은 10분 단위로 올린다
 
 
 def request_summary(req: dict | None) -> str:

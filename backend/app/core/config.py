@@ -1,5 +1,6 @@
 from datetime import date
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -49,6 +50,8 @@ class Settings(BaseSettings):
     debug: bool = False
     # 데모용 '오늘' (후기 가능 여부·식비 환불 확정). 비우면 실제 오늘
     demo_today: date | None = None
+    # v3.6 사진 저장 폴더 (POST /uploads → <폴더>/<yyyy>/<mm>/<uuid>.<ext>, /media/... 로 보임). 기본 backend/uploads (깃 제외)
+    upload_dir: str = str(Path(__file__).resolve().parents[2] / "uploads")
 
     def today(self) -> date:
         return self.demo_today or date.today()

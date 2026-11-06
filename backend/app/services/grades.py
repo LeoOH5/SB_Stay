@@ -1,11 +1,16 @@
-"""버디 등급·정산율·휴면 (v3.2).
+"""버디 등급·정산율·휴면 (v3.2, v3.7 매달 평가).
 
-- 평가 기간: 오늘이 든 운영 방학(없으면 가장 최근 방학) + 그 직전 방학. 방학 밖 날짜는 세지 않는다.
-- 실적: 확정되고 날짜가 오늘 이전인 버디 항목(활동 완료) 수, 그 항목 후기의 평균 평점·개수.
-- 등급: 평점·동행·후기 세 조건을 모두 채우는 가장 높은 등급 (rules.GRADES). 매월 1회 recompute_all.
-- 정산율은 예약 확정 때 항목에 고정(lock_rate). 버디 몫 = round(활동비 × 정산율), 나머지는 플랫폼.
-- 휴면: 운영 기간 중 30일간 활동(완료 동행·요청 수락·가능 날짜 수정)이 없으면 needs_recheck.
-  예약이 없어 생긴 휴면이라 등급·정산율은 내리지 않고, 복귀 후 첫 동행이 끝날 때까지 재산정을 미룬다.
+- 평가: 매달 1일. 평가 달 = 그 전 달(달력 기준). recompute_all(db, 어느 날)은 그날이 든 달의 1일에 한 평가를 한다.
+  이미 그 달을 평가했으면 다시 하지 않는다(grade_evaluated_for) — 같은 달에 두 번 눌러도 한 단계씩만 오른다.
+- 실적: 지난달 완료 동행 수(확정 + 그 달 날짜, 누적 아님) · 지난달 말까지 끝난 동행의 후기 개수·평균(누적).
+- 등급(decide): 승인 후 첫 달(승인일이 평가 달 1일보다 늦음)은 기본.
+  성장 = 지난달 동행 ≥ 4 · 후기 ≥ 3 · 평점 ≥ 4.3 (지금 등급과 상관없음).
+  우수 = 지금 성장 또는 우수 + 지난달 동행 ≥ 7 · 후기 ≥ 5 · 평점 ≥ 4.5.
+  올라갈 때는 한 단계씩(기본 → 성장 → 우수), 내려갈 때는 조건에 맞는 가장 높은 등급으로 바로(우수 → 기본도 된다).
+  동행이 없는 달도 똑같이 평가한다(방학이 끝나면 대부분 기본).
+- 정산율은 예약 확정 때 항목에 고정(lock_rate). 버디 몫 = round((활동비 + 앨범) × 정산율), 나머지는 플랫폼 (v3.6 앨범 포함).
+- 휴면: 운영 기간 중 30일간 활동(완료 동행·요청 수락·가능 날짜 수정)이 없으면 needs_recheck → 목록·AI 추천에서 빠지고 새 예약 409.
+  v3.7부터 등급은 멈추지 않는다(휴면이어도 매달 평가).
 """
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -21,62 +26,103 @@ from app.models.supply import BuddyProfile
 
 @dataclass
 class Eval:
-    grade: rules.Grade
-    rating: float | None  # 소수 둘째 자리
-    walks: int
-    reviews: int
-    window: dict  # {from, to, label}
+    grade: rules.Grade  # 이 실적으로 정해지는 등급 (지금 등급 → decide)
+    month: date  # 평가 달 1일
+    walks: int  # 그 달 완료 동행
+    reviews: int  # 그 달 말까지 누적 후기
+    rating: float | None  # 누적 평균 (소수 둘째 자리)
+    first_month: bool  # 승인 후 첫 달이라 기본
 
 
-# ---------- 기간
-def vacation_index(today: date) -> int | None:
-    """오늘이 든 방학, 없으면 오늘 전 가장 최근 방학의 번호"""
-    past = [i for i, (_, start, _) in enumerate(rules.VACATIONS) if start <= today]
-    return past[-1] if past else None
+# ---------- 달
+def month_start(d: date) -> date:
+    return d.replace(day=1)
 
 
-def window(today: date) -> list[tuple[str, date, date]]:
-    """평가 기간 = [직전 방학, 현재 방학] (오래된 순)"""
-    i = vacation_index(today)
-    return [] if i is None else rules.VACATIONS[max(i - 1, 0): i + 1]
+def prev_month(d: date) -> date:
+    """d가 든 달의 바로 전 달 1일"""
+    return (month_start(d) - timedelta(days=1)).replace(day=1)
 
 
-def window_out(today: date) -> dict:
-    w = window(today)
-    if not w:
-        return {"from": None, "to": None, "label": ""}
-    return {"from": w[0][1].isoformat(), "to": w[-1][2].isoformat(), "label": " + ".join(n for n, _, _ in w)}
+def next_month(d: date) -> date:
+    return (month_start(d) + timedelta(days=32)).replace(day=1)
+
+
+def month_end(m: date) -> date:
+    return next_month(m) - timedelta(days=1)
+
+
+def eval_month(as_of: date) -> date:
+    """as_of가 든 달 1일의 평가가 보는 달 = 지난달 1일"""
+    return prev_month(as_of)
 
 
 def in_vacation(d: date) -> bool:
     return any(start <= d <= end for _, start, end in rules.VACATIONS)
 
 
-# ---------- 평가
-def done_items(db: Session, buddy_id: int, today: date) -> list[BookingItem]:
-    """평가 기간 안에서 활동 완료(확정 + 날짜 ≤ 오늘)한 버디 항목"""
-    rows = db.scalars(select(BookingItem).where(BookingItem.type == "buddy", BookingItem.ref_id == buddy_id,
-                                                BookingItem.status == "confirmed", BookingItem.date_from <= today)).all()
-    w = window(today)
-    return [it for it in rows if any(start <= it.date_from <= end for _, start, end in w)]
+# ---------- 실적
+def walks_in(db: Session, buddy_id: int, month: date) -> list[BookingItem]:
+    """그 달 완료 동행 (확정 + 날짜가 그 달 안)"""
+    return list(db.scalars(select(BookingItem).where(
+        BookingItem.type == "buddy", BookingItem.ref_id == buddy_id, BookingItem.status == "confirmed",
+        BookingItem.date_from >= month, BookingItem.date_from <= month_end(month))))
 
 
-def grade_for(rating: Decimal | None, walks: int, reviews: int) -> rules.Grade:
-    for g in rules.GRADES:
-        if walks >= g.walks and reviews >= g.reviews and (g.reviews == 0 or (rating is not None and rating >= g.rating)):
-            return g
-    return rules.GRADES[-1]
+def reviews_until(db: Session, buddy_id: int, until: date) -> list[int]:
+    """until까지 날짜인 이 버디 동행의 후기 평점 (누적)"""
+    return list(db.scalars(select(Review.rating).join(BookingItem, Review.booking_item_id == BookingItem.id).where(
+        BookingItem.type == "buddy", BookingItem.ref_id == buddy_id, BookingItem.date_from <= until)))
 
 
-def evaluate(db: Session, buddy: BuddyProfile, today: date) -> Eval:
-    items = done_items(db, buddy.id, today)
-    ratings = list(db.scalars(select(Review.rating).where(Review.booking_item_id.in_([i.id for i in items])))) if items else []
-    avg = Decimal(sum(ratings)) / len(ratings) if ratings else None
-    return Eval(grade_for(avg, len(items), len(ratings)), round(float(avg), 2) if avg is not None else None,
-                len(items), len(ratings), window_out(today))
+def _avg(ratings: list[int]) -> Decimal | None:
+    return Decimal(sum(ratings)) / len(ratings) if ratings else None
+
+
+def first_month(buddy: BuddyProfile, month: date) -> bool:
+    """승인일이 평가 달 1일보다 늦거나 없으면 첫 달 (= 승인한 지 한 달이 안 됨) → 기본"""
+    return buddy.approved_on is None or buddy.approved_on > month
+
+
+def decide(current: str, first: bool, walks: int, reviews: int, rating: Decimal | None) -> rules.Grade:
+    """지금 등급 + 지난달 실적 → 새 등급. 오를 때 한 단계씩, 내릴 때 바로."""
+    top, growth, basic = rules.GRADE_BY_CODE["top"], rules.GRADE_BY_CODE["growth"], rules.GRADE_BY_CODE["basic"]
+    if first:
+        return basic
+
+    def meets(g: rules.Grade) -> bool:
+        return walks >= g.walks and reviews >= g.reviews and rating is not None and rating >= g.rating
+
+    if current in ("growth", "top") and meets(top):
+        return top
+    if meets(growth):
+        return growth
+    return basic
+
+
+def evaluate(db: Session, buddy: BuddyProfile, as_of: date) -> Eval:
+    """as_of가 든 달 1일 평가 (지난달 동행 · 지난달 말까지 누적 후기). 저장은 apply_grade"""
+    m = eval_month(as_of)
+    walks = len(walks_in(db, buddy.id, m))
+    ratings = reviews_until(db, buddy.id, month_end(m))
+    avg = _avg(ratings)
+    first = first_month(buddy, m)
+    return Eval(decide(buddy.grade or "basic", first, walks, len(ratings), avg), m, walks, len(ratings),
+                round(float(avg), 2) if avg is not None else None, first)
+
+
+def stats_now(db: Session, buddy: BuddyProfile, today: date) -> dict:
+    """화면용: 평가 달(지난달) 동행, 이번 달 지금까지 동행, 오늘까지 누적 후기·평점"""
+    m, this = eval_month(today), month_start(today)
+    ratings = reviews_until(db, buddy.id, today)
+    avg = _avg(ratings)
+    return {"month": m, "last_month_walks": len(walks_in(db, buddy.id, m)),
+            "this_month_walks": len([i for i in walks_in(db, buddy.id, this) if i.date_from <= today]),
+            "reviews": len(ratings), "rating": round(float(avg), 2) if avg is not None else None}
 
 
 def next_grade(code: str) -> rules.Grade | None:
+    """한 단계 위 (우수면 None)"""
     i = [g.code for g in rules.GRADES].index(code)
     return rules.GRADES[i - 1] if i > 0 else None
 
@@ -119,43 +165,40 @@ def check_dormant(db: Session, buddy: BuddyProfile, today: date) -> bool:
 
 
 def confirm_active(buddy: BuddyProfile, today: date) -> None:
-    """'계속 활동할게요': 요청 받기 다시 시작. 등급은 그대로(첫 동행은 기존 정산율), dormant_since는 첫 동행 뒤 지운다"""
-    buddy.needs_recheck, buddy.active_on = False, today
+    """'계속 활동할게요': 요청 받기 다시 시작. 등급은 휴면과 상관없이 매달 평가"""
+    buddy.needs_recheck, buddy.dormant_since, buddy.active_on = False, None, today
 
 
-def _held(db: Session, buddy: BuddyProfile, today: date) -> bool:
-    """휴면 중이거나 복귀 후 아직 동행을 마치지 않았으면 등급 재산정을 미룬다"""
-    if buddy.needs_recheck:
-        return True
-    if not buddy.dormant_since:
+def apply_grade(db: Session, buddy: BuddyProfile, as_of: date) -> bool:
+    """as_of가 든 달 1일 평가를 저장. 이미 그 달(또는 더 뒤)을 평가했으면 건너뛴다. 등급·정산율이 바뀌었으면 True"""
+    m = eval_month(as_of)
+    if buddy.grade_evaluated_for and buddy.grade_evaluated_for >= m:
         return False
-    walked = db.scalar(select(func.max(BookingItem.date_from)).where(
-        BookingItem.type == "buddy", BookingItem.ref_id == buddy.id, BookingItem.status == "confirmed", BookingItem.date_from <= today))
-    if walked and walked > buddy.dormant_since:
-        buddy.dormant_since = None
-        return False
-    return True
-
-
-def apply_grade(db: Session, buddy: BuddyProfile, today: date) -> bool:
-    """등급·정산율 갱신. 바뀌었으면 True"""
-    if _held(db, buddy, today):
-        return False
-    g = evaluate(db, buddy, today).grade
+    g = evaluate(db, buddy, as_of).grade
     changed = buddy.grade != g.code or Decimal(buddy.payout_rate or 0) != g.rate
-    buddy.grade, buddy.payout_rate, buddy.grade_updated_at = g.code, g.rate, today
+    buddy.grade, buddy.payout_rate = g.code, g.rate
+    buddy.grade_evaluated_for, buddy.grade_updated_at = m, month_start(as_of)
     return changed
 
 
-def recompute_all(db: Session, today: date) -> list[BuddyProfile]:
-    """매월 1회: 등급 재산정 → 휴면 판정 (휴면 중이면 등급은 그대로). 등급·정산율·휴면이 바뀐 버디 목록 (commit은 호출한 쪽)"""
+def recompute_all(db: Session, as_of: date, dormancy: bool = True) -> list[BuddyProfile]:
+    """매달 1일: 등급 평가(지난달 실적) → 휴면 판정. 등급·정산율·휴면이 바뀐 버디 목록 (commit은 호출한 쪽).
+    as_of가 1일이 아니어도 그 달 1일 평가로 본다(그 달에 아직 안 했으면 한다). dormancy=False면 등급만."""
     changed = []
     for b in db.scalars(select(BuddyProfile).order_by(BuddyProfile.id)).all():
-        graded = apply_grade(db, b, today)
-        if check_dormant(db, b, today) or graded:
+        graded = apply_grade(db, b, as_of)
+        if (dormancy and check_dormant(db, b, as_of)) or graded:
             changed.append(b)
     db.flush()
     return changed
+
+
+def replay(db: Session, since: date, today: date) -> None:
+    """시드용: since 다음 달 1일부터 today가 든 달 1일까지 매달 평가를 차례로 (휴면은 마지막에 한 번)"""
+    m = next_month(since)
+    while m <= today:
+        recompute_all(db, m, dormancy=False)
+        m = next_month(m)
 
 
 # ---------- 정산율
@@ -174,6 +217,6 @@ def item_rate(db: Session, it: BookingItem) -> Decimal:
 
 
 def buddy_net(gross: int, rate: Decimal) -> int:
-    """버디 몫 = round(활동비 × 정산율), 0.5는 올림"""
+    """버디 몫 = round(금액 × 정산율), 0.5는 올림. 금액 = 활동비 + 앨범 (booking_state.payout_base)"""
     return int((Decimal(gross) * Decimal(rate)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
 

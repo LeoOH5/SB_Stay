@@ -8,7 +8,7 @@ class BuddyProfileOut(BaseModel):
     user_id: int
     name: str
     university: str
-    university_id: int
+    university_id: int | None = None  # v3.7 거주 경로 다른 대학이면 None
     major: str | None = None
     year: int | None = None
     languages: list[str] = []
@@ -91,7 +91,7 @@ class EarningItem(BaseModel):
     date: str
     tourist: str
     activity: str
-    amount: int  # 수수료 뺀 금액 (net). 식사 보증금은 넣지 않음
+    amount: int  # 버디 몫 net = round((활동비 + 앨범) × 정산율). 식사 보증금은 넣지 않음
     status: str  # pending | paid
 
 
@@ -127,6 +127,7 @@ class MealClaimOut(BaseModel):
     over_limit: bool = False
     status: str  # requested | approved | rejected
     reason: str | None = None
+    receipt_url: str | None = None  # v3.6: /media/... (앱에서 올린 영수증) 또는 예전 시드 값(파일 이름)
     created_at: datetime
 
 
@@ -165,7 +166,8 @@ class SettlementItem(BaseModel):
     item_id: int
     date: str
     tourist: str
-    gross: int  # 활동비 (앨범·식사 보증금 제외)
+    gross: int  # 정산 대상 = 활동비 + 앨범(사진 기록) (식사 보증금 제외, v3.6)
+    album: int = 0  # gross 중 앨범 요금 (0 또는 5,000)
     payout_rate: float  # 확정 때 고정한 버디 정산율
     fee: int  # 플랫폼 몫 = gross − net
     meal_approved: int
@@ -181,7 +183,8 @@ class BuddySettlementOut(BaseModel):
     grade: str  # 지금 등급 basic | growth | top
     payout_rate: float  # 지금 정산율 (항목마다는 items[].payout_rate)
     walks: int
-    gross: int
+    gross: int  # Σ (활동비 + 앨범)
+    album: int = 0  # gross 중 앨범 요금 합
     fee: int
     net: int
     meals_approved: int
@@ -202,10 +205,44 @@ class ApplyStatusOut(BaseModel):
     profile_done: bool
     korean_national: bool = False  # 한국 국적 확인 (외국인 유학생은 시간제 취업 허가 문제로 불가)
     status: str  # none | pending | approved | suspended
+    # v3.7 자격 두 경로 + 사전 교육
+    eligibility: str | None = None  # school_email | residence | None
+    eligible: bool = False  # 1단계 자격 확인 끝 (메일 인증 또는 거주 서류 제출)
+    school_name: str | None = None  # 거주 경로: 다니는 대학
+    residence_proof_url: str | None = None
+    enrollment_proof_url: str | None = None
+    videos_watched: list[str] = []
+    videos_total: int = 5
+    education_done: bool = False  # 영상 다 봄 → 퀴즈 열림
 
 
 class ApplyEmailIn(BaseModel):
     email: str = Field(max_length=255)
+
+
+class ApplyResidenceIn(BaseModel):
+    """1단계 성북구 거주 경로: 주소 증빙 + 재학 증명 사진(POST /uploads 의 /media 주소). 운영자가 승인 때 확인"""
+    school_name: str = Field(min_length=2, max_length=100)
+    residence_proof_url: str = Field(max_length=500)
+    enrollment_proof_url: str = Field(max_length=500)
+    birth_date: date
+    korean_national: bool = False
+
+
+class EducationVideo(BaseModel):
+    id: str
+    title: str
+    topics: str
+    duration_sec: int
+    video_url: str | None = None  # 데모: 아직 영상 없음 (화면 '영상 준비 중')
+    watched: bool = False
+
+
+class EducationOut(BaseModel):
+    videos: list[EducationVideo]
+    watched: int
+    total: int
+    done: bool
 
 
 class ApplyVerifyIn(BaseModel):
@@ -236,23 +273,19 @@ class QuizResultOut(BaseModel):
     best_score: int
 
 
-# ---------- 등급·정산율 (v3.2)
-class GradeWindow(BaseModel):
-    from_: str | None = Field(default=None, serialization_alias="from")
-    to: str | None = None
-    label: str = ""
-
-
+# ---------- 등급·정산율 (v3.2, v3.7 매달 평가)
 class GradeStats(BaseModel):
-    rating: float | None = None  # 평가 기간 완료 동행 후기 평균
-    walks: int = 0  # 완료 동행
-    reviews: int = 0
+    month: str  # 평가 달 = 지난달 "YYYY-MM"
+    last_month_walks: int = 0  # 지난달 완료 동행 (누적 아님)
+    this_month_walks: int = 0  # 이번 달 지금까지 완료 동행 (다음 1일 평가에 쓰임)
+    reviews: int = 0  # 누적 후기
+    rating: float | None = None  # 누적 평균 평점
 
 
 class GradeNeed(BaseModel):
-    rating: float  # 다음 등급 기준값
-    walks: int
-    reviews: int
+    walks: int  # 한 달 동행 이상
+    reviews: int  # 누적 후기 이상
+    rating: float  # 누적 평점 이상
 
 
 class GradeNext(BaseModel):
@@ -265,9 +298,13 @@ class GradeOut(BaseModel):
     """GET /buddy/grade"""
     grade: str  # basic | growth | top
     payout_rate: float
-    window: GradeWindow
+    evaluated_for: str | None = None  # 지금 등급을 정한 평가 달 "YYYY-MM" (없으면 아직 평가 전)
+    next_eval_on: date  # 다음 평가일 (다음 달 1일)
     stats: GradeStats
-    next: GradeNext | None = None  # 우수면 null
+    next: GradeNext | None = None  # 한 단계 위 기준 (우수면 null)
+    keep: GradeNeed | None = None  # 지금 등급을 지키는 기준 (기본이면 null)
+    first_month: bool = False  # 다음 평가까지 승인 후 첫 달 → 기본
+    note: str  # rules.GRADE_NOTE
     needs_recheck: bool = False
     dormant_since: date | None = None
     updated_at: date | None = None

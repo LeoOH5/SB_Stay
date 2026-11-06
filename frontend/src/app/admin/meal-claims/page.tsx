@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { get, patch, won } from "@/lib/api";
 import type { AdminMealClaimRow, ListResponse, MealClaimStatus } from "@/lib/types";
+import { mediaSrc } from "@/lib/uploads";
 import { Button, ImageBlock, Spinner, StatusPill } from "@/components/ui";
 import {
   AdminHeader, EmptyRow, ErrorText, KeyValues, Note, OperatorOnly, SectionLabel, Select, SplitLayout, Table, Td, Tr, adminInput, errMsg, mdKo, smallBtn,
@@ -115,7 +116,12 @@ function ClaimPanel({ c, onDone }: { c: Row; onDone: (c: Row) => void }) {
   return (
     <div>
       <SectionLabel className="mb-4">영수증 · {c.booking_code}</SectionLabel>
-      <ImageBlock label={c.receipt_url ? "영수증 사진 자리" : "영수증 사진 없음"} h="h-[220px]" className="rounded-[14px]" />
+      {mediaSrc(c.receipt_url) ? (
+        <a href={mediaSrc(c.receipt_url)!} target="_blank" rel="noreferrer" className="block h-[220px] overflow-hidden rounded-[14px] bg-[#3B4652]" aria-label="영수증 사진 크게 보기">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={mediaSrc(c.receipt_url)!} alt={`${c.place} 영수증`} className="h-full w-full object-contain" />
+        </a>
+      ) : <ImageBlock label={c.receipt_url ? "영수증 사진 자리 (예전 데모 값)" : "영수증 사진 없음"} h="h-[220px]" className="rounded-[14px]" />}
       <KeyValues className="mt-4" rows={rows} />
 
       {error && <ErrorText className="mt-3">{error}</ErrorText>}

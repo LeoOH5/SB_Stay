@@ -1,27 +1,33 @@
 "use client";
-// B06–B10 버디 지원 5단계 — GET /buddy/apply 로 지금 단계를 정하고 (?step=1~5 로 바로 가기)
-// 1 학교 메일·인증번호·생년월일·대한민국 국적: POST /buddy/apply/email · /buddy/apply/verify   2 버디 약속: POST /buddy/apply/agree
-// 3 교육 퀴즈 10문제: GET/POST /buddy/apply/quiz (8개 이상 통과)   4 성향·소개: PUT /buddy/profile   5 운영팀 확인 중
+// B06–B10 버디 지원 6단계 — GET /buddy/apply 로 지금 단계를 정하고 (?step=1~6 로 바로 가기)
+// 1 자격 확인 (v3.7 두 경로): 성북구 대학 메일 — POST /buddy/apply/email · /buddy/apply/verify
+//   또는 성북구 거주 — 주소 증빙·재학 증명 사진(POST /uploads) + POST /buddy/apply/residence (운영팀이 승인 때 확인). 둘 다 생년월일·대한민국 국적
+// 2 버디 약속: POST /buddy/apply/agree   3 사전 교육 영상 5개: GET /buddy/apply/education · POST /buddy/apply/education/{id}
+// 4 교육 퀴즈 10문제: GET/POST /buddy/apply/quiz (영상을 다 봐야 열림, 8개 이상 통과)   5 성향·소개: PUT /buddy/profile   6 운영팀 확인 중
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ProfileFields, draftOf, type ProfileDraft } from "@/components/buddy/profile-fields";
 import { BottomBar } from "@/components/buddy/ui";
+import { UploadThumb, usePhotoUploads } from "@/components/photo-upload";
 import { Button, Icon, LinkButton, Spinner, StepDots, TopBar, cn, inputCls } from "@/components/ui";
 import { BUDDY_MIN_AGE, BUDDY_PROMISES as PROMISES, KOREAN_NATIONAL_NOTE, QUIZ_PASS, QUIZ_TOTAL } from "@/lib/codes";
 import { ApiError, get, post, put } from "@/lib/api";
 import { useUser } from "@/lib/auth";
-import type { BuddyApplyEmailOut, BuddyApplyStatus, BuddyProfile, QuizQuestion, QuizResult } from "@/lib/types";
+import { UPLOAD_ACCEPT } from "@/lib/uploads";
+import type { BuddyApplyEmailOut, BuddyApplyStatus, BuddyProfile, EducationOut, Eligibility, QuizQuestion, QuizResult } from "@/lib/types";
 
+const STEPS = 6;
 const OTP_SECONDS = 5 * 60;
 const fieldCls = cn(inputCls, "h-[52px] text-[16px]");
 const errText = (e: unknown) => (e instanceof Error ? e.message : "다시 시도해 주세요");
 
 function stepOf(s: BuddyApplyStatus): number {
-  if (!s.email_verified || !s.age_ok || !s.korean_national) return 1;
+  if (!s.eligible || !s.age_ok || !s.korean_national) return 1;
   if (!s.code_agreed) return 2;
-  if (!s.quiz_passed) return 3;
-  if (!s.profile_done) return 4;
-  return 5;
+  if (!s.education_done) return 3;
+  if (!s.quiz_passed) return 4;
+  if (!s.profile_done) return 5;
+  return 6;
 }
 
 function Title({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
@@ -44,44 +50,109 @@ function ApplyPage() {
   const refresh = useCallback(async () => { const s = await get<BuddyApplyStatus>("/buddy/apply"); setStatus(s); return s; }, []);
   useEffect(() => {
     const forced = Number(sp.get("step"));
+    const ok = forced >= 1 && forced <= STEPS;
     get<BuddyApplyStatus>("/buddy/apply")
-      .then((s) => { setStatus(s); setStep(forced >= 1 && forced <= 5 ? forced : stepOf(s)); })
-      .catch(() => setStep(forced >= 1 && forced <= 5 ? forced : 1));
+      .then((s) => { setStatus(s); setStep(ok ? forced : stepOf(s)); })
+      .catch(() => setStep(ok ? forced : 1));
   }, [sp]);
 
   const go = (n: number) => { setStep(n); window.scrollTo(0, 0); };
   const back = () => {
-    if (step === 3 && quizIdx > 0) { setQuizIdx((i) => i - 1); return; }
-    if (step && step > 1 && step < 5) go(step - 1);
+    if (step === 4 && quizIdx > 0) { setQuizIdx((i) => i - 1); return; }
+    if (step && step > 1 && step < STEPS) go(step - 1);
     else router.push("/buddy/login");
   };
+  const next = (n: number) => async () => { await refresh().catch(() => null); go(n); };
 
   return (
     <>
-      <TopBar onBack={back} right={step ? <span className="text-muted">{step} / 5</span> : undefined} />
-      <div className="px-5 pt-1"><StepDots step={step ?? 0} /></div>
+      <TopBar onBack={back} right={step ? <span className="text-muted">{step} / {STEPS}</span> : undefined} />
+      <div className="px-5 pt-1"><StepDots step={step ?? 0} total={STEPS} /></div>
       {step === null && <Spinner />}
-      {step === 1 && <EmailStep status={status} userEmail={user?.email} onDone={async () => { await refresh().catch(() => null); go(2); }} />}
-      {step === 2 && <PromiseStep onDone={async () => { await refresh().catch(() => null); go(3); }} />}
-      {step === 3 && <QuizStep idx={quizIdx} setIdx={setQuizIdx} onDone={async () => { await refresh().catch(() => null); go(4); }} />}
-      {step === 4 && <ProfileStep onDone={async () => { await refresh().catch(() => null); go(5); }} />}
-      {step === 5 && <ReviewStep status={status} />}
+      {step === 1 && <EligibilityStep status={status} userEmail={user?.email} onDone={next(2)} />}
+      {step === 2 && <PromiseStep onDone={next(3)} />}
+      {step === 3 && <EducationStep onDone={next(4)} />}
+      {step === 4 && <QuizStep idx={quizIdx} setIdx={setQuizIdx} onDone={next(5)} />}
+      {step === 5 && <ProfileStep onDone={next(6)} />}
+      {step === 6 && <ReviewStep status={status} />}
     </>
   );
 }
 
-/* ------------------------------------------------------------------ 1 학교 메일 */
-function EmailStep({ status, userEmail, onDone }: { status: BuddyApplyStatus | null; userEmail?: string; onDone: () => void }) {
+/* ------------------------------------------------------------------ 1 자격 확인 (두 경로) */
+const PATHS: { key: Eligibility; title: string; sub: string }[] = [
+  { key: "school_email", title: "성북구 대학에 다녀요", sub: "학교 메일로 바로 인증" },
+  { key: "residence", title: "성북구에 살아요", sub: "다른 대학이어도 괜찮아요" },
+];
+
+function EligibilityStep({ status, userEmail, onDone }: { status: BuddyApplyStatus | null; userEmail?: string; onDone: () => void }) {
+  const [path, setPath] = useState<Eligibility>(status?.eligibility ?? "school_email");
+  const [birth, setBirth] = useState("");
+  const [korean, setKorean] = useState(!!status?.korean_national);
+  const [err, setErr] = useState<{ field: "birth" | "national"; msg: string } | null>(null);
+  const person = { birth, korean, setErr };
+  return (
+    <>
+      <Title sub="성북구 대학에 다니거나, 성북구에 사는 대학생이면 지원할 수 있어요.">버디 자격 확인</Title>
+      <div className="px-5 pt-6">
+        <div role="radiogroup" aria-label="자격 경로" className="grid grid-cols-2 gap-2.5">
+          {PATHS.map((p) => {
+            const on = path === p.key;
+            return (
+              <button key={p.key} type="button" role="radio" aria-checked={on} onClick={() => setPath(p.key)}
+                className={cn("rounded-[14px] border px-4 py-3.5 text-left transition", on ? "border-navy bg-navy-bg" : "border-line bg-white hover:border-navy/40")}>
+                <span className="block text-[15px] font-semibold text-ink">{p.title}</span>
+                <span className="mt-0.5 block text-[13px] text-muted">{p.sub}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {path === "school_email"
+        ? <EmailPath status={status} userEmail={userEmail} person={person} onDone={onDone} personFields={<PersonFields birth={birth} setBirth={setBirth} korean={korean} setKorean={setKorean} err={err} />} />
+        : <ResidencePath status={status} person={person} onDone={onDone} personFields={<PersonFields birth={birth} setBirth={setBirth} korean={korean} setKorean={setKorean} err={err} />} />}
+    </>
+  );
+}
+
+type Person = { birth: string; korean: boolean; setErr: (e: { field: "birth" | "national"; msg: string } | null) => void };
+
+/** 생년월일 · 대한민국 국적 (두 경로 공통) */
+function PersonFields({ birth, setBirth, korean, setKorean, err }: { birth: string; setBirth: (v: string) => void; korean: boolean; setKorean: (f: (v: boolean) => boolean) => void; err: { field: string; msg: string } | null }) {
+  return (
+    <>
+      <label className="mt-6 block">
+        <span className="mb-2 block text-[14px] font-semibold text-ink">생년월일</span>
+        <input className={fieldCls} type="date" value={birth} max="2015-12-31" min="1950-01-01" onChange={(e) => setBirth(e.target.value)} />
+      </label>
+      <p className={cn("mt-2 text-[14px]", err?.field === "birth" ? "font-semibold text-red" : "text-muted")}>{err?.field === "birth" ? err.msg : `만 ${BUDDY_MIN_AGE}세 이상만 버디로 활동할 수 있어요`}</p>
+      <button type="button" role="checkbox" aria-checked={korean} onClick={() => setKorean((v) => !v)} className="mt-6 flex w-full items-start gap-3 text-left">
+        <span className={cn("mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] border-[1.5px] transition", korean ? "border-navy bg-navy text-white" : "border-[#C9CED3] bg-white")}>
+          {korean && <Icon name="check" className="h-4 w-4" strokeWidth={2.8} />}
+        </span>
+        <span className="text-[16px] font-semibold text-ink">대한민국 국적이에요 <span className="text-[14px] font-normal text-muted">(필수)</span></span>
+      </button>
+      <p className={cn("mt-1.5 pl-[34px] text-[14px]", err?.field === "national" ? "font-semibold text-red" : "text-muted")}>{err?.field === "national" ? err.msg : KOREAN_NATIONAL_NOTE}</p>
+    </>
+  );
+}
+
+function personErr(e: unknown, set: Person["setErr"]): string | null {
+  const c = e instanceof ApiError ? e.code : "";
+  if (c === "TOO_YOUNG" || c === "VALIDATION") { set({ field: "birth", msg: errText(e) }); return null; }
+  if (c === "NOT_KOREAN_NATIONAL") { set({ field: "national", msg: errText(e) }); return null; }
+  return errText(e);
+}
+
+function EmailPath({ status, userEmail, person, personFields, onDone }: { status: BuddyApplyStatus | null; userEmail?: string; person: Person; personFields: ReactNode; onDone: () => void }) {
   const [email, setEmail] = useState(status?.school_email ?? (userEmail?.endsWith(".ac.kr") ? userEmail : ""));
   const [univ, setUniv] = useState<string | null>(null);
   const [devCode, setDevCode] = useState<string | null>(null);
   const [code, setCode] = useState("");
-  const [birth, setBirth] = useState("");
-  const [korean, setKorean] = useState(!!status?.korean_national);
   const [expires, setExpires] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<{ field: "email" | "code" | "birth" | "national" | "all"; msg: string } | null>(null);
+  const [err, setErr] = useState<{ field: "email" | "code" | "all"; msg: string } | null>(null);
 
   useEffect(() => {
     if (!expires) return;
@@ -99,18 +170,19 @@ function EmailStep({ status, userEmail, onDone }: { status: BuddyApplyStatus | n
     finally { setBusy(false); }
   };
   const verify = async () => {
-    setBusy(true); setErr(null);
-    try { await post<BuddyApplyStatus>("/buddy/apply/verify", { email: email.trim(), code, birth_date: birth, korean_national: korean }); onDone(); }
+    setBusy(true); setErr(null); person.setErr(null);
+    try { await post<BuddyApplyStatus>("/buddy/apply/verify", { email: email.trim(), code, birth_date: person.birth, korean_national: person.korean }); onDone(); }
     catch (e) {
       const c = e instanceof ApiError ? e.code : "";
-      setErr({ field: c === "BAD_CODE" ? "code" : c === "TOO_YOUNG" || c === "VALIDATION" ? "birth" : c === "NOT_SEONGBUK_SCHOOL" ? "email" : c === "NOT_KOREAN_NATIONAL" ? "national" : "all", msg: errText(e) });
+      if (c === "BAD_CODE") setErr({ field: "code", msg: errText(e) });
+      else if (c === "NOT_SEONGBUK_SCHOOL") setErr({ field: "email", msg: errText(e) });
+      else { const rest = personErr(e, person.setErr); if (rest) setErr({ field: "all", msg: rest }); }
     } finally { setBusy(false); }
   };
 
   const sent = !!univ;
   return (
     <>
-      <Title sub="성북구 대학 메일만 받아요. 소속 대학이 자동으로 정해져요.">학교 메일로<br />재학생 인증</Title>
       <div className="px-5 pb-6 pt-6">
         <label className="block">
           <span className="mb-2 block text-[14px] font-semibold text-ink">학교 이메일</span>
@@ -120,7 +192,7 @@ function EmailStep({ status, userEmail, onDone }: { status: BuddyApplyStatus | n
             {sent && <span className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-1.5 text-[14px] font-semibold text-navy"><span className="h-1.5 w-1.5 rounded-full bg-navy" />{univ}</span>}
           </span>
         </label>
-        {err?.field === "email" && <p className="mt-2 text-[14px] font-semibold text-red">{err.msg}</p>}
+        <p className={cn("mt-2 text-[14px]", err?.field === "email" ? "font-semibold text-red" : "text-muted")}>{err?.field === "email" ? err.msg : "성북구 대학 메일만 받아요. 소속 대학이 자동으로 정해져요."}</p>
 
         <div className="mt-4 flex gap-2.5">
           <input className={cn(fieldCls, "flex-1 tracking-[0.12em]")} inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="인증번호 6자리" aria-label="인증번호"
@@ -131,24 +203,77 @@ function EmailStep({ status, userEmail, onDone }: { status: BuddyApplyStatus | n
           {err?.field === "code" ? err.msg : sent ? `메일로 받은 6자리를 넣어 주세요 · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} 남음` : "학교 메일을 넣고 인증번호를 받아 주세요"}
         </p>
         {sent && devCode && <p className="mt-1 text-[13px] text-muted">데모 인증번호 {devCode}</p>}
-
-        <label className="mt-6 block">
-          <span className="mb-2 block text-[14px] font-semibold text-ink">생년월일</span>
-          <input className={fieldCls} type="date" value={birth} max="2015-12-31" min="1950-01-01" onChange={(e) => setBirth(e.target.value)} />
-        </label>
-        <p className={cn("mt-2 text-[14px]", err?.field === "birth" ? "font-semibold text-red" : "text-muted")}>{err?.field === "birth" ? err.msg : `만 ${BUDDY_MIN_AGE}세 이상만 버디로 활동할 수 있어요`}</p>
-
-        <button type="button" role="checkbox" aria-checked={korean} onClick={() => setKorean((v) => !v)} className="mt-6 flex w-full items-start gap-3 text-left">
-          <span className={cn("mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] border-[1.5px] transition", korean ? "border-navy bg-navy text-white" : "border-[#C9CED3] bg-white")}>
-            {korean && <Icon name="check" className="h-4 w-4" strokeWidth={2.8} />}
-          </span>
-          <span className="text-[16px] font-semibold text-ink">대한민국 국적이에요 <span className="text-[14px] font-normal text-muted">(필수)</span></span>
-        </button>
-        <p className={cn("mt-1.5 pl-[34px] text-[14px]", err?.field === "national" ? "font-semibold text-red" : "text-muted")}>{err?.field === "national" ? err.msg : KOREAN_NATIONAL_NOTE}</p>
+        {personFields}
         {err?.field === "all" && <p className="mt-3 text-[14px] font-semibold text-red">{err.msg}</p>}
       </div>
       <BottomBar>
-        <Button onClick={verify} disabled={busy || !sent || code.length !== 6 || !birth || !korean || left === 0}>{busy ? "확인하는 중…" : "인증하고 다음"}</Button>
+        <Button onClick={verify} disabled={busy || !sent || code.length !== 6 || !person.birth || !person.korean || left === 0}>{busy ? "확인하는 중…" : "인증하고 다음"}</Button>
+      </BottomBar>
+    </>
+  );
+}
+
+/** 사진 한 장 칸 (주소 증빙 · 재학 증명) */
+function ProofPicker({ title, hint, upload }: { title: string; hint: string; upload: ReturnType<typeof usePhotoUploads> }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const slot = upload.slots[0];
+  return (
+    <div className="mt-3">
+      <input ref={ref} type="file" accept={UPLOAD_ACCEPT} className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { upload.clear(); upload.add([f]); } e.target.value = ""; }} />
+      {slot ? (
+        <div className="flex items-center gap-4 rounded-[16px] border-[1.5px] border-navy/40 p-3">
+          <UploadThumb slot={slot} onRemove={upload.clear} onRetry={() => upload.retry(slot.key)} className="h-[84px] w-[68px] shrink-0 rounded-[10px]" />
+          <div className="min-w-0 flex-1">
+            <div className={cn("text-[15px] font-semibold", slot.error ? "text-red" : "text-ink")}>{slot.error ? "올리지 못했어요" : slot.url ? `${title} 올렸어요` : "올리는 중…"}</div>
+            <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{slot.error ?? hint}</p>
+            <button type="button" onClick={() => ref.current?.click()} className="mt-1.5 text-[14px] font-semibold text-navy">다른 사진으로 바꾸기</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => ref.current?.click()}
+          className="flex w-full items-center gap-3.5 rounded-[16px] border-[1.5px] border-dashed border-[#C9CED3] px-4 py-4 text-left transition hover:bg-gray-bg">
+          <Icon name="camera" className="h-6 w-6 shrink-0 text-ink" />
+          <span className="min-w-0"><span className="block text-[16px] font-semibold text-ink">{title}</span><span className="mt-0.5 block text-[13px] text-muted">{hint}</span></span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ResidencePath({ status, person, personFields, onDone }: { status: BuddyApplyStatus | null; person: Person; personFields: ReactNode; onDone: () => void }) {
+  const [school, setSchool] = useState(status?.school_name ?? "");
+  const address = usePhotoUploads(1);
+  const enroll = usePhotoUploads(1);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const addressUrl = address.urls[0] ?? status?.residence_proof_url ?? null;
+  const enrollUrl = enroll.urls[0] ?? status?.enrollment_proof_url ?? null;
+  const submit = async () => {
+    setBusy(true); setErr(null); person.setErr(null);
+    try {
+      await post<BuddyApplyStatus>("/buddy/apply/residence", { school_name: school.trim(), residence_proof_url: addressUrl, enrollment_proof_url: enrollUrl, birth_date: person.birth, korean_national: person.korean });
+      onDone();
+    } catch (e) { setErr(personErr(e, person.setErr)); } finally { setBusy(false); }
+  };
+  const uploading = address.uploading || enroll.uploading;
+  return (
+    <>
+      <div className="px-5 pb-6 pt-6">
+        <label className="block">
+          <span className="mb-2 block text-[14px] font-semibold text-ink">다니는 대학</span>
+          <input className={fieldCls} value={school} maxLength={100} placeholder="예: 서울시립대학교" onChange={(e) => setSchool(e.target.value)} />
+        </label>
+        <p className="mt-2 text-[14px] text-muted">어느 대학이든 괜찮아요. 성북구에 사는 대학생이면 지원할 수 있어요.</p>
+
+        <div className="mt-6 text-[14px] font-semibold text-ink">서류 두 장</div>
+        <ProofPicker title="성북구 주소 증빙" hint="주민등록초본·등본 등 성북구 주소가 보이는 서류. 주민번호 뒷자리는 가려 주세요" upload={address} />
+        <ProofPicker title="재학 증명" hint="재학증명서 또는 학생증 사진" upload={enroll} />
+        <p className="mt-2.5 text-[13px] leading-relaxed text-muted">운영팀이 승인할 때 두 서류를 보고 확인해요. 확인에만 쓰고, 다른 사람에게 보여 주지 않아요.</p>
+        {personFields}
+        {err && <p className="mt-3 text-[14px] font-semibold text-red">{err}</p>}
+      </div>
+      <BottomBar note={!addressUrl || !enrollUrl ? "서류 두 장을 올려 주세요" : undefined}>
+        <Button onClick={submit} disabled={busy || uploading || school.trim().length < 2 || !addressUrl || !enrollUrl || !person.birth || !person.korean}>{busy ? "보내는 중…" : "서류 내고 다음"}</Button>
       </BottomBar>
     </>
   );
@@ -189,10 +314,62 @@ function PromiseStep({ onDone }: { onDone: () => void }) {
   );
 }
 
-/* ------------------------------------------------------------------ 3 교육 퀴즈 */
+/* ------------------------------------------------------------------ 3 사전 교육 영상 */
+const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+
+function EducationStep({ onDone }: { onDone: () => void }) {
+  const [edu, setEdu] = useState<EducationOut | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { get<EducationOut>("/buddy/apply/education").then(setEdu).catch((e: unknown) => setErr(errText(e))); }, []);
+  const watch = async (id: string) => {
+    setBusy(id); setErr(null);
+    try { setEdu(await post<EducationOut>(`/buddy/apply/education/${id}`)); } catch (e) { setErr(errText(e)); } finally { setBusy(null); }
+  };
+  return (
+    <>
+      <Title sub="성북구의 길·교통·안전과 역사 기본 상식을 짧게 봐요. 다 보면 퀴즈가 열려요.">사전 교육 영상</Title>
+      <div className="px-5 pb-6 pt-5">
+        {!edu && !err && <Spinner />}
+        {err && <p className="text-[14px] font-semibold text-red">{err}</p>}
+        {edu && (
+          <>
+            <div className="flex items-center justify-between text-[14px]"><span className="text-muted">영상 {edu.total}개 · 모두 합쳐 약 {Math.round(edu.videos.reduce((t, v) => t + v.duration_sec, 0) / 60)}분</span><span className="font-semibold text-navy">{edu.watched} / {edu.total} 봤어요</span></div>
+            <ol className="mt-3 divide-y divide-line border-y border-line">
+              {edu.videos.map((v, i) => (
+                <li key={v.id} className="flex gap-3.5 py-4">
+                  <div className="relative flex h-[64px] w-[96px] shrink-0 items-center justify-center rounded-[10px] bg-[#2B3A4D] text-white" aria-hidden>
+                    <svg viewBox="0 0 24 24" className="h-6 w-6 opacity-80" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z" /></svg>
+                    <span className="absolute bottom-1 right-1.5 text-[11px] font-semibold">{mmss(v.duration_sec)}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[16px] font-semibold leading-snug text-ink">{i + 1}. {v.title}</div>
+                    <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{v.topics}</p>
+                    <div className="mt-1.5 flex items-center justify-between gap-2">
+                      <span className="text-[12px] text-muted">{v.video_url ? "" : "영상 준비 중 · 요약 먼저"}</span>
+                      {v.watched
+                        ? <span className="flex shrink-0 items-center gap-1 text-[14px] font-semibold text-navy"><Icon name="check" className="h-4 w-4" strokeWidth={2.6} />봤어요</span>
+                        : <button type="button" onClick={() => watch(v.id)} disabled={busy === v.id} className="shrink-0 rounded-full border border-navy px-3 py-1 text-[14px] font-semibold text-navy disabled:opacity-50">다 봤어요</button>}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-3 text-[13px] leading-relaxed text-muted">역사 영상은 해설이 아니라 기본 상식이에요. 버디는 돈을 받고 역사 해설을 하지 않고, 장소 이야기는 앱의 AI가 들려줘요.</p>
+          </>
+        )}
+      </div>
+      <BottomBar>
+        <Button onClick={onDone} disabled={!edu?.done}>{edu?.done ? "퀴즈 풀기" : "영상을 다 보면 퀴즈가 열려요"}</Button>
+      </BottomBar>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ 4 교육 퀴즈 */
 function QuizStep({ idx, setIdx, onDone }: { idx: number; setIdx: (n: number) => void; onDone: () => void }) {
   const [qs, setQs] = useState<QuizQuestion[] | null>(null);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -259,7 +436,7 @@ function QuizStep({ idx, setIdx, onDone }: { idx: number; setIdx: (n: number) =>
   );
 }
 
-/* ------------------------------------------------------------------ 4 어떤 버디인가요 */
+/* ------------------------------------------------------------------ 5 어떤 버디인가요 */
 function ProfileStep({ onDone }: { onDone: () => void }) {
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -287,7 +464,7 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
   );
 }
 
-/* ------------------------------------------------------------------ 5 확인 중 */
+/* ------------------------------------------------------------------ 6 확인 중 */
 function Check({ done, wait, title, sub, last }: { done: boolean; wait?: boolean; title: string; sub: string; last?: boolean }) {
   return (
     <div className="flex gap-3.5">
@@ -318,9 +495,12 @@ function ReviewStep({ status: s }: { status: BuddyApplyStatus | null }) {
         {approved ? <>승인됐어요.<br />환영해요!</> : suspended ? <>활동이<br />잠시 멈췄어요</> : <>운영팀이<br />살펴보고 있어요</>}
       </Title>
       <div className="px-5 pb-6 pt-7">
-        <Check done={s.email_verified && s.age_ok} title="학교 메일 인증" sub={s.email_verified ? `${s.university ?? "학교"} · 만 ${BUDDY_MIN_AGE}세 이상` : "아직 안 했어요"} />
+        {s.eligibility === "residence"
+          ? <Check done={s.eligible && s.age_ok} wait={s.eligible} title="성북구 거주 확인" sub={s.eligible ? `${s.school_name ?? "대학"} · 서류 두 장 냈어요 · 운영팀이 승인 때 확인해요` : "아직 안 냈어요"} />
+          : <Check done={s.email_verified && s.age_ok} title="학교 메일 인증" sub={s.email_verified ? `${s.university ?? "학교"} · 만 ${BUDDY_MIN_AGE}세 이상` : "아직 안 했어요"} />}
         <Check done={s.korean_national} title="대한민국 국적 확인" sub={s.korean_national ? "확인했어요" : "아직 안 했어요"} />
         <Check done={s.code_agreed} title="버디 약속 동의" sub={s.code_agreed ? `${PROMISES.length}개 모두 확인` : "아직 안 했어요"} />
+        <Check done={s.education_done} title="사전 교육 영상" sub={`${s.videos_watched.length} / ${s.videos_total} 봤어요`} />
         <Check done={s.quiz_passed} title="교육 퀴즈 통과" sub={s.quiz_score != null ? `${s.quiz_score} / ${QUIZ_TOTAL}` : "아직 안 풀었어요"} />
         <Check done={approved} wait={!approved} last title="운영팀 승인" sub={approved ? "승인됐어요" : suspended ? "활동 멈춤" : "기다리는 중"} />
       </div>

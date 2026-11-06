@@ -1,6 +1,7 @@
 "use client";
 // T08 무료 산책 코스 상세 — TR-02 GET /tours/{id}, PL GET /places (운영 정보), AI-02 POST /ai/story (장소 이야기 · 질문)
 // 코스는 예약 항목이 아니다 (COURSE_NOT_BOOKABLE). 버디와 걸으면 버디 항목의 course_id 로 들어간다.
+// v3.5 걸리는 시간은 서버 계산값(duration_min = 머무는 시간 + 걷는 시간), 장소 사이에 걷는 구간(legs) "도보 N분 · Mm"
 // v3.4 무료 이용(AU-09 plan=free): 기본 순서 안내 · 이야기 전 광고(T08a) · 질문 하루 3번(T08b, 429 AI_LIMIT) · 도움 안내 · 완료 설문(T08c, TR-05)
 import { useParams, useRouter } from "next/navigation";
 import { KakaoMap } from "@/components/kakao-map";
@@ -10,7 +11,7 @@ import { ErrorBox } from "@/components/tourist";
 import { AdInterstitial, FixedCourseNote, HelpSheet, QuestionLimit, QuestionsLeft, SurveySheet, useMyPlan } from "@/components/tourist/free-tier";
 import { DAY_LABEL, errMsg, okv } from "@/components/tourist/format";
 import { ArrowUp, BottomBar, InfoRow, SectionHead } from "@/components/tourist/v3";
-import { koDuration } from "@/components/tourist/v3/flow";
+import { aboutDuration, hasXY, koDuration, walkText } from "@/components/tourist/v3/flow";
 import { ApiError, get, post, won } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { useLang } from "@/lib/i18n";
@@ -60,6 +61,11 @@ export default function CourseDetailPage() {
   }, [placeId, lang]);
 
   const orderedPlaces = tour ? [...tour.places].sort((a, b) => a.order - b.order) : [];
+  const mapPlaces = orderedPlaces.filter(hasXY); // 좌표 없는 장소는 지도에서만 뺀다
+  const legAfter = (i: number) => {
+    const a = orderedPlaces[i], b = orderedPlaces[i + 1];
+    return b && tour ? tour.legs.find((l) => l.from_place_id === a.id && l.to_place_id === b.id) : undefined;
+  };
   const select = (pid: number) => {
     if (pid === placeId) { setPlaceId(null); return; }
     setStory(null); setQa([]); setQuestion(""); setPlaceId(pid);
@@ -83,8 +89,8 @@ export default function CourseDetailPage() {
     setAskBusy(false);
   };
   const walkAlone = () => {
-    if (!tour?.places[0]) return;
-    if (placeId === null) select(tour.places[0].id);
+    if (!orderedPlaces[0]) return;
+    if (placeId === null) select(orderedPlaces[0].id);
     stopsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -104,7 +110,13 @@ export default function CourseDetailPage() {
           {tour.description && <p className="mt-2 text-[15px] leading-relaxed text-muted">{tour.description}</p>}
 
           <div className="mt-4 divide-y divide-line">
-            <InfoRow label="걷는 시간">약 {koDuration(tour.duration_min)} · 장소 {tour.places.length}곳</InfoRow>
+            <InfoRow label="걸리는 시간">
+              {aboutDuration(tour.duration_min, lang)} · 장소 {tour.places.length}곳
+              <span className="mt-0.5 block text-[13px] font-normal text-muted">
+                머무는 {koDuration(tour.stay_min_total)} + 걷는 {tour.walk_min_total}분 · {tour.walk_m_total.toLocaleString("ko-KR")}m
+                {!tour.walk_complete && " · 걷는 시간 일부 빠짐"}
+              </span>
+            </InfoRow>
             <InfoRow label="가격"><span className="text-navy">{tour.price === 0 ? `무료${anyFee ? " (입장료는 장소마다)" : ""}` : won(tour.price)}</span></InfoRow>
             <InfoRow label="시작">{tour.meeting_point}</InfoRow>
             {my.free && my.left !== null && <InfoRow label="AI 질문">오늘 남은 질문 {my.left}/{my.limit}</InfoRow>}
@@ -113,17 +125,18 @@ export default function CourseDetailPage() {
           {my.free && <FixedCourseNote courseId={tour.id} className="mt-4" />}
 
           <KakaoMap className="mt-5" route numbered
-            points={orderedPlaces.map((pl) => ({ lat: pl.lat, lng: pl.lng, label: lang === "en" ? pl.name_en : pl.name }))}
-            active={placeId === null ? undefined : Math.max(0, orderedPlaces.findIndex((pl) => pl.id === placeId))}
-            onSelect={(i) => { const pid = orderedPlaces[i]?.id; if (pid !== undefined && pid !== placeId) select(pid); }} />
+            points={mapPlaces.map((pl) => ({ lat: pl.lat, lng: pl.lng, label: lang === "en" ? pl.name_en : pl.name }))}
+            active={placeId === null ? undefined : Math.max(0, mapPlaces.findIndex((pl) => pl.id === placeId))}
+            onSelect={(i) => { const pid = mapPlaces[i]?.id; if (pid !== undefined && pid !== placeId) select(pid); }} />
 
           <div ref={stopsRef} className="scroll-mt-4">
             <SectionHead className="mt-8" title="코스" right="눌러서 AI 이야기 듣기" />
           </div>
           <ol className="mt-4">
-            {tour.places.map((p, i) => {
+            {orderedPlaces.map((p, i) => {
               const open = p.id === placeId;
-              const last = i === tour.places.length - 1;
+              const last = i === orderedPlaces.length - 1;
+              const leg = legAfter(i);
               const info = places.find((x) => x.id === p.id);
               return (
                 <li key={p.id} className="relative flex gap-4 pb-6">
@@ -178,6 +191,7 @@ export default function CourseDetailPage() {
                         )}
                       </div>
                     )}
+                    {leg && <p className="mt-2.5 text-[12px] text-muted">{walkText(leg, lang)}</p>}
                   </div>
                 </li>
               );

@@ -1,6 +1,7 @@
 "use client";
 // B13 버디 정산 — GET /buddy/settlement?month= → {pay_date, account, grade, payout_rate, walks, gross, fee, net, meals_approved, meals_pending, payout, items}
 // v3.2: 활동비 × 항목별 정산율(예약 확정 때 고정) — 기본 70% · 성장 75% · 우수 80%
+// v3.6: 사진 기록(앨범) 요금도 같은 정산율로 나눈다 → gross = 활동비 + 앨범, album = 그중 앨범
 // 동행 시간은 GET /buddy/schedule 의 duration_min, 계좌 바꾸기는 PUT /buddy/profile {bank_account}
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -65,7 +66,9 @@ function SettlementPage() {
   const cur = byMonth[month];
   const st = cur && cur !== "error" ? cur : null;
   const err = cur === "error";
-  const perWalk = st && st.items.length && st.items.every((i) => i.gross === st.items[0].gross) ? st.items[0].gross : null;
+  const walkFee = (i: { gross: number; album?: number }) => i.gross - (i.album ?? 0);
+  const perWalk = st && st.items.length && st.items.every((i) => walkFee(i) === walkFee(st.items[0])) ? walkFee(st.items[0]) : null;
+  const albums = st?.items.filter((i) => (i.album ?? 0) > 0).length ?? 0;
   const pendingClaims = st?.items.filter((i) => i.meal_pending > 0) ?? [];
   const approvedClaims = st?.items.filter((i) => i.meal_approved > 0).length ?? 0;
   const rates = [...new Set(st?.items.map((i) => i.payout_rate) ?? [])];
@@ -93,7 +96,8 @@ function SettlementPage() {
 
             <h2 className="mt-9 text-[18px] font-bold text-ink">어떻게 계산했나요</h2>
             <div className="mt-1 divide-y divide-line">
-              <Line label={perWalk ? `동행 ${st.walks}회 × ${won(perWalk)}` : `동행 ${st.walks}회`} value={won(st.gross)} />
+              <Line label={perWalk ? `동행 ${st.walks}회 × ${won(perWalk)}` : `동행 ${st.walks}회`} value={won(st.gross - (st.album ?? 0))} />
+              {albums > 0 && <Line label={`사진 기록 ${albums}건`} value={`+${won(st.album ?? 0)}`} />}
               <Line label={rateLabel} value={won(st.net)} />
               <Line label={`식비 환급 (승인 ${approvedClaims}건)`} value={`+${won(st.meals_approved)}`} />
               <Line label="받을 돈" value={won(st.payout)} tone="navy" />
@@ -111,7 +115,7 @@ function SettlementPage() {
                         <span className="text-[16px] font-bold text-ink">{won(i.net + i.meal_approved)}</span>
                       </div>
                       <div className="mt-1 flex items-center justify-between gap-3">
-                        <span className="text-[14px] text-muted">{krDate(i.date)} · 동행 {hours(durations[i.item_id])} {won(i.gross)} × {pct(i.payout_rate)}{meal ? ` + 식비 ${won(meal)}` : ""}</span>
+                        <span className="text-[14px] text-muted">{krDate(i.date)} · 동행 {hours(durations[i.item_id])} {won(walkFee(i))}{i.album ? ` + 사진 ${won(i.album)}` : ""} × {pct(i.payout_rate)}{meal ? ` + 식비 ${won(meal)}` : ""}</span>
                         <StatusPill status={i.status} label={i.status === "meal_pending" ? "식비 확인 중" : "확정"} />
                       </div>
                     </div>
@@ -119,7 +123,7 @@ function SettlementPage() {
                 })}
               </div>
             )}
-            <p className="mt-2 text-[13px] leading-relaxed text-muted">취소된 동행은 여행자 환불 규정에 따라 빠져요. 금액은 활동비에 정산율을 곱한 값이고, 정산율은 예약이 확정될 때 정해져 나중에 등급이 바뀌어도 그대로예요.</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-muted">취소된 동행은 여행자 환불 규정에 따라 빠져요. 금액은 활동비(사진 기록 포함)에 정산율을 곱한 값이고, 정산율은 예약이 확정될 때 정해져 나중에 등급이 바뀌어도 그대로예요.</p>
 
             <div className="mt-5 grid grid-cols-2 gap-2.5">
               <Button variant="ghost" className="min-h-[48px]! border-[#C9CED3]" onClick={() => setAcctOpen(true)}>계좌 바꾸기</Button>

@@ -15,9 +15,19 @@ class TourPlaceOut(BaseModel):
     id: int
     name: str
     name_en: str
-    lat: float
-    lng: float
-    stay_min: int | None = None
+    lat: float | None = None  # 좌표가 없으면 null (그 구간 걷는 시간은 빠진다)
+    lng: float | None = None
+    stay_min: int | None = None  # 이 코스에서 머무는 시간 (코스별 값 → 없으면 장소 기본값)
+    photo_url: str | None = None  # v3.5 장소 대표 사진 (TourAPI, 없으면 null → 화면은 색 블록)
+    photo_credit: str | None = None
+
+
+class CourseLegOut(BaseModel):
+    """v3.5 장소 → 다음 장소 걷는 구간 (직선 × 1.3, 4 km/h 추정). 좌표가 없으면 walk_m·walk_min null"""
+    from_place_id: int
+    to_place_id: int
+    walk_m: int | None = None  # 10 m 단위
+    walk_min: int | None = None  # 분, 올림
 
 
 class TourOut(BaseModel):
@@ -27,13 +37,18 @@ class TourOut(BaseModel):
     title_en: str
     theme: str
     guide: GuideBrief | None = None  # v3: 해설사 없음 → 항상 null
-    duration_min: int
+    duration_min: int  # v3.5 계산값 = stay_min_total + walk_min_total 을 10분 단위로 올림 (services/courses.py)
+    stay_min_total: int = 0  # Σ places[].stay_min
+    walk_m_total: int = 0  # Σ legs[].walk_m (좌표 없는 구간 제외)
+    walk_min_total: int = 0  # Σ legs[].walk_min
+    walk_complete: bool = True  # false = 좌표 없는 장소가 있어 걷는 시간 일부 빠짐
     price: int
     operating_days: list[str] = []
     languages: list[str] = []
     meeting_point: str | None = None
     description: str | None = None
     places: list[TourPlaceOut] = []
+    legs: list[CourseLegOut] = []  # v3.5 places 순서대로 n−1개 (목록·상세 모두)
 
 
 class PlaceOut(BaseModel):

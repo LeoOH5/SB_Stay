@@ -33,12 +33,25 @@
    "subway"
   ],
   "school_email": "jiwoo@a-univ.ac.kr",
-  "school_email_verified_at": "2026-12-01T10:00:00Z",
-  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "school_email_verified_at": "2026-06-10T10:00:00Z",
+  "code_agreed_at": "2026-06-10T10:05:00Z",
   "quiz_score": 9,
   "bank_account": "신한 110-123-456482",
   "can_drive": false,
-  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
+  "korean_national_confirmed_at": "2026-06-10T10:00:00Z",
+  "approved_on": "2026-06-15",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 32,
@@ -71,12 +84,25 @@
    "subway"
   ],
   "school_email": "minho@b-univ.ac.kr",
-  "school_email_verified_at": "2026-12-01T10:00:00Z",
-  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "school_email_verified_at": "2026-11-01T10:00:00Z",
+  "code_agreed_at": "2026-11-01T10:05:00Z",
   "quiz_score": 9,
   "bank_account": "국민 123-45-678901",
   "can_drive": true,
-  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
+  "korean_national_confirmed_at": "2026-11-01T10:00:00Z",
+  "approved_on": "2026-11-03",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 33,
@@ -113,7 +139,20 @@
   "quiz_score": 7,
   "bank_account": null,
   "can_drive": false,
-  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z",
+  "approved_on": null,
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 34,
@@ -149,7 +188,20 @@
   "quiz_score": 9,
   "bank_account": null,
   "can_drive": false,
-  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z",
+  "approved_on": null,
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 35,
@@ -185,7 +237,20 @@
   "quiz_score": 9,
   "bank_account": "우리 1002-345-678901",
   "can_drive": false,
-  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z",
+  "approved_on": "2026-12-03",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 36,
@@ -221,7 +286,20 @@
   "quiz_score": 9,
   "bank_account": "하나 391-910-123456",
   "can_drive": true,
-  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z",
+  "approved_on": "2026-12-03",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 37,
@@ -260,6 +338,69 @@
   "quiz_score": 10,
   "bank_account": "우리 1002-345-678901",
   "can_drive": false,
-  "korean_national_confirmed_at": "2026-06-08T10:00:00Z"
+  "korean_national_confirmed_at": "2026-06-08T10:00:00Z",
+  "approved_on": "2026-06-12",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
+ },
+ {
+  "id": 38,
+  "user_id": 18,
+  "university_id": null,
+  "major": "도시공학",
+  "year": 3,
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "interests": [
+   "walking",
+   "architecture"
+  ],
+  "intro": "정릉동에 살아요. 동네 산책길과 버스 타는 법을 잘 알아요.",
+  "avatar": "illust_04",
+  "status": "pending",
+  "hourly_fee": 15000,
+  "personality": [
+   "calm"
+  ],
+  "style": [
+   "slow_walk",
+   "explore"
+  ],
+  "can_help": [
+   "subway",
+   "photo"
+  ],
+  "school_email": null,
+  "school_email_verified_at": null,
+  "code_agreed_at": "2027-01-11T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": null,
+  "can_drive": false,
+  "korean_national_confirmed_at": "2027-01-11T10:00:00Z",
+  "approved_on": null,
+  "eligibility": "residence",
+  "school_name": "서울시립대학교",
+  "residence_proof_url": "residence_proof_gaeun.jpg",
+  "enrollment_proof_url": "enrollment_gaeun.jpg",
+  "residence_submitted_at": "2027-01-11T10:00:00Z",
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  }
 ]

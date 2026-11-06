@@ -59,3 +59,4 @@ PayPal 캡처,PM-05,F-07,결제 (Payments),POST,/payments/paypal/capture,tourist
 약관·환불 규정·고객센터 조회,CM-01,마이페이지,공통 (Common),GET,/contents/{key},전체,"terms, refund, support(긴급연락처), intro(성북 소개) 정적 콘텐츠. 언어별","마이페이지, T1",권장,목업
 콘텐츠 관리 (다국어),AD-09,A-05,어드민 (Admin),PUT,/admin/contents/{key},operator,투어 소개글·이용 안내 다국어 버전 관리. 시드 데이터로 대체,콘텐츠 관리,권장,제외
 어드민 설정,AD-10,설정,어드민 (Admin),PATCH,/admin/settings,operator,수수료율 등 설정값. 해커톤은 상수로 대체,설정,선택,제외
+사진 올리기,UP-01,사진,공통 (Common),POST,/uploads,로그인,"v3.6 JPEG·PNG·WebP 10MB, 매직 바이트 확인 → {url: /media/...}. 활동 기록·식비 영수증·신고 사진",B12·B11·T22,권장,구현

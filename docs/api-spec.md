@@ -200,7 +200,7 @@ AD-01 Response 200
 | universities | id, name, name_en, address, lat, lng, open_from, open_to |
 | dorm_rooms | id, university_id, building, room_type, price_per_night, total_rooms, open_from, open_to, rules(json), photos(json), active |
 | guides | id, user_id, license, languages(json), intro |
-| tours | id, guide_id, title, title_en, theme, duration_min, price, operating_days(json), languages(json), meeting_point, description |
+| tours | id, guide_id, title, title_en, theme, price, operating_days(json), languages(json), meeting_point, description |
 | tour_places | tour_id, place_id, order, stay_min |
 | places | id, name, name_en, lat, lng, address, hours, closed_days, fee, need_reservation, stay_min, tags(json), story_doc(text), sources(json) |
 | buddy_profiles | id, user_id, university_id, major, year, languages(json), interests(json), intro, avatar, status(pending/approved/suspended), hourly_fee |
@@ -243,7 +243,7 @@ AD-01 Response 200
 ## v3 변경
 
 기준: `docs/v3/CONTRACT.md` (해설사 삭제, 코스 무료, 예약 항목은 dorm | buddy). 역할은 `tourist | buddy | univ_admin | operator`.
-숫자: 수수료 10%(숙박·버디 활동비) · 앨범 ₩5,000(전액 플랫폼 수입) · 식사 1회 한도 ₩20,000(보증금 = 횟수 × 20,000, 수수료 없음, 최대 4회) · 신고 2건 자동 정지 · 퀴즈 8/10 · 만 19세 · `DEMO_TODAY`(후기·식비 기준일).
+숫자: 수수료 10%(숙박·버디 활동비) · 앨범 ₩5,000(v3.1~3.5 전액 플랫폼 수입 → v3.6부터 활동비처럼 정산율로 나눔, 아래 v3.6) · 식사 1회 한도 ₩20,000(보증금 = 횟수 × 20,000, 수수료 없음, 최대 4회) · 신고 2건 자동 정지 · 퀴즈 8/10 · 만 19세 · `DEMO_TODAY`(후기·식비 기준일).
 `booking.platform_fee = round((total − Σ식사 보증금 − Σ앨범) × 0.10) + Σ앨범`. 버디 정산 = 활동비 × 0.9 + 승인 식비.
 
 | Method | Path | 역할 | 변경 | 내용 |
@@ -308,3 +308,35 @@ AD-01 Response 200
 | PATCH | /admin/buddies/{id} | admin | 변경 | approve는 한국 국적 확인도 필요 (409 `NOT_READY`) |
 | POST | /admin/buddies/recompute-grades | operator | 신규 | 등급·정산율 갱신 → 휴면 판정. 바뀐 버디 행 `{items:[AdminBuddyRow]}`. 매월 1일 실행 (`scripts/recompute_grades.py`도 같음) |
 | GET | /admin/settlements | operator | 변경 | 버디 행 `fee` = 활동비 − Σ 버디 몫(항목 정산율), + `payout_rate`(실효값). `profit.cost_buddy` 도 항목 정산율로 |
+
+### v3.6 추가 — 앨범(사진 기록) 정산 · 사진 저장
+앨범 요금도 활동비처럼 항목 정산율로 나눈다: 버디 몫 = round((활동비 + 앨범) × 정산율), 플랫폼 = 나머지. 식사 보증금은 그대로 통과 금액.
+`booking.platform_fee = round(숙박 × 0.10) + Σ((활동비 + 앨범) − 버디 몫)`. 버디 정산 = Σ 버디 몫 + 승인 식비. 앨범 5,000 → 버디 3,500 / 3,750 / 4,000 (70 / 75 / 80%).
+
+| Method | Path | 역할 | 변경 | 내용 |
+|---|---|---|---|---|
+| POST | /uploads | 로그인 | 신규 | multipart `file` → 201 `{url: "/media/<yyyy>/<mm>/<uuid hex>.<ext>", content_type, size}`. JPEG·PNG·WebP(매직 바이트 확인), 10 MB. 413 `FILE_TOO_LARGE` · 415 `UNSUPPORTED_TYPE` · 422 `EMPTY_FILE` ([UP-01](api-detail/UP-01.md)) |
+| GET | /media/<yyyy>/<mm>/<file> | 공개(주소를 아는 사람) | 신규 | 올린 사진. `/api/v1` 밖, 백엔드 주소 기준. 폴더 목록 없음 |
+| POST | /buddy/activities · /buddy/meal-claims · /reports | 각 역할 | 변경 | `photos[]` · `receipt_url` · `photo_url`은 `/uploads`가 만든 `/media/...`만 (아니면 422 `PHOTO_URL`). MealClaimOut + `receipt_url` |
+| GET | /buddy/settlement | buddy | 변경 | `gross` = 활동비 + 앨범, items[]·합계 + `album`. `net` = round(gross × 항목 정산율) |
+| GET | /buddy/earnings | buddy | 변경 | `amount`에 앨범 버디 몫 포함 |
+| GET | /admin/settlements | operator | 변경 | 버디 행 `revenue` = 활동비 + 앨범, + `album`. `profit.cost_buddy`에 앨범 버디 몫 포함, + `profit.cost_buddy_album`. `sales_buddy`(활동비)·`sales_album`(앨범) 그대로 |
+
+### v3.7 추가 — 등급 매달 평가 · 버디 자격 두 경로 · 사전 교육 영상
+등급은 매달 1일, 지난달 완료 동행(누적 아님)과 누적 후기·평점으로: 성장 75%(동행 ≥ 4 · 후기 ≥ 3 · 평점 ≥ 4.3), 우수 80%(지금 성장 + ≥ 7 · ≥ 5 · ≥ 4.5), 그 밖에 기본 70%. 승인 후 첫 달은 기본, 오를 때 한 단계씩, 내릴 때 바로. 휴면은 등급을 멈추지 않는다.
+버디 자격 = 대학생 + (성북구 대학 재학 또는 성북구 거주) + 국적·나이·약속·사전 교육(영상 5개 → 퀴즈 8/10). Alembic `v3g_monthly_grade`.
+
+| Method | Path | 역할 | 변경 | 내용 |
+|---|---|---|---|---|
+| GET | /buddy/grade | buddy | 변경 | `window` 삭제 → `evaluated_for, next_eval_on, stats{month, last_month_walks, this_month_walks, reviews, rating}, next, keep, first_month, note` ([BD-08](api-detail/BD-08.md)) |
+| POST | /buddy/confirm-active | buddy | 변경 | 휴면 표시·`dormant_since`만 지움 (등급은 매달 평가) |
+| GET | /buddy/apply | buddy | 변경 | + `eligibility, eligible, school_name, residence_proof_url, enrollment_proof_url, videos_watched, videos_total, education_done` |
+| POST | /buddy/apply/residence | buddy | 신규 | `{school_name, residence_proof_url, enrollment_proof_url, birth_date, korean_national}` — 성북구 거주 경로. 사진은 `/media/...`만(422 `PHOTO_URL`) ([BD-09](api-detail/BD-09.md)) |
+| GET | /buddy/apply/education | buddy | 신규 | 사전 교육 영상 5개 `{videos, watched, total, done}` |
+| POST | /buddy/apply/education/{id} | buddy | 신규 | '다 봤어요' (404 없는 영상, 409 자격 확인 전) |
+| GET/POST | /buddy/apply/quiz | buddy | 변경 | 영상을 다 봐야 열림(409 `EDUCATION_NOT_DONE`). 문제 13개 중 10개(늘 돈·해설·응급), 낸 문제만 채점 |
+| GET | /admin/buddies | operator | 변경 | `eval_*` 삭제 → `eval_month, last_month_walks, total_reviews, avg_rating, evaluated_for, approved_on` + `university, eligibility, school_name, residence_proof_url, enrollment_proof_url, videos_watched, videos_total` ([AD-03](api-detail/AD-03.md)) |
+| PATCH | /admin/buddies/{id} | operator | 변경 | 승인 조건 + 자격 경로(거주면 서류 두 장)·교육 영상 5개 → 409 `NOT_READY`. 승인 때 `approved_on` 기록 ([AD-04](api-detail/AD-04.md)) |
+| POST | /admin/buddies/recompute-grades | operator | 변경 | 이번 달 1일 평가(지난달 동행)를 안 한 버디만 평가 → 휴면 판정 |
+| GET | /buddies, /buddies/{id} | 공개 | 변경 | `verified` + `residence`. 거주 경로 다른 대학 버디는 `university_id: null`, `university` = 학교 이름 |
+

@@ -3,25 +3,26 @@
 import { ApiError } from "../errors";
 import {
   ALBUM_FEE, ALLERGIES, BUDDY_MIN_AGE, CAN_HELP, DIET, DIET_TO_HELP, FREE_AI_QUESTIONS, MEAL_LIMIT, MEAL_MAX, PACE, PERSONALITY, QUIZ_PASS, QUIZ_TOTAL,
-  REPORT_CATEGORY, REPORT_SUSPEND_AT, REQUEST_NOTE_MAX, REQUEST_PLACES_MAX, REVIEW_TAGS, STYLE, SUB_SCORES, SURVEY_PAIN, VACATIONS, buddyItemPrice, buddyNet,
-  gradeFor, label, platformFee, rateOf, GRADE_RULES,
+  REPORT_CATEGORY, REPORT_SUSPEND_AT, REQUEST_NOTE_MAX, REQUEST_PLACES_MAX, REVIEW_TAGS, STYLE, SUB_SCORES, SURVEY_PAIN, buddyItemPrice, buddyNet,
+  decideGrade, label, payoutBase, platformFee, rateOf, GRADE_NOTE, GRADE_RULES,
 } from "../codes";
 import type {
   Activity, AdminBookingRow, AdminBuddyRow, AdminCourseRow, AdminMealClaimRow, AdminReportRow, AiPlan, AiStory, Booking, BookingItem, CourseSurvey, MyPlan,
-  BuddyApplyStatus, BuddyDetail, BuddyGradeInfo, BuddyMatch, BuddyProfile, BuddyRequest, BuddyRequestBody, BuddySettlement, BuddyStatus, CanHelp,
+  BuddyApplyStatus, BuddyDetail, BuddyGradeInfo, EducationOut, Eligibility, BuddyMatch, BuddyProfile, BuddyRequest, BuddyRequestBody, BuddySettlement, BuddyStatus, CanHelp,
   CartItem, DormRequest, ItemStatus, ListResponse, MealClaim, PlanDay, PlanItem, PlanWarning, PublicActivity, Report, ReportCategory,
   Review, ReviewTag, SettlementRow, Settlements, SubScores, Traveler, User,
 } from "../types";
 import * as D from "./data";
 
-/** 버디 정산 gross 에 앨범비를 넣을지. 계약서 §7 은 "활동비+앨범"이지만 화면 B13(동행 4회 × ₩30,000)에 맞춰 목업은 뺀다 */
-const ALBUM_IN_GROSS = false;
 const DEFAULT_MONTH = D.TODAY.slice(0, 7);
 
 interface ApplyState {
   school_email: string | null; university: string | null; university_id: number | null; email_verified: boolean; korean_national: boolean;
   birth_date: string | null; code_agreed: boolean; quiz_score: number | null; profile_done: boolean; status: BuddyStatus | "none";
+  /** v3.7 자격 경로 · 거주 경로 서류 · 본 교육 영상 */
+  eligibility: Eligibility | null; school_name: string | null; residence_proof_url: string | null; enrollment_proof_url: string | null; videos: string[];
 }
+const ALL_VIDEOS = D.educationVideos.map((v) => v.id);
 
 const state = {
   bookings: structuredClone(D.bookings),
@@ -40,7 +41,10 @@ const state = {
   availability: new Set<string>(D.buddies[0].available_dates),
   bankAccount: D.BANK_ACCOUNT as string | null,
   apply: {
-    "jiwoo@a-univ.ac.kr": { school_email: "jiwoo@a-univ.ac.kr", university: "고려대학교", university_id: 1, email_verified: true, korean_national: true, birth_date: "2004-05-02", code_agreed: true, quiz_score: 9, profile_done: true, status: "approved" },
+    "jiwoo@a-univ.ac.kr": { school_email: "jiwoo@a-univ.ac.kr", university: "고려대학교", university_id: 1, email_verified: true, korean_national: true, birth_date: "2004-05-02", code_agreed: true, quiz_score: 9, profile_done: true, status: "approved",
+      eligibility: "school_email", school_name: null, residence_proof_url: null, enrollment_proof_url: null, videos: ALL_VIDEOS },
+    "gaeun@example.com": { school_email: null, university: "서울시립대학교", university_id: null, email_verified: false, korean_national: true, birth_date: "2004-07-09", code_agreed: true, quiz_score: 9, profile_done: true, status: "pending",
+      eligibility: "residence", school_name: "서울시립대학교", residence_proof_url: "residence_proof_gaeun.jpg", enrollment_proof_url: "enrollment_gaeun.jpg", videos: ALL_VIDEOS },
   } as Record<string, ApplyState>,
   calendarConnected: false,
   /** v3.4 무료 이용자 AI 질문 수: "이메일|날짜" → 횟수 */
@@ -76,7 +80,7 @@ const buddyOf = (id: number) => state.buddies.find((b) => b.id === id);
 const dormOf = (id: number) => D.dorms.find((d) => d.id === id);
 const courseOf = (id?: number | null) => (id == null ? undefined : D.tours.find((t) => t.id === id));
 const statusOf = (id: number) => state.buddyStatus[id] ?? "pending";
-const gradeOf = (id: number) => state.grades[id] ?? { grade: "basic" as const, rating: null, walks: 0, reviews: 0, needs_recheck: false, dormant_since: null };
+const gradeOf = (id: number): D.GradeRow => (state.grades[id] ??= { grade: "basic", approved_on: null, evaluated_for: null, last_month_walks: 0, this_month_walks: 0, reviews: 0, rating: null, needs_recheck: false, dormant_since: null });
 /** 공개 목록·AI 추천에 나오는 버디: 승인 + 휴면 아님 */
 const listed = (id: number) => statusOf(id) === "approved" && !gradeOf(id).needs_recheck;
 const withGrade = <T extends { id: number }>(bd: T) => ({ ...bd, grade: gradeOf(bd.id).grade });
@@ -88,6 +92,8 @@ function findItem(itemId: number): { b: Booking; it: BookingItem } | null {
   for (const b of state.bookings) { const it = b.items.find((i) => i.id === itemId); if (it) return { b, it }; }
   return null;
 }
+/** v3.6: 새로 받는 사진 값은 /uploads 가 준 주소만 (목업은 blob:, 백엔드는 /media/) */
+const photosOk = (v: unknown) => v == null || (Array.isArray(v) && v.every((u) => typeof u === "string" && (u.startsWith("blob:") || u.startsWith("/media/"))));
 const claimsOf = (itemId: number) => state.mealClaims.filter((c) => c.item_id === itemId);
 const sumClaims = (itemId: number, statuses: string[]) => claimsOf(itemId).filter((c) => statuses.includes(c.status)).reduce((s, c) => s + c.amount, 0);
 
@@ -142,7 +148,7 @@ function recalcTotals(b: Booking) {
   const live = b.items.filter((i) => i.status !== "cancelled" && i.status !== "rejected");
   b.total_price = live.reduce((s, i) => s + i.price, 0);
   const buddies = live.filter((i) => i.type === "buddy");
-  b.platform_fee = platformFee(live.filter((i) => i.type === "dorm").reduce((s, i) => s + i.price, 0), buddies.map((i) => ({ activity: activityOf(i), rate: rateFor(i) })), buddies.filter((i) => i.album).length * ALBUM_FEE);
+  b.platform_fee = platformFee(live.filter((i) => i.type === "dorm").reduce((s, i) => s + i.price, 0), buddies.map((i) => ({ activity: activityOf(i), rate: rateFor(i), album: !!i.album })));
 }
 
 function notify(title: string, type = "info") {
@@ -261,19 +267,19 @@ function buddyItems(buddyId: number) {
 function buddySettlement(buddyId: number, month: string): BuddySettlement {
   const rows = buddyItems(buddyId).filter(({ it }) => it.status === "confirmed" && (it.date_from ?? "").startsWith(month)).sort((a, b) => (a.it.date_from ?? "").localeCompare(b.it.date_from ?? ""));
   const items = rows.map(({ b, it }) => {
-    const albumFee = it.album ? ALBUM_FEE : 0;
-    const activity = it.price - (it.meal_count ?? 0) * MEAL_LIMIT - albumFee;
-    const gross = activity + (ALBUM_IN_GROSS ? albumFee : 0);
+    // v3.6: 정산 대상 = 활동비 + 앨범 (식사 보증금 제외)
+    const album = it.album ? ALBUM_FEE : 0;
+    const gross = payoutBase(activityOf(it), !!it.album);
     const payout_rate = rateFor(it), net = buddyNet(gross, payout_rate);
     const meal_approved = sumClaims(it.id, ["approved"]), meal_pending = sumClaims(it.id, ["requested"]);
-    return { item_id: it.id, date: it.date_from ?? "", tourist: b.traveler?.name ?? "", gross, payout_rate, fee: gross - net, meal_approved, meal_pending, net, status: (meal_pending > 0 ? "meal_pending" : "confirmed") as "confirmed" | "meal_pending" };
+    return { item_id: it.id, date: it.date_from ?? "", tourist: b.traveler?.name ?? "", gross, album, payout_rate, fee: gross - net, meal_approved, meal_pending, net, status: (meal_pending > 0 ? "meal_pending" : "confirmed") as "confirmed" | "meal_pending" };
   });
-  const sum = (k: "gross" | "fee" | "net" | "meal_approved" | "meal_pending") => items.reduce((s, i) => s + i[k], 0);
+  const sum = (k: "gross" | "album" | "fee" | "net" | "meal_approved" | "meal_pending") => items.reduce((s, i) => s + i[k], 0);
   const [y, m] = month.split("-").map(Number);
   const last = new Date(Date.UTC(y, m + 1, 0));
   const masked = buddyId === 31 && state.bankAccount ? state.bankAccount.replace(/(\d{3})-(\d{3})-(\d{3})(\d{3})/, "$1-***-***$4") : null;
   const g = gradeOf(buddyId).grade;
-  return { month, pay_date: last.toISOString().slice(0, 10), account: masked, grade: g, payout_rate: rateOf(g), walks: items.length, gross: sum("gross"), fee: sum("fee"), net: sum("net"), meals_approved: sum("meal_approved"), meals_pending: sum("meal_pending"), payout: sum("net") + sum("meal_approved"), items };
+  return { month, pay_date: last.toISOString().slice(0, 10), account: masked, grade: g, payout_rate: rateOf(g), walks: items.length, gross: sum("gross"), album: sum("album"), fee: sum("fee"), net: sum("net"), meals_approved: sum("meal_approved"), meals_pending: sum("meal_pending"), payout: sum("net") + sum("meal_approved"), items };
 }
 
 function toMealClaim(c: D.MealClaimRow): MealClaim {
@@ -309,22 +315,26 @@ function toAdminBuddy(id: number): AdminBuddyRow | null {
   if (!bd || !info || st === "rejected") return null;
   return { id, name: bd.name, email: info.email, major: bd.major, year: bd.year, university: bd.university, university_id: bd.university_id, languages: bd.languages, status: st,
     age: info.age, school_email_verified: info.school_email_verified, code_agreed: info.code_agreed, quiz_score: info.quiz_score, report_count: reportCount(id), can_help: bd.can_help, can_drive: bd.can_drive, walk_count: bd.walk_count, rating: bd.rating,
-    korean_national: info.korean_national ?? true, ...gradeCols(id) };
+    korean_national: info.korean_national ?? true, eligibility: info.eligibility, school_name: info.school_name ?? null,
+    residence_proof_url: info.residence_proof_url ?? null, enrollment_proof_url: info.enrollment_proof_url ?? null, videos_watched: info.videos_watched, videos_total: D.educationVideos.length,
+    ...gradeCols(id) };
 }
 function gradeCols(id: number) {
   const g = gradeOf(id);
-  return { grade: g.grade, payout_rate: rateOf(g.grade), eval_rating: g.rating, eval_walks: g.walks, eval_reviews: g.reviews, needs_recheck: g.needs_recheck };
+  return { grade: g.grade, payout_rate: rateOf(g.grade), eval_month: D.EVAL_MONTH, last_month_walks: g.last_month_walks, total_reviews: g.reviews, avg_rating: g.rating,
+    evaluated_for: g.evaluated_for, approved_on: g.approved_on, needs_recheck: g.needs_recheck };
 }
-/** GET /buddy/grade — 평가 기간 = 현재 + 직전 운영 방학 */
+/** GET /buddy/grade — v3.7 매달 1일, 지난달 동행으로 평가 */
 function gradeInfo(id: number): BuddyGradeInfo {
   const g = gradeOf(id);
-  const cur = VACATIONS.filter(([, start]) => start <= D.TODAY).length - 1;
-  const win = VACATIONS.slice(Math.max(cur - 1, 0), cur + 1);
+  const need = (code: string) => { const r = GRADE_RULES.find((x) => x.grade === code)!; return { walks: r.walks, reviews: r.reviews, rating: r.rating }; };
   const i = GRADE_RULES.findIndex((r) => r.grade === g.grade);
   const nx = i > 0 ? GRADE_RULES[i - 1] : null;
-  return { grade: g.grade, payout_rate: rateOf(g.grade), window: { from: win[0]?.[1] ?? null, to: win[win.length - 1]?.[2] ?? null, label: win.map(([n]) => n).join(" + ") },
-    stats: { rating: g.rating, walks: g.walks, reviews: g.reviews },
-    next: nx ? { grade: nx.grade, payout_rate: nx.rate, need: { rating: nx.rating, walks: nx.walks, reviews: nx.reviews } } : null,
+  return { grade: g.grade, payout_rate: rateOf(g.grade), evaluated_for: g.evaluated_for, next_eval_on: D.NEXT_EVAL_ON,
+    stats: { month: D.EVAL_MONTH, last_month_walks: g.last_month_walks, this_month_walks: g.this_month_walks, reviews: g.reviews, rating: g.rating },
+    next: nx ? { grade: nx.grade, payout_rate: nx.rate, need: need(nx.grade) } : null,
+    keep: g.grade !== "basic" ? need(g.grade) : null,
+    first_month: !g.approved_on || g.approved_on > `${D.TODAY.slice(0, 7)}-01`, note: GRADE_NOTE,
     needs_recheck: g.needs_recheck, dormant_since: g.dormant_since, updated_at: D.GRADE_UPDATED };
 }
 
@@ -339,14 +349,23 @@ function adminBookingRows(): AdminBookingRow[] {
 }
 
 function applyStateFor(email: string): ApplyState {
-  return (state.apply[email] ??= { school_email: null, university: null, university_id: null, email_verified: false, korean_national: false, birth_date: null, code_agreed: false, quiz_score: null, profile_done: false, status: "none" });
+  return (state.apply[email] ??= { school_email: null, university: null, university_id: null, email_verified: false, korean_national: false, birth_date: null, code_agreed: false, quiz_score: null, profile_done: false, status: "none",
+    eligibility: null, school_name: null, residence_proof_url: null, enrollment_proof_url: null, videos: [] });
+}
+const eligibleOf = (s: ApplyState) => (s.eligibility === "residence" ? !!(s.residence_proof_url && s.enrollment_proof_url) : s.email_verified);
+function educationOut(s: ApplyState): EducationOut {
+  const videos = D.educationVideos.map((v) => ({ ...v, video_url: null, watched: s.videos.includes(v.id) }));
+  const watched = videos.filter((v) => v.watched).length;
+  return { videos, watched, total: videos.length, done: watched === videos.length };
 }
 function ageOn(birth: string, today: string): number {
   const [by, bm, bd] = birth.split("-").map(Number), [ty, tm, td] = today.split("-").map(Number);
   return ty - by - (tm < bm || (tm === bm && td < bd) ? 1 : 0);
 }
 function applyOut(s: ApplyState): BuddyApplyStatus {
-  return { email_verified: s.email_verified, korean_national: s.korean_national, school_email: s.school_email, university: s.university, age_ok: !!s.birth_date && ageOn(s.birth_date, D.TODAY) >= BUDDY_MIN_AGE, code_agreed: s.code_agreed, quiz_score: s.quiz_score, quiz_passed: (s.quiz_score ?? 0) >= QUIZ_PASS, profile_done: s.profile_done, status: s.status };
+  return { email_verified: s.email_verified, korean_national: s.korean_national, school_email: s.school_email, university: s.university, age_ok: !!s.birth_date && ageOn(s.birth_date, D.TODAY) >= BUDDY_MIN_AGE, code_agreed: s.code_agreed, quiz_score: s.quiz_score, quiz_passed: (s.quiz_score ?? 0) >= QUIZ_PASS, profile_done: s.profile_done, status: s.status,
+    eligibility: s.eligibility, eligible: eligibleOf(s), school_name: s.school_name, residence_proof_url: s.residence_proof_url, enrollment_proof_url: s.enrollment_proof_url,
+    videos_watched: ALL_VIDEOS.filter((v) => s.videos.includes(v)), videos_total: ALL_VIDEOS.length, education_done: ALL_VIDEOS.every((v) => s.videos.includes(v)) };
 }
 function univByEmail(email: string) {
   const domain = email.split("@")[1]?.toLowerCase() ?? "";
@@ -418,6 +437,17 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   let x: RegExpMatchArray | null;
   const role = me()?.role;
   const requireOperator = () => { if (role && role !== "operator") fail(403, "FORBIDDEN", "운영팀 계정만 볼 수 있어요"); };
+
+  // ---- v3.6 사진 올리기: 서버 없이 이 브라우저에서만 보이는 object URL
+  if (method === "POST" && path === "/uploads") {
+    if (!me()) fail(401, "UNAUTHORIZED", "로그인한 뒤 사진을 올릴 수 있어요");
+    const file = b.file;
+    if (!(file instanceof Blob)) fail(422, "VALIDATION", "사진 파일이 없어요");
+    const f = file as Blob;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(f.type)) fail(415, "UNSUPPORTED_TYPE", "JPG · PNG · WebP 사진만 올릴 수 있어요");
+    if (f.size > 10 * 1024 * 1024) fail(413, "FILE_TOO_LARGE", "사진은 10MB까지 올릴 수 있어요");
+    return { url: URL.createObjectURL(f), content_type: f.type, size: f.size };
+  }
 
   // ---- 인증
   if (method === "POST" && path === "/auth/google") { const u = D.users["emma@example.com"]; state.currentUser = u; return { access_token: "mock", user: u, needs_role_setup: false }; }
@@ -607,6 +637,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     if (!(category in REPORT_CATEGORY)) fail(422, "VALIDATION", "신고 유형을 골라 주세요");
     const text = String(b.text ?? "").trim();
     if (!text) fail(422, "VALIDATION", "무슨 일이 있었는지 적어 주세요");
+    if (isStr(b.photo_url) && !photosOk([b.photo_url])) fail(422, "PHOTO_URL", "사진은 앱에서 올린 것만 쓸 수 있어요 (POST /uploads)");
     const row: D.ReportRow = { id: state.nextId++, booking_item_id: f.it.id, reporter: f.b.traveler?.name ?? "", buddy_id: f.it.ref_id, category, text, photo_url: isStr(b.photo_url) ? b.photo_url : null, status: "open", action: null, auto_suspended: false, created_at: nowIso(), resolved_at: null };
     state.reports.unshift(row);
     if (reportCount(row.buddy_id) >= REPORT_SUSPEND_AT && statusOf(row.buddy_id) === "approved") { state.buddyStatus[row.buddy_id] = "suspended"; row.auto_suspended = true; }
@@ -629,16 +660,41 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     if (!/^\d{4}-\d{2}-\d{2}$/.test(birth)) fail(422, "VALIDATION", "생년월일을 입력해 주세요");
     if (ageOn(birth, D.TODAY) < BUDDY_MIN_AGE) fail(422, "TOO_YOUNG", `만 ${BUDDY_MIN_AGE}세 이상만 버디로 활동할 수 있어요`);
     const s = applyStateFor(myEmail());
-    Object.assign(s, { school_email: email, university: u.name, university_id: u.id, email_verified: true, korean_national: true, birth_date: birth, status: s.status === "none" ? "pending" : s.status });
+    Object.assign(s, { school_email: email, university: u.name, university_id: u.id, email_verified: true, korean_national: true, birth_date: birth, status: s.status === "none" ? "pending" : s.status, eligibility: "school_email", school_name: null });
     const cu = me(); if (cu) state.currentUser = { ...cu, university_id: u.id, birth_date: birth };
     return applyOut(s);
   }
-  if (method === "POST" && path === "/buddy/apply/agree") { const s = applyStateFor(myEmail()); s.code_agreed = true; return applyOut(s); }
-  if (method === "GET" && path === "/buddy/apply/quiz") return { questions: D.quiz.map(({ id, text, options }) => ({ id, text, options })) };
+  if (method === "POST" && path === "/buddy/apply/residence") {
+    // v3.7 성북구 거주 경로: 주소 증빙 + 재학 증명 사진(/uploads 주소). 운영자가 승인 때 확인
+    const name = String(b.school_name ?? "").trim();
+    if (name.length < 2) fail(422, "VALIDATION", "다니는 대학 이름을 적어 주세요");
+    if (!isStr(b.residence_proof_url) || !isStr(b.enrollment_proof_url) || !photosOk([b.residence_proof_url, b.enrollment_proof_url])) fail(422, "PHOTO_URL", "사진은 앱에서 올린 것만 쓸 수 있어요 (POST /uploads)");
+    if (b.korean_national !== true) fail(422, "NOT_KOREAN_NATIONAL", "한국 국적 학생만 버디로 활동할 수 있어요");
+    const birth = String(b.birth_date ?? "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birth)) fail(422, "VALIDATION", "생년월일을 입력해 주세요");
+    if (ageOn(birth, D.TODAY) < BUDDY_MIN_AGE) fail(422, "TOO_YOUNG", `만 ${BUDDY_MIN_AGE}세 이상만 버디로 활동할 수 있어요`);
+    const s = applyStateFor(myEmail());
+    const u = D.universities.find((x) => x.name === name);
+    Object.assign(s, { eligibility: "residence", school_name: name, university: name, university_id: u?.id ?? null, korean_national: true, birth_date: birth,
+      residence_proof_url: b.residence_proof_url, enrollment_proof_url: b.enrollment_proof_url, status: s.status === "none" ? "pending" : s.status });
+    return applyOut(s);
+  }
+  const needEligible = () => { const s = applyStateFor(myEmail()); if (!eligibleOf(s)) fail(409, "CONFLICT", "자격 확인(학교 메일 인증 또는 성북구 거주 확인)을 먼저 해 주세요"); return s; };
+  if (method === "POST" && path === "/buddy/apply/agree") { const s = needEligible(); s.code_agreed = true; return applyOut(s); }
+  if (method === "GET" && path === "/buddy/apply/education") return educationOut(applyStateFor(myEmail()));
+  if ((x = m(/^\/buddy\/apply\/education\/([a-z_]+)$/)) && method === "POST") {
+    if (!ALL_VIDEOS.includes(x[1])) fail(404, "NOT_FOUND", "없는 교육 영상이에요");
+    const s = needEligible();
+    if (!s.videos.includes(x[1])) s.videos = ALL_VIDEOS.filter((v) => v === x![1] || s.videos.includes(v));
+    return educationOut(s);
+  }
+  const needEducation = () => { const s = needEligible(); if (!ALL_VIDEOS.every((v) => s.videos.includes(v))) fail(409, "EDUCATION_NOT_DONE", "교육 영상을 모두 본 뒤에 퀴즈를 풀 수 있어요"); return s; };
+  const shownQuiz = () => D.quiz.filter((qq) => D.QUIZ_SHOWN.includes(qq.id));
+  if (method === "GET" && path === "/buddy/apply/quiz") { needEducation(); return { questions: shownQuiz().map(({ id, text, options }) => ({ id, text, options })) }; }
   if (method === "POST" && path === "/buddy/apply/quiz") {
     const answers = (b.answers ?? {}) as Record<string, number>;
-    const score = D.quiz.filter((qq) => Number(answers[qq.id]) === qq.answer).length;
-    const s = applyStateFor(myEmail());
+    const s = needEducation();
+    const score = shownQuiz().filter((qq) => Number(answers[qq.id]) === qq.answer).length;
     s.quiz_score = Math.max(s.quiz_score ?? 0, score);
     return { score, total: QUIZ_TOTAL, passed: score >= QUIZ_PASS };
   }
@@ -647,7 +703,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if (method === "GET" && path === "/buddy/availability") return { dates: [...state.availability].sort() };
   if (method === "PUT" && path === "/buddy/availability") { state.availability = new Set((b.dates as string[]) ?? []); return { dates: [...state.availability].sort() }; }
   if (method === "GET" && path === "/buddy/grade") return gradeInfo(myBuddyId());
-  if (method === "POST" && path === "/buddy/confirm-active") { if (role && role !== "buddy") fail(403, "FORBIDDEN", "권한이 없습니다"); gradeOf(myBuddyId()).needs_recheck = false; return gradeInfo(myBuddyId()); }
+  if (method === "POST" && path === "/buddy/confirm-active") { if (role && role !== "buddy") fail(403, "FORBIDDEN", "권한이 없습니다"); Object.assign(gradeOf(myBuddyId()), { needs_recheck: false, dormant_since: null }); return gradeInfo(myBuddyId()); }
   if (method === "GET" && path === "/buddy/profile") return buddyProfile(myBuddyId());
   if (method === "PUT" && path === "/buddy/profile") {
     const bd = buddyOf(myBuddyId())!;
@@ -677,6 +733,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     const amount = Number(b.amount);
     if (!Number.isInteger(amount) || amount <= 0) fail(422, "VALIDATION", "금액을 입력해 주세요");
     if (!String(b.place ?? "").trim()) fail(422, "VALIDATION", "가게 이름을 입력해 주세요");
+    if (isStr(b.receipt_url) && !photosOk([b.receipt_url])) fail(422, "PHOTO_URL", "사진은 앱에서 올린 것만 쓸 수 있어요 (POST /uploads)");
     const row: D.MealClaimRow = { id: state.nextId++, item_id: f.it.id, buddy_id: myBuddyId(), date: f.it.date_from ?? D.TODAY, place: String(b.place).trim(), items: String(b.items ?? ""), amount, receipt_url: isStr(b.receipt_url) ? b.receipt_url : null, status: "requested", reason: null, created_at: nowIso() };
     state.mealClaims.unshift(row);
     return toMealClaim(row);
@@ -687,6 +744,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     if (itemId != null) { const f = findItem(itemId); if (!f || f.it.type !== "buddy" || f.it.ref_id !== myBuddyId()) fail(403, "FORBIDDEN", "내 동행 항목만 기록할 수 있어요"); }
     const places = Array.isArray(b.places) ? (b.places as unknown[]).map(String).filter(Boolean) : [];
     if (!isStr(b.date) || places.length === 0) fail(422, "VALIDATION", "날짜와 다녀온 곳을 입력해 주세요");
+    if (!photosOk(b.photos)) fail(422, "PHOTO_URL", "사진은 앱에서 올린 것만 쓸 수 있어요 (POST /uploads)");
     const row: D.ActivityRow = { id: state.nextId++, buddy_id: myBuddyId(), item_id: itemId, date: b.date as string, places, foods: isStr(b.foods) ? b.foods : null, note: isStr(b.note) ? b.note : null, photos: Array.isArray(b.photos) ? (b.photos as unknown[]).map(String) : [], created_at: nowIso() };
     state.activities.unshift(row);
     return toActivity(row);
@@ -701,11 +759,13 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   }
   if (method === "POST" && path === "/admin/buddies/recompute-grades") {
     requireOperator();
-    // 매월 1일 갱신: 휴면 중이면 등급 그대로, 아니면 세 조건을 모두 채우는 가장 높은 등급
+    // v3.7 매달 1일 평가: 이번 달 평가(지난달 동행)를 아직 안 한 버디만. 휴면이어도 평가한다
     const changed = Object.keys(state.grades).map(Number).filter((id) => {
       const g = state.grades[id];
-      if (g.needs_recheck) return false;
-      const nx = gradeFor(g.rating, g.walks, g.reviews).grade;
+      if (g.evaluated_for === D.EVAL_MONTH) return false;
+      const first = !g.approved_on || g.approved_on > `${D.EVAL_MONTH}-01`;
+      const nx = decideGrade(g.grade, first, g.last_month_walks, g.reviews, g.rating);
+      g.evaluated_for = D.EVAL_MONTH;
       if (nx === g.grade) return false;
       g.grade = nx;
       return true;
@@ -718,9 +778,14 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     const row = toAdminBuddy(id) ?? fail(404, "NOT_FOUND", "버디 없음");
     const action = String(b.action);
     if (action === "approve") {
-      const missing = [!row.school_email_verified && "학교 메일 인증", !row.korean_national && "한국 국적 확인", (row.age ?? 0) < BUDDY_MIN_AGE && `만 ${BUDDY_MIN_AGE}세`, !row.code_agreed && "약속 동의", (row.quiz_score ?? 0) < QUIZ_PASS && `퀴즈 ${row.quiz_score ?? 0}/${QUIZ_TOTAL} (${QUIZ_PASS}점 이상)`].filter(Boolean);
+      const elig = row.eligibility === "residence"
+        ? [!row.residence_proof_url && "성북구 주소 증빙", !row.enrollment_proof_url && "재학 증명"]
+        : [!row.school_email_verified && "자격 확인(성북구 대학 메일 또는 성북구 거주)"];
+      const missing = [...elig, !row.korean_national && "한국 국적 확인", (row.age ?? 0) < BUDDY_MIN_AGE && `만 ${BUDDY_MIN_AGE}세`, !row.code_agreed && "약속 동의",
+        row.videos_watched < row.videos_total && `교육 영상 ${row.videos_watched}/${row.videos_total}`, (row.quiz_score ?? 0) < QUIZ_PASS && `퀴즈 ${row.quiz_score ?? 0}/${QUIZ_TOTAL} (${QUIZ_PASS}점 이상)`].filter(Boolean);
       if (missing.length) fail(409, "NOT_READY", `아직 안 된 항목: ${missing.join(", ")}`);
       state.buddyStatus[id] = "approved";
+      gradeOf(id).approved_on ??= D.TODAY;
     } else if (action === "suspend") state.buddyStatus[id] = "suspended";
     else if (action === "unsuspend") state.buddyStatus[id] = "approved";
     else if (action === "reject") state.buddyStatus[id] = "rejected";
@@ -737,7 +802,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     ];
     const buddyRows: SettlementRow[] = [31, 35].map((id) => {
       const s = buddySettlement(id, month);
-      return { party_type: "buddy", party_id: id, target: `버디 ${buddyOf(id)?.name ?? ""}`, count: s.walks, revenue: s.gross, fee: s.fee, meals: s.meals_approved, payout: s.payout, status: s.meals_pending > 0 ? "meal_pending" : "pending",
+      return { party_type: "buddy", party_id: id, target: `버디 ${buddyOf(id)?.name ?? ""}`, count: s.walks, revenue: s.gross, album: s.album, fee: s.fee, meals: s.meals_approved, payout: s.payout, status: s.meals_pending > 0 ? "meal_pending" : "pending",
         payout_rate: s.gross ? Math.round((s.net / s.gross) * 1000) / 1000 : null };
     });
     const items = [...univRows, ...buddyRows];
@@ -747,13 +812,16 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
       if (sumClaims(it.id, ["requested"]) > 0) continue;
       refund += (it.meal_count ?? 0) * MEAL_LIMIT - sumClaims(it.id, ["approved"]);
     }
-    // 판매가 − 원가 = 이익 (원가 = 대학 지급 90% · 버디 지급 = 항목별 정산율, 식비·보증금은 통과 금액이라 뺀다)
-    const part = (t: SettlementRow["party_type"], k: "revenue" | "fee") => items.filter((r) => r.party_type === t).reduce((s, r) => s + r[k], 0);
-    const albumSales = state.bookings.flatMap((bk) => bk.items).filter((it) => it.type === "buddy" && it.album && it.status === "confirmed" && (it.date_from ?? "").startsWith(month)).length * ALBUM_FEE;
-    const salesDorm = part("university", "revenue"), salesBuddy = part("buddy", "revenue");
-    const costUni = salesDorm - part("university", "fee"), costBuddy = salesBuddy - part("buddy", "fee");
+    // 판매가 − 원가 = 이익 (원가 = 대학 지급 90% · 버디 지급 = (활동비 + 앨범) × 항목별 정산율, 식비·보증금은 통과 금액이라 뺀다)
+    // v3.6: 버디 행 revenue 에 앨범이 들어간다 → 판매가는 활동비(sales_buddy)와 앨범(sales_album)으로 나누고, 앨범 버디 몫은 cost_buddy_album
+    const part = (t: SettlementRow["party_type"], k: "revenue" | "fee" | "album") => items.filter((r) => r.party_type === t).reduce((s, r) => s + (r[k] ?? 0), 0);
+    const albumItems = [31, 35].flatMap((id) => buddyItems(id)).filter(({ it }) => it.album && it.status === "confirmed" && (it.date_from ?? "").startsWith(month));
+    const albumSales = part("buddy", "album");
+    const albumCost = albumItems.reduce((s, { it }) => s + buddyNet(payoutBase(activityOf(it), true), rateFor(it)) - buddyNet(activityOf(it), rateFor(it)), 0);
+    const salesDorm = part("university", "revenue"), salesBuddy = part("buddy", "revenue") - albumSales;
+    const costUni = salesDorm - part("university", "fee"), costBuddy = part("buddy", "revenue") - part("buddy", "fee");
     const sales = salesDorm + salesBuddy + albumSales, profitAmt = sales - costUni - costBuddy;
-    const profit = { sales, sales_dorm: salesDorm, sales_buddy: salesBuddy, sales_album: albumSales, cost_university: costUni, cost_buddy: costBuddy, cost_other: 0, profit: profitAmt, margin: sales ? Math.round((profitAmt / sales) * 1000) / 1000 : 0 };
+    const profit = { sales, sales_dorm: salesDorm, sales_buddy: salesBuddy, sales_album: albumSales, cost_university: costUni, cost_buddy: costBuddy, cost_buddy_album: albumCost, cost_other: 0, profit: profitAmt, margin: sales ? Math.round((profitAmt / sales) * 1000) / 1000 : 0 };
     if (role === "univ_admin") { // 대학 담당자: 자기 학교 숙박 행만, 수익 구조 없음
       const mine = univRows.filter((r) => r.party_id === (me()?.university_id ?? 1));
       return { period: { from: `${month}-01`, to: `${month}-31` }, total: mine.reduce((s, r) => s + r.revenue, 0), items: mine, meal_refund_total: 0, profit: null } satisfies Settlements;
@@ -790,7 +858,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if (method === "GET" && path === "/admin/tours") {
     requireOperator();
     const walks = (id: number) => state.bookings.flatMap((bk) => bk.items).filter((i) => i.type === "buddy" && i.course_id === id && i.status !== "cancelled").length;
-    return list<AdminCourseRow>(D.tours.map((t) => ({ id: t.id, title: t.title, theme: t.theme, duration_min: t.duration_min, places: t.places.map((p) => p.name), place_count: t.places.length, story_ready: t.places.filter((p) => !!D.stories[p.id]).length, buddy_walks: walks(t.id) })));
+    return list<AdminCourseRow>(D.tours.map((t) => ({ id: t.id, title: t.title, theme: t.theme, duration_min: t.duration_min, walk_complete: t.walk_complete, places: t.places.map((p) => p.name), place_count: t.places.length, story_ready: t.places.filter((p) => !!D.stories[p.id]).length, buddy_walks: walks(t.id) })));
   }
 
   return fail(404, "NOT_FOUND", `mock: ${method} ${path} 핸들러 없음`);

@@ -31,6 +31,25 @@ export function koDuration(min?: number | null): string {
   const h = Math.floor(m / 60), r = m % 60;
   return h && r ? `${h}시간 ${r}분` : h ? `${h}시간` : `${r}분`;
 }
+/** v3.5 코스 걸리는 시간: 180 → "약 3시간", 170 → "약 2시간 50분", 50 → "50분" (en: "About 3 hr" · "About 2 hr 50 min" · "50 min") */
+export function aboutDuration(min: number, lang: "ko" | "en" = "ko"): string {
+  const h = Math.floor(min / 60), r = min % 60;
+  if (lang === "en") return h ? `About ${h} hr${r ? ` ${r} min` : ""}` : `${r} min`;
+  return h ? `약 ${h}시간${r ? ` ${r}분` : ""}` : `${r}분`;
+}
+/** 코스 머리 한 줄: "약 3시간 · 4곳" (en "About 3 hr · 4 stops") */
+export const courseMeta = (min: number, n: number, lang: "ko" | "en" = "ko") =>
+  `${aboutDuration(min, lang)} · ${lang === "en" ? `${n} stop${n === 1 ? "" : "s"}` : `${n}곳`}`;
+/** 걷는 거리: 550 → "550m", 1580 → "1,580m" (en "1,580 m") */
+const meters = (m: number, lang: "ko" | "en") => `${m.toLocaleString("ko-KR")}${lang === "en" ? " m" : "m"}`;
+/** 장소 사이 한 구간: "도보 8분 · 550m" (en "8 min walk · 550 m"). 좌표가 없으면 빠졌다고 알린다 */
+export function walkText(leg: { walk_m: number | null; walk_min: number | null } | undefined, lang: "ko" | "en" = "ko"): string {
+  if (!leg) return "";
+  if (leg.walk_m === null || leg.walk_min === null) return lang === "en" ? "Walking time unknown (no map point)" : "좌표가 없어 걷는 시간 빠짐";
+  return lang === "en" ? `${leg.walk_min} min walk · ${meters(leg.walk_m, lang)}` : `도보 ${leg.walk_min}분 · ${meters(leg.walk_m, lang)}`;
+}
+/** 지도에 찍을 수 있는 장소만 (좌표 없는 장소는 빼고) */
+export const hasXY = <T extends { lat: number | null; lng: number | null }>(p: T): p is T & { lat: number; lng: number } => !!p.lat && !!p.lng;
 /** 받침 있으면 "과", 없으면 "와" */
 export function wa(name: string): string {
   const c = name.charCodeAt(name.length - 1);

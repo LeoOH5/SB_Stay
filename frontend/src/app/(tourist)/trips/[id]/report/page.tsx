@@ -1,8 +1,9 @@
 "use client";
 // T22 도움이 필요해요 · 신고 — GET /bookings/{id}, POST /reports {booking_item_id, category, text, photo_url?}
-// 사진은 실제 업로드 없이 파일 이름만 기억한다 (photo_url 자리)
+// v3.6: 사진은 고르면 바로 POST /uploads 로 올리고, 받은 /media 주소를 photo_url 에 넣는다
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
+import { UploadThumb, usePhotoUploads } from "@/components/photo-upload";
 import { ErrorBox, textareaCls } from "@/components/tourist";
 import { errMsg } from "@/components/tourist/format";
 import { ActionBar, PhoneIcon, buddyNameOf, krDate, useBooking } from "@/components/tourist/trips/util";
@@ -10,6 +11,7 @@ import { Button, Hero, Icon, LinkButton, Spinner, cn } from "@/components/ui";
 import { REPORT_CATEGORY, keysOf, label } from "@/lib/codes";
 import { post } from "@/lib/api";
 import type { Report, ReportCategory } from "@/lib/types";
+import { UPLOAD_ACCEPT } from "@/lib/uploads";
 
 /** 화면(T22) 문구 — 없으면 codes.ts 라벨 */
 const COPY: Partial<Record<ReportCategory, string>> = {
@@ -23,7 +25,9 @@ function ReportPage() {
   const { booking, err: loadErr } = useBooking(id);
   const [category, setCategory] = useState<ReportCategory | null>(null);
   const [text, setText] = useState("");
-  const [photo, setPhoto] = useState<string | null>(null);
+  const upload = usePhotoUploads(1);
+  const slot = upload.slots[0];
+  const photo = upload.urls[0] ?? null;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [sent, setSent] = useState<Report | null>(null);
@@ -37,7 +41,7 @@ function ReportPage() {
   const submit = async () => {
     if (!item || !category) return;
     setBusy(true); setErr(null);
-    try { setSent(await post<Report>("/reports", { booking_item_id: item.id, category, text: text.trim(), photo_url: photo ? `uploads/${photo}` : null })); }
+    try { setSent(await post<Report>("/reports", { booking_item_id: item.id, category, text: text.trim(), photo_url: photo })); }
     catch (e) { setErr(errMsg(e)); }
     finally { setBusy(false); }
   };
@@ -101,17 +105,13 @@ function ReportPage() {
 
             <textarea className={`${textareaCls} mt-4 min-h-[96px] text-[15px]`} placeholder="언제, 어디서, 어떤 일이 있었는지 적어 주세요" value={text} maxLength={1000} onChange={(e) => setText(e.target.value)} aria-label="무슨 일이 있었는지" />
 
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPhoto(f.name); e.target.value = ""; }} />
+            <input ref={fileRef} type="file" accept={UPLOAD_ACCEPT} className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { upload.clear(); upload.add([f]); } e.target.value = ""; }} />
             <div className="mt-4 flex flex-wrap items-center gap-3">
+              {slot && <UploadThumb slot={slot} onRemove={upload.clear} onRetry={() => upload.retry(slot.key)} className="h-12 w-12 shrink-0 rounded-[10px]" />}
               <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex h-12 items-center gap-2.5 rounded-[12px] border border-line px-5 text-[15px] font-semibold text-ink hover:bg-gray-bg">
-                <Icon name="image" className="h-5 w-5" />{photo ? "사진 바꾸기" : "사진 첨부"}
+                <Icon name="image" className="h-5 w-5" />{slot ? "사진 바꾸기" : "사진 첨부"}
               </button>
-              {photo && (
-                <span className="inline-flex max-w-full items-center gap-1.5 text-[14px] text-muted">
-                  <span className="truncate">{photo}</span>
-                  <button type="button" onClick={() => setPhoto(null)} aria-label="사진 빼기" className="text-ink"><Icon name="x" className="h-4 w-4" /></button>
-                </span>
-              )}
+              {slot && <span className={cn("text-[13px]", slot.error ? "text-red" : "text-muted")} role={slot.error ? "alert" : "status"}>{slot.error ?? (photo ? "사진을 올렸어요" : "올리는 중…")}</span>}
             </div>
             <ErrorBox message={err} className="mt-4" />
           </>
@@ -119,8 +119,8 @@ function ReportPage() {
       </div>
 
       {item && (
-        <ActionBar note={!category ? "무슨 일인지 하나 골라 주세요" : !text.trim() ? "있었던 일을 적어 주세요" : undefined}>
-          <Button variant="danger" onClick={submit} disabled={busy || !category || !text.trim()}>{busy ? "보내는 중…" : "운영팀에 알리기"}</Button>
+        <ActionBar note={!category ? "무슨 일인지 하나 골라 주세요" : !text.trim() ? "있었던 일을 적어 주세요" : upload.uploading ? "사진이 다 올라가면 보낼 수 있어요" : upload.error ? "사진을 다시 올리거나 빼 주세요" : undefined}>
+          <Button variant="danger" onClick={submit} disabled={busy || !category || !text.trim() || upload.uploading || !!upload.error}>{busy ? "보내는 중…" : "운영팀에 알리기"}</Button>
         </ActionBar>
       )}
     </>

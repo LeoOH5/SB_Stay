@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 
 from app.core import rules
 from app.models.booking import Booking, BookingItem, Report
-from app.models.supply import BuddyProfile, University
+from app.models.supply import BuddyProfile
 from app.models.user import User
 from app.schemas.admin import AdminReportRow
+from app.services import eligibility
 
 
 def count_for(db: Session, buddy_id: int) -> int:
@@ -22,12 +23,11 @@ def auto_suspend(db: Session, report: Report) -> None:
 
 def row(db: Session, r: Report) -> AdminReportRow:
     prof = db.get(BuddyProfile, r.buddy_id)
-    uni = db.get(University, prof.university_id)
     it = db.get(BookingItem, r.booking_item_id) if r.booking_item_id else None
     b = db.get(Booking, it.booking_id) if it else None
     reporter = (b.traveler or {}).get("name") if b and b.tourist_id == r.reporter_id else None
     return AdminReportRow(
-        id=r.id, created_at=r.created_at, buddy_id=prof.id, buddy_name=db.get(User, prof.user_id).name, buddy_university=uni.name,
+        id=r.id, created_at=r.created_at, buddy_id=prof.id, buddy_name=db.get(User, prof.user_id).name, buddy_university=eligibility.university_name(db, prof),
         reporter=reporter or db.get(User, r.reporter_id).name, booking_code=b.code if b else None, category=r.category, text=r.text,
         photo_url=r.photo_url, count_for_buddy=count_for(db, prof.id), status=r.status, action=r.action,
         auto_suspended=r.auto_suspended, buddy_status=prof.status,

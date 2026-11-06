@@ -244,13 +244,13 @@
   "booking_id": 403,
   "type": "buddy",
   "ref_id": 31,
-  "date_from": "2026-07-22",
+  "date_from": "2026-12-22",
   "time": "14:00",
   "duration_min": 120,
   "price": 30000,
   "status": "confirmed",
   "decided_by": 3,
-  "decided_at": "2026-07-19T10:00:00Z",
+  "decided_at": "2026-12-19T10:00:00Z",
   "payout_rate": 0.7
  },
  {
@@ -258,13 +258,13 @@
   "booking_id": 404,
   "type": "buddy",
   "ref_id": 31,
-  "date_from": "2026-07-29",
+  "date_from": "2026-12-24",
   "time": "14:00",
   "duration_min": 120,
   "price": 30000,
   "status": "confirmed",
   "decided_by": 3,
-  "decided_at": "2026-07-26T10:00:00Z",
+  "decided_at": "2026-12-21T10:00:00Z",
   "payout_rate": 0.7
  },
  {
@@ -272,13 +272,13 @@
   "booking_id": 405,
   "type": "buddy",
   "ref_id": 31,
-  "date_from": "2026-08-05",
+  "date_from": "2026-12-27",
   "time": "14:00",
   "duration_min": 120,
   "price": 30000,
   "status": "confirmed",
   "decided_by": 3,
-  "decided_at": "2026-08-02T10:00:00Z",
+  "decided_at": "2026-12-24T10:00:00Z",
   "payout_rate": 0.7
  },
  {
@@ -286,13 +286,13 @@
   "booking_id": 406,
   "type": "buddy",
   "ref_id": 31,
-  "date_from": "2026-08-11",
+  "date_from": "2026-12-29",
   "time": "14:00",
   "duration_min": 120,
   "price": 30000,
   "status": "confirmed",
   "decided_by": 3,
-  "decided_at": "2026-08-08T10:00:00Z",
+  "decided_at": "2026-12-26T10:00:00Z",
   "payout_rate": 0.7
  },
  {

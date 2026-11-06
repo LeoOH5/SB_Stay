@@ -96,3 +96,21 @@ def test_fee_settings_are_integers():
 def test_meal_deposit_is_count_times_limit():
     for n in range(rules.MEAL_MAX + 1):
         assert n * rules.MEAL_LIMIT == 20_000 * n
+
+
+# ---------- v3.6 앨범(사진 기록)도 정산율로 나눈다
+@pytest.mark.parametrize(("rate", "buddy", "platform"), [("0.70", 3500, 1500), ("0.75", 3750, 1250), ("0.80", 4000, 1000)])
+def test_album_split_by_grade_rate(rate, buddy, platform):
+    from decimal import Decimal
+
+    from app.models.booking import BookingItem
+    from app.services import grades
+    from app.services.booking_state import activity_fee, album_fee, payout_base
+
+    assert grades.buddy_net(rules.ALBUM_FEE, Decimal(rate)) == buddy and rules.ALBUM_FEE - buddy == platform
+    # 활동 30,000 + 앨범 5,000 + 식사 1회 20,000 → 정산 대상 35,000 (보증금은 통과 금액)
+    it = BookingItem(type="buddy", price=30_000 + rules.ALBUM_FEE + rules.MEAL_LIMIT, meal_deposit=rules.MEAL_LIMIT, album=True)
+    assert (activity_fee(it), album_fee(it), payout_base(it)) == (30_000, 5_000, 35_000)
+    net = grades.buddy_net(payout_base(it), Decimal(rate))
+    assert net == grades.buddy_net(30_000, Decimal(rate)) + buddy and isinstance(net, int)
+    assert payout_base(BookingItem(type="buddy", price=30_000, meal_deposit=0, album=False)) == 30_000

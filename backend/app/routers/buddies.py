@@ -14,10 +14,11 @@ from app.core import rules
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.errors import api_error
-from app.models import BookingItem, BuddyActivity, BuddyAvailability, BuddyProfile, University, User
+from app.models import BookingItem, BuddyActivity, BuddyAvailability, BuddyProfile, User
 from app.schemas.buddies import ActivityPublic, BuddyDetailOut, BuddyOut, BuddyVerified
 from app.schemas.common import ListResponse
 from app.schemas.tours import ReviewListOut
+from app.services import eligibility
 from app.services.reviews import average, item_reviews, sub_score_average, top_tags
 
 router = APIRouter(prefix="/buddies", tags=["buddies"])
@@ -38,7 +39,8 @@ def walk_count(db: Session, buddy_id: int) -> int:
 
 def verified(b: BuddyProfile) -> BuddyVerified:
     return BuddyVerified(school_email=b.school_email_verified_at is not None,
-                         trained=b.code_agreed_at is not None and (b.quiz_score or 0) >= rules.QUIZ_PASS)
+                         trained=b.code_agreed_at is not None and (b.quiz_score or 0) >= rules.QUIZ_PASS,
+                         residence=b.eligibility == "residence")
 
 
 def activities(db: Session, buddy_id: int, limit: int) -> list[ActivityPublic]:
@@ -49,10 +51,9 @@ def activities(db: Session, buddy_id: int, limit: int) -> list[ActivityPublic]:
 
 def to_out(db: Session, b: BuddyProfile, detail: bool = False) -> BuddyOut | BuddyDetailOut:
     user = db.get(User, b.user_id)
-    uni = db.get(University, b.university_id)
     reviews, _ = item_reviews(db, "buddy", b.id)
     out = BuddyOut(
-        id=b.id, name=user.name if user else "", university=uni.name if uni else "", university_id=b.university_id,
+        id=b.id, name=user.name if user else "", university=eligibility.university_name(db, b), university_id=b.university_id,
         major=b.major, year=b.year, languages=b.languages or [], interests=b.interests or [], intro=b.intro, avatar=b.avatar,
         hourly_fee=b.hourly_fee, available_dates=_dates(db, b.id), rating=average(reviews) or 0, review_count=len(reviews),
         personality=b.personality or [], style=b.style or [], can_help=b.can_help or [], can_drive=bool(b.can_drive),

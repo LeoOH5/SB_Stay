@@ -1,6 +1,6 @@
 "use client";
 // T21 여행 앨범 — GET /bookings/{id}/album → {items:[{item_id, buddy_name, date, places, photos}]}
-// 사진 URL을 못 불러오면 무늬 타일. 다녀온 곳은 버디 활동 기록 순서대로.
+// v3.6: /media 주소(버디가 올린 사진)면 진짜 사진, 예전 시드 값(파일 이름)이거나 못 불러오면 무늬 타일. 다녀온 곳은 버디 활동 기록 순서대로.
 import { useParams } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import { ErrorBox } from "@/components/tourist";
@@ -9,6 +9,7 @@ import { ActionBar, Node, Photo, TimelineStep, iga, krDate, wa } from "@/compone
 import { Button, Hero, LinkButton, Spinner } from "@/components/ui";
 import { get } from "@/lib/api";
 import type { Album, AlbumItem } from "@/lib/types";
+import { mediaSrc } from "@/lib/uploads";
 
 export default function AlbumPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +23,7 @@ export default function AlbumPage() {
   }, [id]);
 
   const first = album?.items[0];
-  const allPhotos = album?.items.flatMap((i) => i.photos) ?? [];
+  const allPhotos = album?.items.flatMap((i) => i.photos).map(mediaSrc).filter((u): u is string => !!u) ?? [];
   const downloadAll = () => {
     for (const url of allPhotos) {
       const a = document.createElement("a");
@@ -75,11 +76,13 @@ function AlbumSection({ it }: { it: AlbumItem }) {
         <p className="mt-2 text-[15px] leading-relaxed text-muted">{it.buddy_name}{iga(it.buddy_name)} 아직 사진을 올리지 않았어요. 동행이 끝나면 여기에 모여요.</p>
       ) : (
         <div className="mt-2 grid grid-cols-3 gap-1.5">
-          {it.photos.map((src, i) => (
-            <a key={src + i} href={src} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-[10px]" aria-label={`사진 ${i + 1}`}>
-              <Photo src={src} alt={`${it.buddy_name}${wa(it.buddy_name)} 걸은 날 사진 ${i + 1}`} className="h-full w-full" />
-            </a>
-          ))}
+          {it.photos.map((v, i) => {
+            const src = mediaSrc(v);
+            const photo = <Photo src={src ?? ""} alt={`${it.buddy_name}${wa(it.buddy_name)} 걸은 날 사진 ${i + 1}`} className="h-full w-full" />;
+            return src ? (
+              <a key={v + i} href={src} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-[10px]" aria-label={`사진 ${i + 1} 크게 보기`}>{photo}</a>
+            ) : <div key={v + i} className="aspect-square overflow-hidden rounded-[10px]">{photo}</div>;
+          })}
         </div>
       )}
 

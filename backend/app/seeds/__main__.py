@@ -4,6 +4,8 @@ v3: guides는 빈 표, tours는 무료 코스(guide_id 없음). 예약은 숙박
 
 data/*.json 을 테이블 순서대로 넣는다. 데모 날짜는 2027년 1월(겨울방학) 고정, 가격은 전부 가정값.
 v3.2: 마지막에 버디 등급·휴면을 데모 '오늘'(DEMO_TODAY, 없으면 2027-01-14) 기준으로 계산한다.
+v3.7: 등급은 매달 1일 평가라, 가장 이른 승인일 다음 달부터 '오늘'이 든 달 1일까지 차례로 평가를 다시 해 본다(grades.replay).
+      그래서 시드 등급 = 2027-01-01 평가(2026년 12월 동행) 결과. 휴면은 마지막에 '오늘' 기준으로 한 번.
 """
 import json
 from datetime import date
@@ -93,6 +95,9 @@ def main() -> None:
             if "id" in model.__table__.columns and model.__table__.columns["id"].type.python_type is int:
                 db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), COALESCE((SELECT MAX(id) FROM {table}), 0) + 1, false)"))
         today = get_settings().demo_today or SEED_TODAY
+        first = min((b.approved_on for b in db.query(BuddyProfile).all() if b.approved_on), default=None)
+        if first:
+            grades.replay(db, first, today)
         for b in grades.recompute_all(db, today):
             print(f"grade: buddy {b.id} → {b.grade} {b.payout_rate}" + (" (휴면)" if b.needs_recheck else ""))
         db.commit()

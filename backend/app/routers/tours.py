@@ -13,10 +13,18 @@ from app.core import rules
 from app.core.db import get_db
 from app.core.deps import require_role
 from app.core.errors import api_error
-from app.models import CourseSurvey, Place, Tour, TourPlace, User
+from app.models import CourseSurvey, Place, Tour, User
 from app.schemas.common import ListResponse
-from app.schemas.tours import PlaceOut, ReviewListOut, SurveyIn, SurveyOut, TourOut, TourPlaceOut
-from app.services import free_tier
+from app.schemas.tours import (
+    CourseLegOut,
+    PlaceOut,
+    ReviewListOut,
+    SurveyIn,
+    SurveyOut,
+    TourOut,
+    TourPlaceOut,
+)
+from app.services import courses, free_tier
 from app.services.reviews import average, item_reviews
 
 router = APIRouter(tags=["tours"])
@@ -24,24 +32,24 @@ router = APIRouter(tags=["tours"])
 WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
 
-def _places(db: Session, tour_id: int) -> list[TourPlaceOut]:
-    rows = db.execute(
-        select(TourPlace, Place).join(Place, Place.id == TourPlace.place_id)
-        .where(TourPlace.tour_id == tour_id).order_by(TourPlace.seq)
-    ).all()
-    return [
-        TourPlaceOut(order=tp.seq, id=p.id, name=p.name, name_en=p.name_en, lat=float(p.lat), lng=float(p.lng),
-                     stay_min=tp.stay_min or p.stay_min)
-        for tp, p in rows
-    ]
+def _coord(v) -> float | None:
+    return float(v) if v else None
 
 
 def to_out(db: Session, t: Tour) -> TourOut:
+    """코스 + 장소(순서대로) + v3.5 걷는 구간·계산한 전체 시간"""
+    rows = courses.stop_rows(db, t.id)
+    ct = courses.from_rows(rows)
     return TourOut(
         id=t.id, title=t.title, title_en=t.title_en, theme=t.theme, guide=None,
-        duration_min=t.duration_min, price=t.price, operating_days=t.operating_days or [],
+        duration_min=ct.duration_min, stay_min_total=ct.stay_min_total, walk_m_total=ct.walk_m_total,
+        walk_min_total=ct.walk_min_total, walk_complete=ct.walk_complete,
+        price=t.price, operating_days=t.operating_days or [],
         languages=t.languages or [], meeting_point=t.meeting_point, description=t.description,
-        places=_places(db, t.id),
+        places=[TourPlaceOut(order=tp.seq, id=p.id, name=p.name, name_en=p.name_en, lat=_coord(p.lat), lng=_coord(p.lng),
+                             stay_min=courses.stay_of(tp, p), photo_url=p.photo_url, photo_credit=p.photo_credit)
+                for tp, p in rows],
+        legs=[CourseLegOut(**vars(x)) for x in ct.legs],
     )
 
 

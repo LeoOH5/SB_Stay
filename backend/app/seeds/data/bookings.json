@@ -5,7 +5,7 @@
   "tourist_id": 1,
   "status": "confirmed",
   "total_price": 180000,
-  "platform_fee": 23000,
+  "platform_fee": 19250,
   "traveler": {
    "name": "Emma Clark",
    "nationality": "US",
@@ -162,7 +162,7 @@
  },
  {
   "id": 403,
-  "code": "SB-2026-0722",
+  "code": "SB-2026-1222",
   "tourist_id": 23,
   "status": "confirmed",
   "total_price": 30000,
@@ -173,12 +173,12 @@
    "email": "aiko@example.com",
    "guests": 1
   },
-  "paid_at": "2026-07-18T09:05:00Z",
-  "created_at": "2026-07-18T09:00:00Z"
+  "paid_at": "2026-12-18T09:05:00Z",
+  "created_at": "2026-12-18T09:00:00Z"
  },
  {
   "id": 404,
-  "code": "SB-2026-0729",
+  "code": "SB-2026-1224",
   "tourist_id": 24,
   "status": "confirmed",
   "total_price": 30000,
@@ -189,12 +189,12 @@
    "email": "chloe@example.com",
    "guests": 1
   },
-  "paid_at": "2026-07-25T09:05:00Z",
-  "created_at": "2026-07-25T09:00:00Z"
+  "paid_at": "2026-12-20T09:05:00Z",
+  "created_at": "2026-12-20T09:00:00Z"
  },
  {
   "id": 405,
-  "code": "SB-2026-0805",
+  "code": "SB-2026-1227",
   "tourist_id": 25,
   "status": "confirmed",
   "total_price": 30000,
@@ -205,12 +205,12 @@
    "email": "liam@example.com",
    "guests": 1
   },
-  "paid_at": "2026-08-01T09:05:00Z",
-  "created_at": "2026-08-01T09:00:00Z"
+  "paid_at": "2026-12-23T09:05:00Z",
+  "created_at": "2026-12-23T09:00:00Z"
  },
  {
   "id": 406,
-  "code": "SB-2026-0811",
+  "code": "SB-2026-1229",
   "tourist_id": 26,
   "status": "confirmed",
   "total_price": 30000,
@@ -221,8 +221,8 @@
    "email": "ana@example.com",
    "guests": 1
   },
-  "paid_at": "2026-08-07T09:05:00Z",
-  "created_at": "2026-08-07T09:00:00Z"
+  "paid_at": "2026-12-25T09:05:00Z",
+  "created_at": "2026-12-25T09:00:00Z"
  },
  {
   "id": 411,

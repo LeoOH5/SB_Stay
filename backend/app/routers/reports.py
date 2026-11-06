@@ -9,7 +9,7 @@ from app.core.errors import api_error
 from app.models.booking import Booking, BookingItem, Report
 from app.models.user import User
 from app.schemas.admin import ReportIn, ReportOut
-from app.services import reports
+from app.services import reports, storage
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -26,6 +26,8 @@ def create_report(body: ReportIn, user: User = Depends(get_current_user), db: Se
         raise api_error(403, "FORBIDDEN", "본인 예약만 신고할 수 있습니다")
     if it.type != "buddy":
         raise api_error(422, "VALIDATION", "버디 항목만 신고할 수 있습니다")
+    if body.photo_url and not storage.is_media_url(body.photo_url):
+        raise api_error(422, "PHOTO_URL", "사진은 앱에서 올린 것만 쓸 수 있어요 (POST /uploads)")
     r = Report(booking_item_id=it.id, reporter_id=user.id, buddy_id=it.ref_id, category=body.category, text=body.text,
                photo_url=body.photo_url, status="open", auto_suspended=False)
     db.add(r)

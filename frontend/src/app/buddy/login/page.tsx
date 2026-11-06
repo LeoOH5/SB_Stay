@@ -1,5 +1,5 @@
 "use client";
-// B01 버디 로그인 — AU-01 POST /auth/login, AU-02 POST /auth/google. 버디가 되고 싶으면 /buddy/apply (5단계)
+// B01 버디 로그인 — AU-01 POST /auth/login, AU-02 POST /auth/google. 버디가 되고 싶으면 /buddy/apply (6단계)
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { GoogleG } from "@/components/buddy/ui";
@@ -64,7 +64,7 @@ export default function Page() {
 
       <h2 className="mt-10 text-[18px] font-bold text-ink">버디가 되고 싶어요</h2>
       <p className="mt-1.5 text-[14px] text-muted">{BUDDY_ELIGIBILITY}이면 지원할 수 있어요.</p>
-      <LinkButton href="/buddy/apply" variant="secondary" className="mt-4">5단계로 지원하기</LinkButton>
+      <LinkButton href="/buddy/apply" variant="secondary" className="mt-4">6단계로 지원하기</LinkButton>
     </div>
   );
 }

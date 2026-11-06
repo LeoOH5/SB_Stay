@@ -12,8 +12,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core import rules
-from app.models import BuddyAvailability, BuddyProfile, University, User
+from app.models import BuddyAvailability, BuddyProfile, User
 from app.schemas.ai import MatchIn
+from app.services import eligibility
 
 TOP_N = 3
 
@@ -64,12 +65,12 @@ def candidates(db: Session, req: MatchIn) -> list[BuddyCand]:
         langs = b.languages or []
         if req.language and req.language not in langs:
             continue
-        user, uni = db.get(User, b.user_id), db.get(University, b.university_id)
+        user = db.get(User, b.user_id)
         shared = [i for i in req.interests if i in (b.interests or [])]
         traits = len(set(req.personality) & set(b.personality or [])) + len(set(req.style) & set(b.style or []))
         needs_ok = bool(req.needs) and set(req.needs) <= set(b.can_help or [])
         same_uni = req.university_id is not None and b.university_id == req.university_id
-        out.append(BuddyCand(b, (user.name if user else ""), (uni.name if uni else ""), shared,
+        out.append(BuddyCand(b, (user.name if user else ""), eligibility.university_name(db, b), shared,
                              score(len(shared), len(langs), traits, needs_ok, same_uni), traits,
                              list(req.needs) if needs_ok else None, same_uni))
     return sorted(out, key=lambda c: (-c.score, c.profile.id))

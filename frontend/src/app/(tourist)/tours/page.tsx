@@ -1,13 +1,14 @@
 "use client";
 // T07 무료 AI 산책 코스 — TR-01 GET /tours (테마 거르기, 지도)
+// v3.5 C안: 코스마다 장소 사진·한국어/영어 이름, 장소 사이 걷는 구간(legs), 걸리는 시간은 서버 계산값(duration_min)
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { KakaoMap } from "@/components/kakao-map";
-import { Banner, Chip, Hero, Icon, Spinner } from "@/components/ui";
+import { Chip, Hero, Icon, Spinner } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
-import { errMsg, THEME_LABEL, THEMES } from "@/components/tourist/format";
-import { CourseDots, Headline } from "@/components/tourist/v3";
-import { koDuration } from "@/components/tourist/v3/flow";
+import { errMsg, THEMES } from "@/components/tourist/format";
+import { CourseSection } from "@/components/tourist/v3/course";
+import { hasXY } from "@/components/tourist/v3/flow";
 import { get } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 import type { ListResponse, Tour } from "@/lib/types";
@@ -28,40 +29,42 @@ export default function ToursPage() {
   }, [theme]);
   const pick = (t: string) => { setTours(null); setErr(null); setTheme(t); };
   const free = tours?.every((t) => t.price === 0) ?? true;
+  const starts = (tours ?? []).flatMap((t) => t.places.filter(hasXY).slice(0, 1).map((p) => ({ lat: p.lat, lng: p.lng, label: lang === "en" ? t.title_en : t.title })));
 
   return (
     <>
-      <Hero title="코스" className="pb-2" right={
-        <button type="button" onClick={() => setShowMap((v) => !v)} aria-pressed={showMap} className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-semibold ${showMap ? "border-navy bg-navy text-white" : "border-line text-ink"}`}>
-          <Icon name="pin" className="h-[18px] w-[18px]" />지도
-        </button>
-      } />
-      <Headline className="pt-3" title={"AI가 들려주는\n성북 산책 코스"} sub="혼자 걸어도, 버디와 같이 걸어도 돼요. 장소에 닿으면 AI가 이야기를 들려주고 질문에 답해요." />
+      <Hero title="코스" className="pb-2"
+        sub={tours ? `${free ? "무료 " : ""}AI 산책 코스 ${tours.length}개 · 장소에 닿으면 AI가 이야기를 들려줘요` : "장소에 닿으면 AI가 이야기를 들려줘요"}
+        right={
+          <button type="button" onClick={() => setShowMap((v) => !v)} aria-pressed={showMap} className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-semibold ${showMap ? "border-navy bg-navy text-white" : "border-line text-ink"}`}>
+            <Icon name="pin" className="h-[18px] w-[18px]" />지도
+          </button>
+        } />
 
-      <div className="px-5 pb-8 pt-5">
+      <div className="px-5 pb-8 pt-3">
         <div className="flex flex-wrap gap-2">
           <Chip selected={theme === ""} onClick={() => pick("")}>전체</Chip>
           {THEMES.map((t) => <Chip key={t.key} selected={theme === t.key} onClick={() => pick(t.key)}>{t.label}</Chip>)}
         </div>
-        {showMap && tours && <KakaoMap className="mt-4" points={tours.flatMap((t) => t.places.slice(0, 1).map((p) => ({ lat: p.lat, lng: p.lng, label: lang === "en" ? t.title_en : t.title })))} />}
+        {showMap && tours && <KakaoMap className="mt-4" points={starts} />}
 
         <ErrorBox message={err} className="mt-4" />
         {!tours && !err && <Spinner />}
-        {tours && <div className="mt-6 text-[14px] text-muted">코스 {tours.length}개{free ? " · 모두 무료" : ""}</div>}
         {tours && tours.length === 0 && <p className="py-8 text-center text-[14px] text-muted">이 테마의 코스가 아직 없어요.</p>}
-        <div className="divide-y divide-line">
+        <div className="mt-6 space-y-7">
           {(tours ?? []).map((t) => (
-            <Link key={t.id} href={`/tours/${t.id}`} className="block py-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="text-[16px] font-semibold text-ink">{lang === "en" ? t.title_en : t.title}</div>
-                <div className="shrink-0 text-[16px] font-bold text-navy">{t.price === 0 ? "무료" : `₩${t.price.toLocaleString("ko-KR")}`}</div>
-              </div>
-              <div className="mt-1.5 text-[14.5px] text-muted">{THEME_LABEL[t.theme] ?? t.theme} · 걸어서 {koDuration(t.duration_min)}</div>
-              <div className="mt-3"><CourseDots n={t.places.length} /></div>
+            <Link key={t.id} href={`/tours/${t.id}`} className="block" aria-label={`${lang === "en" ? t.title_en : t.title} 코스 보기`}>
+              <CourseSection tour={t} lang={lang} />
             </Link>
           ))}
         </div>
-        {tours && <Banner icon="users" className="mt-2">버디와 같이 걷고 싶다면 버디 요청에서 코스를 골라요</Banner>}
+        {tours && tours.length > 0 && (
+          <div className="mt-8 flex items-start gap-2.5 border-t border-line pt-5 text-[14px] leading-relaxed text-muted">
+            <Icon name="users" className="mt-0.5 h-[18px] w-[18px] shrink-0 text-navy" />
+            <p>버디와 같이 걷고 싶다면 버디 요청에서 코스를 골라요. <Link href="/buddies" className="font-semibold text-navy">버디 보기 →</Link></p>
+          </div>
+        )}
+        {tours && tours.length > 0 && <p className="mt-3 text-[12px] text-muted">걷는 시간은 장소 사이 직선거리에 1.3배, 시속 4km로 잡은 어림값이에요.</p>}
       </div>
     </>
   );

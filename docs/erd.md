@@ -88,7 +88,6 @@ erDiagram
     varchar title
     varchar title_en
     varchar theme "literature|independence|..."
-    int duration_min
     int price
     jsonb operating_days
     jsonb languages
@@ -299,8 +298,8 @@ erDiagram
 | guide_id | bigint | FK → guides.id, NOT NULL |
 | title, title_en | varchar(200) | 코스명 한/영 |
 | theme | varchar(30) | `literature`/`independence`/… (TR-01 `?theme` 필터) |
-| duration_min | int | 소요 시간 |
-| price | int | KRW, 1인 |
+| price | int | KRW, 1인 (v3: 0) |
+| (v3.5) | | `duration_min` 칸 삭제 — 걸리는 시간은 장소 좌표·머무는 시간으로 계산 (`services/courses.py`) |
 | operating_days | jsonb | `["sat","sun"]` — TR-01 `?date` 는 요일로 변환해 필터 |
 | languages | jsonb | 해설 언어 배열 (TR-01 `?language`) |
 | meeting_point | varchar(255) | 집결지 |

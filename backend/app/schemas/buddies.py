@@ -8,6 +8,7 @@ from app.schemas.tours import ReviewOut
 class BuddyVerified(BaseModel):
     school_email: bool = False  # 학교 메일 인증
     trained: bool = False  # 약속 동의 + 교육 퀴즈 통과
+    residence: bool = False  # v3.7 성북구 거주 경로 (운영자가 서류 확인 후 승인)
 
 
 class BuddyOut(BaseModel):

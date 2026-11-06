@@ -68,7 +68,7 @@ class Tour(Base):
     title: Mapped[str] = mapped_column(String(100))
     title_en: Mapped[str] = mapped_column(String(100))
     theme: Mapped[str] = mapped_column(String(30))  # literature | independence | royal | hanok | food | craft
-    duration_min: Mapped[int] = mapped_column(Integer)
+    # v3.5: duration_min 칸 삭제 — 코스 시간은 장소 좌표·머무는 시간으로 계산한다 (services/courses.py)
     price: Mapped[int] = mapped_column(Integer)
     operating_days: Mapped[list | None] = mapped_column(JSON)  # ["sat","sun"]
     languages: Mapped[list | None] = mapped_column(JSON)
@@ -108,7 +108,8 @@ class BuddyProfile(Base):
     __tablename__ = "buddy_profiles"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
-    university_id: Mapped[int] = mapped_column(ForeignKey("universities.id"), index=True)
+    # 성북구 대학이면 그 대학. v3.7 성북구 거주 경로로 다른 대학에 다니면 NULL (school_name에 학교 이름)
+    university_id: Mapped[int | None] = mapped_column(ForeignKey("universities.id"), index=True)
     major: Mapped[str | None] = mapped_column(String(50))
     year: Mapped[int | None] = mapped_column(SmallInteger)
     languages: Mapped[list | None] = mapped_column(JSON)
@@ -134,6 +135,16 @@ class BuddyProfile(Base):
     needs_recheck: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")  # 휴면: 목록·AI 추천에서 빠짐
     dormant_since: Mapped[date | None] = mapped_column(Date)  # 휴면 시작일 (복귀 후 첫 동행까지 남김)
     active_on: Mapped[date | None] = mapped_column(Date)  # 마지막 요청 수락·가능 날짜 수정·활동 확인
+    # v3.7 매달 평가: 승인일(첫 달은 기본), 지금 등급을 정한 평가 달(그 달 1일)
+    approved_on: Mapped[date | None] = mapped_column(Date)
+    grade_evaluated_for: Mapped[date | None] = mapped_column(Date)
+    # v3.7 자격 경로: school_email(성북구 대학 메일) | residence(성북구 거주 + 재학 증명, 운영자가 승인 때 확인)
+    eligibility: Mapped[str | None] = mapped_column(String(20))
+    school_name: Mapped[str | None] = mapped_column(String(100))  # 다니는 대학 이름 (거주 경로)
+    residence_proof_url: Mapped[str | None] = mapped_column(String(500))  # 주소 증빙 사진 (/media/...)
+    enrollment_proof_url: Mapped[str | None] = mapped_column(String(500))  # 재학 증명 사진 (/media/...)
+    residence_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    education_watched: Mapped[list | None] = mapped_column(JSON)  # 다 본 사전 교육 영상 id (rules.EDUCATION_IDS)
 
 
 class BuddyAvailability(Base):

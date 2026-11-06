@@ -5,7 +5,6 @@
   "title": "문인의 성북동 산책",
   "title_en": "Writers' Seongbuk Walk",
   "theme": "literature",
-  "duration_min": 120,
   "price": 0,
   "operating_days": [
    "mon",
@@ -29,7 +28,6 @@
   "title": "독립운동가의 길",
   "title_en": "Independence Trail",
   "theme": "independence",
-  "duration_min": 120,
   "price": 0,
   "operating_days": [
    "mon",
@@ -52,7 +50,6 @@
   "title": "정릉과 성곽길",
   "title_en": "Royal Tomb & Fortress Wall",
   "theme": "royal",
-  "duration_min": 180,
   "price": 0,
   "operating_days": [
    "mon",
@@ -76,7 +73,6 @@
   "title": "길상사와 한옥 골목",
   "title_en": "Gilsangsa & Hanok Alleys",
   "theme": "hanok",
-  "duration_min": 120,
   "price": 0,
   "operating_days": [
    "mon",
@@ -99,7 +95,6 @@
   "title": "왕릉과 산사",
   "title_en": "Royal Tomb and Mountain Temple",
   "theme": "royal",
-  "duration_min": 90,
   "price": 0,
   "operating_days": [
    "mon",

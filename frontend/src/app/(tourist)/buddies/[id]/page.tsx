@@ -12,6 +12,7 @@ import { EMPTY_REQUEST, allLangs, buddiesIn, isBuddyRequest, koDay, koDuration, 
 import { get, won } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import { CAN_HELP, PERSONALITY, REVIEW_TAGS, STYLE, SUB_SCORES, buddyItemPrice, keysOf, label, labels } from "@/lib/codes";
+import { mediaSrc } from "@/lib/uploads";
 import type { BuddyDetail, ListResponse, PublicActivity, Review } from "@/lib/types";
 
 const TIMES = ["10:00", "14:00", "17:00"];
@@ -28,7 +29,7 @@ function TagGroup({ title, items }: { title: string; items: string[] }) {
 }
 
 function ActivityRow({ a }: { a: PublicActivity }) {
-  const photo = a.photos?.[0];
+  const photo = mediaSrc(a.photos?.[0]);
   return (
     <div className="flex items-center gap-4 py-4">
       {photo ? <DormPhoto src={photo} className="h-[52px] w-[52px] shrink-0 rounded-[10px] [&_svg]:hidden" /> : <PhotoTile className="h-[52px] w-[52px] shrink-0 rounded-[10px] [&_svg]:hidden" />}
@@ -105,10 +106,10 @@ function Detail() {
             <div className="min-w-0">
               <h1 className="flex items-center gap-2 text-[24px] font-bold leading-tight text-ink">{buddy.name}<GradeBadge grade={buddy.grade} /></h1>
               <div className="mt-1 text-[14.5px] text-muted">{buddy.university} {buddy.major} {buddy.year}학년</div>
-              {(buddy.verified.school_email || buddy.verified.trained) && (
+              {(buddy.verified.school_email || buddy.verified.residence || buddy.verified.trained) && (
                 <div className="mt-1 flex items-center gap-1.5 text-[13.5px] font-semibold text-navy">
                   <span className="h-1.5 w-1.5 rounded-full bg-navy" />
-                  {[buddy.verified.school_email && "학교 인증", buddy.verified.trained && "교육 이수"].filter(Boolean).join(" · ")}
+                  {[buddy.verified.school_email && "학교 인증", buddy.verified.residence && "성북구 거주 확인", buddy.verified.trained && "교육 이수"].filter(Boolean).join(" · ")}
                 </div>
               )}
             </div>

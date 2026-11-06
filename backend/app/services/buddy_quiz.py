@@ -1,4 +1,9 @@
-"""버디 교육 퀴즈 10문제 (지원 3단계). 10문제 중 8문제 이상 맞히면 통과. answer는 보기 번호(0부터)."""
+"""버디 교육 퀴즈 (지원 4단계, 사전 교육 영상 뒤). 문제 13개 중 10개를 내고 8개 이상 맞히면 통과. answer는 보기 번호(0부터).
+
+v3.7: 길·안전·역사 기본 상식 문제 3개(q11~q13)를 더했다. 늘 내는 문제(CORE: 돈 받지 않기 · 역사 해설 안 함 · 응급 번호)
++ 나머지에서 사람마다 정해진 7개(지원자 id로 고름 — 다시 풀어도 같은 문제).
+"""
+import random
 
 QUESTIONS: list[dict] = [
     {"id": "q1", "text": "여행자가 버섯 알레르기가 있다고 적었어요. 식당에서 어떻게 할까요?",
@@ -31,13 +36,32 @@ QUESTIONS: list[dict] = [
     {"id": "q10", "text": "여행자가 밤 11시에 동네 구경을 같이 하자고 해요.",
      "options": ["가까운 곳이면 같이 가요", "늦은 밤 동행은 하지 않아요. 낮 시간으로 다시 예약해 달라고 해요", "택시를 같이 타고 가요"],
      "answer": 1},
+    {"id": "q11", "text": "고려대·안암 쪽에서 여행자와 지하철을 타려고 해요. 가까운 역은?",
+     "options": ["6호선 안암역·고려대역", "2호선 강남역", "9호선 여의도역"],
+     "answer": 0},
+    {"id": "q12", "text": "동행 중 여행자가 갑자기 많이 아파요. 어떻게 할까요?",
+     "options": ["내 차로 가까운 병원에 데려다줘요", "119에 전화하고, 앱으로 운영팀에도 알려요", "조금 쉬면 나을 테니 기다려요"],
+     "answer": 1},
+    {"id": "q13", "text": "한양도성(서울 성곽)에 대해 맞는 것은? (해설이 아니라 기본 상식)",
+     "options": ["조선 시대 서울을 둘러싼 성곽이고, 성북구에도 성곽길이 있어요", "일제강점기에 처음 쌓은 담이에요", "성북구는 지나가지 않아요"],
+     "answer": 0},
 ]
+CORE = ("q2", "q3", "q8")  # 늘 낸다: 돈·선물 받지 않기 · 버디는 역사 해설을 하지 않음 · 응급 번호
+BY_ID = {q["id"]: q for q in QUESTIONS}
 
 
-def public() -> list[dict]:
+def for_user(user_id: int, total: int = 10) -> list[dict]:
+    """이 지원자에게 낼 문제 (CORE + 정해진 나머지, 원래 순서대로)"""
+    rest = [q["id"] for q in QUESTIONS if q["id"] not in CORE]
+    pick = set(CORE) | set(random.Random(user_id).sample(rest, total - len(CORE)))
+    return [q for q in QUESTIONS if q["id"] in pick]
+
+
+def public(user_id: int) -> list[dict]:
     """정답 없이 문제·보기만"""
-    return [{"id": q["id"], "text": q["text"], "options": q["options"]} for q in QUESTIONS]
+    return [{"id": q["id"], "text": q["text"], "options": q["options"]} for q in for_user(user_id)]
 
 
-def grade(answers: dict[str, int]) -> int:
-    return sum(1 for q in QUESTIONS if answers.get(q["id"]) == q["answer"])
+def grade(answers: dict[str, int], user_id: int) -> int:
+    """이 지원자에게 낸 10문제만 채점 (다른 문제 답은 세지 않음)"""
+    return sum(1 for q in for_user(user_id) if answers.get(q["id"]) == q["answer"])

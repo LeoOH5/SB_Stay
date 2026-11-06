@@ -41,11 +41,29 @@ export interface DormRoom {
 }
 /** 레거시: 코스에 남아 있을 수 있는 해설사 정보 (v3에서는 항상 null) */
 export interface Guide { id: number; name: string; license: string; languages: string[] }
-export interface TourPlace { order: number; id: number; name: string; name_en: string; lat: number; lng: number; stay_min: number }
+export interface TourPlace {
+  order: number; id: number; name: string; name_en: string;
+  /** 좌표가 없으면 null (그 구간 걷는 시간은 빠진다) */
+  lat: number | null; lng: number | null;
+  /** 이 코스에서 머무는 시간 */
+  stay_min: number;
+  /** v3.5 장소 대표 사진. 없으면 화면은 색 블록 */
+  photo_url?: string | null; photo_credit?: string | null;
+}
+/** v3.5 장소 → 다음 장소 걷는 구간 (직선 × 1.3, 4 km/h 추정). 좌표가 없으면 walk_m·walk_min null */
+export interface CourseLeg { from_place_id: number; to_place_id: number; walk_m: number | null; walk_min: number | null }
 /** 무료 AI 산책 코스 (경로·테이블 이름은 tours 그대로). price 는 항상 0, guide 는 null */
 export interface Tour {
-  id: number; title: string; title_en: string; theme: string; guide: Guide | null; duration_min: number; price: number;
+  id: number; title: string; title_en: string; theme: string; guide: Guide | null;
+  /** v3.5 계산값: stay_min_total + walk_min_total 을 10분 단위로 올림 */
+  duration_min: number;
+  stay_min_total: number; walk_m_total: number; walk_min_total: number;
+  /** false = 좌표 없는 장소가 있어 걷는 시간 일부 빠짐 */
+  walk_complete: boolean;
+  price: number;
   operating_days: string[]; languages: string[]; meeting_point: string; places: TourPlace[]; description?: string;
+  /** places 순서대로 n−1개 */
+  legs: CourseLeg[];
 }
 export type Course = Tour;
 export interface Place {
@@ -68,7 +86,7 @@ export interface Buddy {
   /** 많이 받은 후기 태그 최대 3개 */
   tags_top: ReviewTag[];
   walk_count: number;
-  verified: { school_email: boolean; trained: boolean };
+  verified: { school_email: boolean; trained: boolean; residence?: boolean };
   /** 공개 배지 (화면은 성장·우수만 표시) */
   grade?: BuddyGrade;
   /** BD-02 상세에서만 (최대 3개) */
@@ -208,7 +226,11 @@ export interface Activity {
 }
 /** GET /buddy/settlement?month= */
 export interface BuddySettlementItem {
-  item_id: number; date: string; tourist: string; gross: number;
+  item_id: number; date: string; tourist: string;
+  /** 정산 대상 = 활동비 + 앨범 (식사 보증금 제외, v3.6) */
+  gross: number;
+  /** gross 중 앨범(사진 기록) 요금 (0 또는 5,000) */
+  album?: number;
   /** 예약 확정 때 고정한 정산율 (0.75 = 75%) */
   payout_rate: number;
   /** 플랫폼 몫 = gross − net */
@@ -221,29 +243,51 @@ export interface BuddySettlement {
   month: string; pay_date: string; account: string | null;
   /** 지금 등급·정산율 (항목마다는 items[].payout_rate) */
   grade: BuddyGrade; payout_rate: number;
-  walks: number; gross: number; fee: number; net: number;
+  walks: number; gross: number;
+  /** gross 중 앨범 요금 합 (v3.6) */
+  album?: number;
+  fee: number; net: number;
   meals_approved: number; meals_pending: number; payout: number; items: BuddySettlementItem[];
 }
-/** GET /buddy/grade · POST /buddy/confirm-active */
+/** 등급 기준값: 한 달 동행 · 누적 후기 · 누적 평점 */
+export interface GradeNeed { walks: number; reviews: number; rating: number }
+/** GET /buddy/grade · POST /buddy/confirm-active — v3.7 매달 1일, 지난달 동행으로 평가 */
 export interface BuddyGradeInfo {
   grade: BuddyGrade; payout_rate: number;
-  /** 평가 기간 = 현재 + 직전 운영 방학 */
-  window: { from: string | null; to: string | null; label: string };
-  /** 평가 기간 완료 동행의 평균 평점·동행 수·후기 수 */
-  stats: { rating: number | null; walks: number; reviews: number };
-  /** 다음 등급과 그 기준값 (우수면 null) */
-  next: { grade: BuddyGrade; payout_rate: number; need: { rating: number; walks: number; reviews: number } } | null;
-  /** 30일간 활동이 없어 요청 받기를 멈춤 */
+  /** 지금 등급을 정한 평가 달 "YYYY-MM" (아직 평가 전이면 null) */
+  evaluated_for: string | null;
+  /** 다음 평가일 (다음 달 1일) */
+  next_eval_on: string;
+  /** month = 평가 달(지난달). 지난달 동행(누적 아님) · 이번 달 지금까지 동행 · 누적 후기 · 누적 평점 */
+  stats: { month: string; last_month_walks: number; this_month_walks: number; reviews: number; rating: number | null };
+  /** 한 단계 위와 그 기준 (우수면 null) */
+  next: { grade: BuddyGrade; payout_rate: number; need: GradeNeed } | null;
+  /** 지금 등급을 지키는 기준 (기본이면 null) */
+  keep: GradeNeed | null;
+  /** 다음 평가까지 승인 후 첫 달 → 기본 */
+  first_month: boolean;
+  /** "등급은 매달 1일, 지난달 동행으로 다시 정해요. 올라갈 때는 한 단계씩…" */
+  note: string;
+  /** 30일간 활동이 없어 요청 받기를 멈춤 (등급은 그대로 매달 평가) */
   needs_recheck: boolean; dormant_since: string | null; updated_at: string | null;
 }
-/** 버디 지원 5단계 — GET /buddy/apply */
+/** 버디 자격 경로 (v3.7) */
+export type Eligibility = "school_email" | "residence";
+/** 버디 지원 6단계 — GET /buddy/apply */
 export interface BuddyApplyStatus {
   email_verified: boolean; school_email: string | null; university: string | null; age_ok: boolean; code_agreed: boolean;
   quiz_score: number | null; quiz_passed: boolean; profile_done: boolean;
   /** 대한민국 국적 확인 (외국인 유학생은 지원 불가) */
   korean_national: boolean;
   status: BuddyStatus | "none";
+  /** v3.7 자격 경로와 1단계 완료 여부, 거주 경로 서류, 사전 교육 */
+  eligibility: Eligibility | null; eligible: boolean; school_name: string | null;
+  residence_proof_url: string | null; enrollment_proof_url: string | null;
+  videos_watched: string[]; videos_total: number; education_done: boolean;
 }
+/** GET /buddy/apply/education · POST /buddy/apply/education/{id} */
+export interface EducationVideo { id: string; title: string; topics: string; duration_sec: number; video_url: string | null; watched: boolean }
+export interface EducationOut { videos: EducationVideo[]; watched: number; total: number; done: boolean }
 export interface BuddyApplyEmailOut { sent: boolean; university: string; dev_code?: string | null }
 export interface QuizQuestion { id: number; text: string; options: string[] }
 export interface QuizResult { score: number; total: number; passed: boolean }
@@ -260,20 +304,32 @@ export interface AdminBookingRow {
 }
 export interface AdminBuddyRow {
   id: number; name: string; email: string; major: string; languages: string[]; status: BuddyStatus;
-  university?: string; university_id?: number; year?: number;
+  university?: string; university_id?: number | null; year?: number;
   /** 만 나이 (생년월일 없으면 null) */
   age: number | null;
   school_email_verified: boolean; code_agreed: boolean; quiz_score: number | null; report_count: number; can_help: CanHelp[];
   can_drive: boolean; walk_count?: number; rating?: number;
   /** 한국 국적 확인 */
   korean_national: boolean;
-  /** v3.2 저장된 등급·정산율 + 지금 평가 기간 실적 */
-  grade: BuddyGrade; payout_rate: number; eval_rating: number | null; eval_walks: number; eval_reviews: number;
-  /** 휴면 (목록·AI 추천에서 빠짐) */
+  /** 저장된 등급·정산율 (v3.7 매달 1일 평가) */
+  grade: BuddyGrade; payout_rate: number;
+  /** 평가 달(지난달) "YYYY-MM" · 지난달 동행 · 누적 후기 · 누적 평점 */
+  eval_month: string; last_month_walks: number; total_reviews: number; avg_rating: number | null;
+  evaluated_for: string | null; approved_on: string | null;
+  /** 휴면 (목록·AI 추천에서 빠짐, 등급은 그대로 매달 평가) */
   needs_recheck: boolean;
+  /** v3.7 자격 경로 · 거주 경로 서류(/media/… 이면 사진, 아니면 자리 표시) · 사전 교육 */
+  eligibility: Eligibility | null; school_name: string | null;
+  residence_proof_url: string | null; enrollment_proof_url: string | null;
+  videos_watched: number; videos_total: number;
 }
 export interface AdminCourseRow {
-  id: number; title: string; theme: string; duration_min: number; places: string[]; place_count: number;
+  id: number; title: string; theme: string;
+  /** v3.5 계산값 (머무는 시간 + 걷는 시간, 10분 올림) */
+  duration_min: number;
+  /** false = 좌표 없는 장소가 있어 걷는 시간 일부 빠짐 */
+  walk_complete: boolean;
+  places: string[]; place_count: number;
   /** 이야기 자료가 있는 장소 수 */
   story_ready: number;
   /** 이 코스를 고른 버디 항목 수 */
@@ -288,7 +344,10 @@ export interface AdminReportRow {
   auto_suspended: boolean; buddy_status: BuddyStatus;
 }
 export interface SettlementRow {
+  /** revenue: 숙박 매출 또는 버디 정산 대상(활동비 + 앨범, v3.6) */
   party_type: "university" | "buddy"; party_id: number; target: string; count: number; revenue: number; fee: number;
+  /** 버디: revenue 중 앨범 요금 */
+  album?: number;
   /** 승인된 식비 (버디만, 수수료 없음) */
   meals: number;
   payout: number; status: string;
@@ -298,8 +357,10 @@ export interface SettlementRow {
 /** 판매가 − 원가 = 이익. 식사 보증금은 통과 금액이라 판매가에 넣지 않는다 */
 export interface SettlementProfit {
   sales: number; sales_dorm: number; sales_buddy: number; sales_album: number;
-  /** 대학 지급 (숙박비 × 90%) · 버디 지급료 (활동비 × 항목별 정산율 70~80%, 식비 제외) · 기타 원가 (카드 수수료 등, 지금은 0) */
+  /** 대학 지급 (숙박비 × 90%) · 버디 지급료 ((활동비 + 앨범) × 항목별 정산율 70~80%, 식비 제외) · 기타 원가 (카드 수수료 등, 지금은 0) */
   cost_university: number; cost_buddy: number; cost_other: number;
+  /** cost_buddy 중 앨범 버디 몫 (v3.6) */
+  cost_buddy_album?: number;
   profit: number;
   /** profit / sales (소수 셋째 자리) */
   margin: number;

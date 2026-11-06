@@ -1,7 +1,7 @@
 // v3 코드값 라벨 + 숫자 규칙 — docs/v3/CONTRACT.md §1·§3
 // 화면은 ko/en 라벨을 고르고, API 에는 key 만 보낸다.
 import type {
-  Allergy, BuddyGrade, CanHelp, Diet, DormRequestKey, Pace, Personality, ReportCategory, ReviewTag, SubScoreKey, SurveyPain, WalkStyle,
+  Allergy, BuddyGrade, CanHelp, Diet, DormRequestKey, Eligibility, Pace, Personality, ReportCategory, ReviewTag, SubScoreKey, SurveyPain, WalkStyle,
 } from "./types";
 
 // ---- 숫자 규칙 (§1)
@@ -11,15 +11,21 @@ export const PLATFORM_FEE_RATE = 0.1;
 export const MEAL_LIMIT = 20000;
 /** 버디 항목 1개당 식사 최대 횟수 */
 export const MEAL_MAX = 4;
-/** 여행 앨범 옵션 */
+/** 여행 앨범(사진 기록) 옵션. v3.6: 활동비처럼 버디 정산율로 나눈다 */
 export const ALBUM_FEE = 5000;
 /** 신고(기각 제외) 누적 시 자동 정지 */
 export const REPORT_SUSPEND_AT = 2;
 export const QUIZ_PASS = 8;
 export const QUIZ_TOTAL = 10;
 export const BUDDY_MIN_AGE = 19;
-/** 버디 지원 자격 (B01 로그인 · B06 지원 1단계) — 외국인 유학생은 시간제 취업 허가 문제로 지원 불가 */
-export const BUDDY_ELIGIBILITY = "성북구 대학 재학생, 대한민국 국적, 만 19세 이상";
+/** 버디 지원 자격 (B01 로그인 · B06 지원 1단계) — 외국인 유학생은 시간제 취업 허가 문제로 지원 불가.
+ *  v3.7: 성북구 대학에 다니거나, 성북구에 사는 대학생(어느 대학이든) */
+export const BUDDY_ELIGIBILITY = "성북구 대학 재학생 또는 성북구에 사는 대학생, 대한민국 국적, 만 19세 이상";
+/** 자격 경로 라벨 (A03 '자격 경로') */
+export const ELIGIBILITY: Record<Eligibility, { ko: string; en: string }> = {
+  school_email: { ko: "대학 메일", en: "University email" },
+  residence: { ko: "성북구 거주", en: "Seongbuk resident" },
+};
 export const KOREAN_NATIONAL_NOTE = "외국인 유학생은 시간제 취업 허가 문제로 지원할 수 없어요";
 /** 버디 약속 (B07 지원 2단계). 동의는 한 번에 받고(POST /buddy/apply/agree), 개수는 화면 표시용(A03 n/n) */
 export const BUDDY_PROMISES = [
@@ -39,32 +45,32 @@ export const REQUEST_NOTE_MAX = 300;
 export function buddyItemPrice(hourlyFee: number, durationMin: number, mealCount = 0, album = false): number {
   return Math.round(hourlyFee * (durationMin / 60)) + (album ? ALBUM_FEE : 0) + mealCount * MEAL_LIMIT;
 }
-/** 수수료 = 숙박 × 10% + Σ 활동비 × (1 − 버디 정산율) + 앨범 요금 전액. 식사 보증금에는 수수료 없음 */
-export function platformFee(dormTotal: number, buddyItems: { activity: number; rate: number }[], albumFees = 0): number {
-  return Math.round(dormTotal * PLATFORM_FEE_RATE) + buddyItems.reduce((s, b) => s + b.activity - buddyNet(b.activity, b.rate), 0) + albumFees;
+/** 정산율을 곱하는 금액 = 활동비 + 앨범 (v3.6). 식사 보증금은 통과 금액이라 뺀다 */
+export const payoutBase = (activity: number, album = false) => activity + (album ? ALBUM_FEE : 0);
+/** 수수료 = 숙박 × 10% + Σ (활동비 + 앨범) × (1 − 버디 정산율). 식사 보증금에는 수수료 없음 (v3.6: 앨범도 정산율로 나눈다) */
+export function platformFee(dormTotal: number, buddyItems: { activity: number; rate: number; album?: boolean }[]): number {
+  return Math.round(dormTotal * PLATFORM_FEE_RATE) + buddyItems.reduce((s, b) => { const base = payoutBase(b.activity, b.album); return s + base - buddyNet(base, b.rate); }, 0);
 }
 
-// ---- v3.2 버디 등급·정산율 (backend app/core/rules.py 와 같음)
-/** 등급 기준 (높은 등급부터). 평가 기간 = 현재 + 직전 운영 방학, 매월 1일 갱신, 예약 확정 때 정산율 고정 */
+// ---- 버디 등급·정산율 (backend app/core/rules.py 와 같음) — v3.7 매달 1일, 지난달 동행으로 평가
+/** 등급 기준 (높은 등급부터). walks = 지난달 완료 동행(누적 아님), reviews·rating = 누적. 예약 확정 때 정산율 고정 */
 export const GRADE_RULES: { grade: BuddyGrade; rating: number; walks: number; reviews: number; rate: number }[] = [
-  { grade: "top", rating: 4.5, walks: 15, reviews: 5, rate: 0.8 },
-  { grade: "growth", rating: 4.3, walks: 5, reviews: 3, rate: 0.75 },
+  { grade: "top", rating: 4.5, walks: 7, reviews: 5, rate: 0.8 },
+  { grade: "growth", rating: 4.3, walks: 4, reviews: 3, rate: 0.75 },
   { grade: "basic", rating: 0, walks: 0, reviews: 0, rate: 0.7 },
 ];
 export const BASE_PAYOUT_RATE = 0.7;
-/** 운영 기간 중 이만큼 활동이 없으면 휴면 (요청 받기 멈춤) */
+export const GRADE_NOTE = "등급은 매달 1일, 지난달 동행으로 다시 정해요. 올라갈 때는 한 단계씩, 내려갈 때는 조건에 맞는 등급으로 바로 가요.";
+/** 운영 기간 중 이만큼 활동이 없으면 휴면 (요청 받기 멈춤, 등급과는 상관없음) */
 export const DORMANT_DAYS = 30;
-/** 운영 방학 (이름, 시작, 끝) */
-export const VACATIONS: [string, string, string][] = [
-  ["2025 겨울방학", "2025-12-22", "2026-02-28"],
-  ["2026 여름방학", "2026-06-22", "2026-08-31"],
-  ["2027 겨울방학", "2026-12-21", "2027-02-28"],
-];
-/** 버디 몫 = round(활동비 × 정산율) */
+/** 버디 몫 = round((활동비 + 앨범) × 정산율) — 금액은 payoutBase() */
 export const buddyNet = (activity: number, rate: number) => Math.round(activity * rate);
-/** 세 조건을 모두 채우는 가장 높은 등급 */
-export function gradeFor(rating: number | null, walks: number, reviews: number) {
-  return GRADE_RULES.find((g) => walks >= g.walks && reviews >= g.reviews && (g.reviews === 0 || (rating ?? 0) >= g.rating)) ?? GRADE_RULES[GRADE_RULES.length - 1];
+/** 지금 등급 + 지난달 실적 → 새 등급 (backend grades.decide). 첫 달은 기본, 오를 때 한 단계씩, 내릴 때 바로 */
+export function decideGrade(current: BuddyGrade, firstMonth: boolean, walks: number, reviews: number, rating: number | null): BuddyGrade {
+  if (firstMonth) return "basic";
+  const meets = (g: BuddyGrade) => { const r = GRADE_RULES.find((x) => x.grade === g)!; return walks >= r.walks && reviews >= r.reviews && rating != null && rating >= r.rating; };
+  if (current !== "basic" && meets("top")) return "top";
+  return meets("growth") ? "growth" : "basic";
 }
 export const rateOf = (grade: BuddyGrade) => GRADE_RULES.find((g) => g.grade === grade)?.rate ?? BASE_PAYOUT_RATE;
 /** 0.75 → "75%" */
@@ -185,4 +191,35 @@ export function requestChips(r: { diet?: readonly string[]; allergies?: readonly
   out.push(...labels(ALLERGIES, r.allergies, lang).map((a) => (lang === "ko" ? `${a} 알레르기` : `${a} allergy`)));
   if (r.pace === "slow") out.push(label(PACE, "slow", lang));
   return out;
+}
+
+// ---- v3.5 코스 걷는 시간 (백엔드 app/services/courses.py 와 같은 계산). 1.3·4 km/h 는 추정값
+/** 직선거리 × 130% = 실제 걷는 길 (골목·언덕을 돌아가는 몫, 추정) */
+export const WALK_DETOUR_PERCENT = 130;
+/** 걷는 속도 4 km/h (추정) */
+export const WALK_M_PER_HOUR = 4000;
+/** 코스 전체 시간은 10분 단위로 올린다 */
+export const DURATION_STEP_MIN = 10;
+type XY = { id: number; lat: number | null; lng: number | null; stay_min: number };
+/** 두 좌표 사이 직선거리(m, 하버사인) */
+export function straightM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const r = Math.PI / 180, p1 = lat1 * r, p2 = lat2 * r, dp = p2 - p1, dl = (lng2 - lng1) * r;
+  const h = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
+/** 순서대로 놓인 장소 → 구간(walk_m 10 m 반올림, walk_min 올림)과 합계. 좌표가 없으면 그 구간은 null */
+export function courseTimes(stops: XY[]) {
+  const legs = stops.slice(1).map((b, i) => {
+    const a = stops[i];
+    if (!a.lat || !a.lng || !b.lat || !b.lng) return { from_place_id: a.id, to_place_id: b.id, walk_m: null, walk_min: null };
+    const route = Math.floor((Math.round(straightM(a.lat, a.lng, b.lat, b.lng)) * WALK_DETOUR_PERCENT + 50) / 100);
+    return { from_place_id: a.id, to_place_id: b.id, walk_m: Math.floor((route + 5) / 10) * 10, walk_min: Math.ceil((route * 60) / WALK_M_PER_HOUR) };
+  });
+  const stay = stops.reduce((s, p) => s + p.stay_min, 0);
+  const walkMin = legs.reduce((s, l) => s + (l.walk_min ?? 0), 0);
+  return {
+    stay_min_total: stay, walk_m_total: legs.reduce((s, l) => s + (l.walk_m ?? 0), 0), walk_min_total: walkMin,
+    duration_min: Math.ceil((stay + walkMin) / DURATION_STEP_MIN) * DURATION_STEP_MIN,
+    walk_complete: legs.every((l) => l.walk_m !== null), legs,
+  };
 }

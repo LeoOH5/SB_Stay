@@ -2,6 +2,7 @@
 // A05 정산 본문 — KPI 줄(총 거래액·대학 지급·버디 지급·여행자 식비 환불) + 지급 대상 표 (식비 열 포함)
 // + 수익 구조 (판매가 − 원가 = 이익, 식사 보증금은 통과 금액이라 뺀다)
 // v3.2: 버디 지급 = Σ 활동비 × 항목별 정산율(예약 확정 때 고정, 기본 70% · 성장 75% · 우수 80%) + 승인 식비
+// v3.6: 앨범(사진 기록)도 같은 정산율로 나눈다 — 버디 행 매출 = 활동비 + 앨범, 수익 구조 앨범 원가 = cost_buddy_album
 import { useEffect, useState } from "react";
 import { get, won } from "@/lib/api";
 import type { AdminMealClaimRow, ListResponse, SettlementProfit, SettlementRow, Settlements } from "@/lib/types";
@@ -24,10 +25,11 @@ const rate = (r: number) => (Math.abs(r * 100 - Math.round(r * 100)) < 0.05 ? `$
 
 /** 수익 구조: 줄마다 판매가 − 원가 = 이익 */
 function ProfitTable({ p }: { p: SettlementProfit }) {
+  const albumCost = p.cost_buddy_album ?? 0, walkCost = p.cost_buddy - albumCost;
   const rows = [
     { label: "숙소비", sub: "대학 지급 90%", sales: p.sales_dorm, cost: p.cost_university },
-    { label: "버디비", sub: `버디 지급료 ${p.sales_buddy ? rate(p.cost_buddy / p.sales_buddy) : "70~80%"} (항목별 정산율) · 식비 제외`, sales: p.sales_buddy, cost: p.cost_buddy },
-    { label: "앨범", sub: "전액 플랫폼", sales: p.sales_album, cost: 0 },
+    { label: "버디비", sub: `버디 지급료 ${p.sales_buddy ? rate(walkCost / p.sales_buddy) : "70~80%"} (항목별 정산율) · 식비 제외`, sales: p.sales_buddy, cost: walkCost },
+    { label: "앨범", sub: `사진 찍은 버디 몫 ${p.sales_album ? rate(albumCost / p.sales_album) : "70~80%"} (같은 정산율)`, sales: p.sales_album, cost: albumCost },
     { label: "기타 원가", sub: "카드 수수료 등", sales: 0, cost: p.cost_other },
   ];
   const cost = p.cost_university + p.cost_buddy + p.cost_other;
@@ -107,7 +109,7 @@ export function SettlementSection({ month }: { month: string }) {
       ] : [
         { label: "총 거래액", value: data ? won(data.total) : "—" },
         { label: "대학 지급", value: data ? won(sumBy(items, "university", "payout")) : "—", sub: "숙박 매출에서 수수료 제외" },
-        { label: "버디 지급", value: data ? won(buddyPayout) : "—", sub: data ? `활동비 × 정산율 ${won(buddyPayout - buddyMeals)} + 식비 ${won(buddyMeals)}` : undefined },
+        { label: "버디 지급", value: data ? won(buddyPayout) : "—", sub: data ? `(활동비 + 앨범) × 정산율 ${won(buddyPayout - buddyMeals)} + 식비 ${won(buddyMeals)}` : undefined },
         { label: "여행자 식비 환불", value: data ? won(data.meal_refund_total) : "—", sub: "쓰고 남은 보증금" },
       ]} />
 
@@ -129,7 +131,7 @@ export function SettlementSection({ month }: { month: string }) {
         </Table>
       )}
       {data?.profit && <ProfitTable p={data.profit} />}
-      {univ ? <Note className="mt-9">대학은 확정된 숙박비의 90%를 받아요. 버디 활동비·식비·수익 구조는 성북스테이 운영팀이 관리해요.</Note> : <Note className="mt-9">식사 보증금과 승인 식비는 여행자 돈을 대신 전하는 금액이라 판매가·원가에 넣지 않아요. 대학은 숙박비의 90%, 버디는 활동비에 동행마다 예약 확정 때 고정한 정산율(기본 70% · 성장 75% · 우수 80%)을 곱한 금액에 승인된 식비를 더해 받아요. 앨범 요금은 전액 플랫폼 수입이에요. 외국인 숙박 신고용 내보내기는 운영 단계에서 열려요.</Note>}
+      {univ ? <Note className="mt-9">대학은 확정된 숙박비의 90%를 받아요. 버디 활동비·식비·수익 구조는 성북스테이 운영팀이 관리해요.</Note> : <Note className="mt-9">식사 보증금과 승인 식비는 여행자 돈을 대신 전하는 금액이라 판매가·원가에 넣지 않아요. 대학은 숙박비의 90%, 버디는 활동비와 앨범(사진 기록) 요금에 동행마다 예약 확정 때 고정한 정산율(기본 70% · 성장 75% · 우수 80%)을 곱한 금액에 승인된 식비를 더해 받아요. 앨범 요금도 사진을 찍은 버디와 같은 비율로 나눠요. 외국인 숙박 신고용 내보내기는 운영 단계에서 열려요.</Note>}
     </section>
   );
 }

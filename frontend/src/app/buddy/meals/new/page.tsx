@@ -1,22 +1,26 @@
 "use client";
 // B11 식비 청구 — GET /buddy/schedule(확정 동행·식사 횟수·청구 수), POST /buddy/meal-claims {item_id, place, items, amount, receipt_url}
-// 영수증은 실제 업로드 없이 고른 파일 이름만 receipt_url 자리에 넣는다 (데모)
+// v3.6: 영수증 사진은 고르면 바로 POST /uploads 로 올리고, 받은 /media 주소를 receipt_url 에 넣는다
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { krDate } from "@/components/buddy/format";
 import { LoginGate } from "@/components/buddy/login-gate";
 import { BottomBar } from "@/components/buddy/ui";
+import { UploadThumb, usePhotoUploads } from "@/components/photo-upload";
 import { Banner, Button, Hero, Icon, LinkButton, Spinner, cn, inputCls } from "@/components/ui";
 import { MEAL_LIMIT } from "@/lib/codes";
 import { ApiError, get, post, won } from "@/lib/api";
 import type { BuddyRequest, ListResponse, MealClaim } from "@/lib/types";
+import { UPLOAD_ACCEPT } from "@/lib/uploads";
 
 const fieldCls = cn(inputCls, "h-[52px] text-[16px]");
 
 function MealClaimPage() {
   const sp = useSearchParams();
   const [items, setItems] = useState<BuddyRequest[] | null>(null);
-  const [receipt, setReceipt] = useState<string | null>(null);
+  const upload = usePhotoUploads(1);
+  const slot = upload.slots[0];
+  const receipt = upload.urls[0] ?? null;
   const [place, setPlace] = useState("");
   const [amount, setAmount] = useState(0);
   const [foods, setFoods] = useState("");
@@ -39,7 +43,7 @@ function MealClaimPage() {
   const submit = async () => {
     if (!item) return;
     setBusy(true); setErr(null);
-    try { setDone(await post<MealClaim>("/buddy/meal-claims", { item_id: item.item_id, place: place.trim(), items: foods.trim(), amount, receipt_url: receipt ? `receipts/${receipt}` : null })); }
+    try { setDone(await post<MealClaim>("/buddy/meal-claims", { item_id: item.item_id, place: place.trim(), items: foods.trim(), amount, receipt_url: receipt })); }
     catch (e) { setErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "청구하지 못했어요"); }
     finally { setBusy(false); }
   };
@@ -70,13 +74,24 @@ function MealClaimPage() {
 
         {item && (
           <>
-            <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setReceipt(f.name); e.target.value = ""; }} />
-            <button type="button" onClick={() => fileRef.current?.click()}
-              className={cn("flex h-[180px] w-full flex-col items-center justify-center rounded-[16px] border-[1.5px] border-dashed text-center transition", receipt ? "border-navy bg-navy-bg/60" : "border-[#C9CED3] hover:bg-gray-bg")}>
-              <Icon name={receipt ? "check" : "camera"} className={cn("h-6 w-6", receipt ? "text-navy" : "text-ink")} />
-              <span className="mt-2.5 text-[16px] text-ink">{receipt ? "영수증 사진을 올렸어요" : "영수증 사진 올리기"}</span>
-              <span className="mt-1 max-w-[80%] truncate text-[14px] text-muted">{receipt ?? "가게 이름, 날짜, 금액이 보이게"}</span>
-            </button>
+            <input ref={fileRef} type="file" accept={UPLOAD_ACCEPT} capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { upload.clear(); upload.add([f]); } e.target.value = ""; }} />
+            {slot ? (
+              <div className="flex items-center gap-4 rounded-[16px] border-[1.5px] border-navy/40 p-3">
+                <UploadThumb slot={slot} onRemove={upload.clear} onRetry={() => upload.retry(slot.key)} className="h-[120px] w-[96px] shrink-0 rounded-[10px]" />
+                <div className="min-w-0 flex-1">
+                  <div className={cn("text-[16px] font-semibold", slot.error ? "text-red" : "text-ink")}>{slot.error ? "올리지 못했어요" : receipt ? "영수증 사진을 올렸어요" : "올리는 중…"}</div>
+                  <p className="mt-1 text-[13px] leading-relaxed text-muted">{slot.error ?? "가게 이름, 날짜, 금액이 잘 보이는지 확인해 주세요"}</p>
+                  <button type="button" onClick={() => fileRef.current?.click()} className="mt-2 text-[14px] font-semibold text-navy">다른 사진으로 바꾸기</button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" onClick={() => fileRef.current?.click()}
+                className="flex h-[180px] w-full flex-col items-center justify-center rounded-[16px] border-[1.5px] border-dashed border-[#C9CED3] text-center transition hover:bg-gray-bg">
+                <Icon name="camera" className="h-6 w-6 text-ink" />
+                <span className="mt-2.5 text-[16px] text-ink">영수증 사진 올리기</span>
+                <span className="mt-1 max-w-[80%] truncate text-[14px] text-muted">가게 이름, 날짜, 금액이 보이게 · JPG · PNG · WebP, 10MB까지</span>
+              </button>
+            )}
 
             <label className="mt-5 block">
               <span className="mb-2 block text-[14px] font-semibold text-ink">가게</span>
@@ -106,7 +121,7 @@ function MealClaimPage() {
       </div>
 
       {item && (
-        <BottomBar note={!receipt ? "영수증 사진을 올려 주세요" : undefined}>
+        <BottomBar note={upload.uploading ? "영수증 사진을 올리는 중이에요" : !receipt ? "영수증 사진을 올려 주세요" : undefined}>
           <Button onClick={submit} disabled={busy || full || !receipt || !place.trim() || amount <= 0}>{busy ? "보내는 중…" : "청구하기"}</Button>
         </BottomBar>
       )}

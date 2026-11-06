@@ -43,20 +43,21 @@ def test_buddy_rows_and_approve_readiness(client, univ_admin, operator, reset_db
 def test_users_and_settlements_operator_only(client, univ_admin, operator):
     assert client.get("/api/v1/admin/users", headers=univ_admin).status_code == 403
     assert {u["role"] for u in client.get("/api/v1/admin/users", headers=operator).json()["items"]} == {"tourist", "buddy", "univ_admin", "operator"}
-    assert len(client.get("/api/v1/admin/users", params={"role": "buddy"}, headers=operator).json()["items"]) == 7  # + 수아(휴면)
+    assert len(client.get("/api/v1/admin/users", params={"role": "buddy"}, headers=operator).json()["items"]) == 8  # + 수아(휴면) · 가은(성북구 거주, v3.7)
     s = client.get("/api/v1/admin/settlements", headers=operator).json()
     targets = {r["target"]: r for r in s["items"]}
     assert set(targets) == {"고려대학교 프런티어관", "버디 지우", "버디 준서"}  # 해설사 행 없음
     assert targets["고려대학교 프런티어관"]["revenue"] == 105000 + 114000 and targets["고려대학교 프런티어관"]["meals"] == 0
-    j = targets["버디 지우"]  # 1월 동행 4회 활동비 120,000 (앨범·보증금 제외) × 정산율 75% · 승인 식비 18,000 · 대기 1건
-    assert (j["revenue"], j["fee"], j["meals"], j["payout"], j["status"]) == (120000, 30000, 18000, 108000, "meal_pending")
+    j = targets["버디 지우"]  # 1월 동행 4회 (활동비 120,000 + 앨범 5,000, 보증금 제외) × 정산율 75% · 승인 식비 18,000 · 대기 1건
+    assert (j["revenue"], j["album"], j["fee"], j["meals"], j["payout"], j["status"]) == (125000, 5000, 31250, 18000, 111750, "meal_pending")
     assert j["payout_rate"] == 0.75 and targets["버디 준서"]["payout_rate"] == 0.7 and targets["버디 준서"]["fee"] == 9000
     assert s["meal_refund_total"] == 40000 + 2000 and s["total"] == sum(r["revenue"] for r in s["items"])
     # 판매가(숙박 219,000 + 활동비 150,000 + 앨범 5,000) − 원가(대학 90% + 버디 항목별 정산율) = 이익 (식비·보증금 제외)
     p = s["profit"]
     assert (p["sales_dorm"], p["sales_buddy"], p["sales_album"], p["sales"]) == (219000, 150000, 5000, 374000)
-    assert (p["cost_university"], p["cost_buddy"], p["cost_other"]) == (197100, 90000 + 21000, 0)  # 지우 75% · 준서 70%
-    assert p["profit"] == 65900 == 21900 + 39000 + 5000 and p["margin"] == 0.176
+    # 지우 75% (활동비 90,000 + 앨범 3,750) · 준서 70%
+    assert (p["cost_university"], p["cost_buddy"], p["cost_buddy_album"], p["cost_other"]) == (197100, 90000 + 3750 + 21000, 3750, 0)
+    assert p["profit"] == 62150 == 21900 + 39000 + 1250 and p["margin"] == 0.166
 
 
 def test_settlements_univ_admin_sees_own_dorm_only(client, univ_admin):
@@ -74,7 +75,7 @@ def test_admin_courses(client, univ_admin, operator):
     by_id = {r["id"]: r for r in rows}
     assert by_id[3]["places"] == ["성북근현대문학관", "수연산방(이태준 가옥)", "심우장", "길상사"] and by_id[3]["place_count"] == 4
     assert by_id[3]["story_ready"] == 4 and by_id[3]["buddy_walks"] == 1 and by_id[6]["buddy_walks"] == 2
-    assert set(rows[0]) == {"id", "title", "theme", "duration_min", "places", "place_count", "story_ready", "buddy_walks"}
+    assert set(rows[0]) == {"id", "title", "theme", "duration_min", "walk_complete", "places", "place_count", "story_ready", "buddy_walks"}
 
 
 def test_reports_auto_suspend_and_actions(client, operator, reset_db):

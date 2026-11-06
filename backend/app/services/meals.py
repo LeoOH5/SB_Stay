@@ -1,7 +1,7 @@
 """식비 청구·버디 정산 계산 (버디 본인 /buddy/* 와 운영자 /admin/* 공용).
 
-버디 항목 가격 = 활동비 + 앨범 + 식사 보증금. 앨범(5,000)은 전액 플랫폼 수입이라 버디 몫이 아니다.
-버디 몫 = round(활동비 × 확정 때 고정한 정산율) + 승인된 식비(수수료 없음). 정산율은 services/grades.
+버디 항목 가격 = 활동비 + 앨범 + 식사 보증금. v3.6: 앨범(5,000)도 활동비처럼 정산율로 나눠 버디 몫이 있다. 식사 보증금은 통과 금액.
+버디 몫 = round((활동비 + 앨범) × 확정 때 고정한 정산율) + 승인된 식비(수수료 없음). 정산율은 services/grades.
 """
 import re
 from calendar import monthrange
@@ -17,12 +17,13 @@ from app.models.supply import BuddyProfile
 from app.models.user import User
 from app.schemas.buddy import AdminMealClaimOut, MealClaimOut
 from app.services import grades
-from app.services.booking_state import activity_fee, meal_sums
+from app.services.booking_state import meal_sums, payout_base
 
 
 def gross_fee_net(db: Session, it: BookingItem) -> tuple[int, int, int, Decimal]:
-    """버디 항목의 (활동비, 플랫폼 몫, 버디 몫, 정산율). 식사 보증금·앨범 제외"""
-    gross, rate = activity_fee(it), grades.item_rate(db, it)
+    """버디 항목의 (활동비 + 앨범, 플랫폼 몫, 버디 몫, 정산율). 식사 보증금 제외.
+    v3.6: 앨범(사진 기록)도 활동비처럼 정산율로 나눈다. 버디 몫 = round((활동비 + 앨범) × 정산율)"""
+    gross, rate = payout_base(it), grades.item_rate(db, it)
     net = grades.buddy_net(gross, rate)
     return gross, gross - net, net, rate
 
@@ -36,7 +37,7 @@ def claim_out(db: Session, c: MealClaim) -> MealClaimOut:
     b = db.get(Booking, it.booking_id)
     return MealClaimOut(id=c.id, item_id=it.id, booking_code=b.code, tourist=traveler_name(db, b), date=c.date, place=c.place,
                         items=c.items, amount=c.amount, limit=rules.MEAL_LIMIT, over_limit=c.amount > rules.MEAL_LIMIT,
-                        status=c.status, reason=c.reason, created_at=c.created_at)
+                        status=c.status, reason=c.reason, receipt_url=c.receipt_url, created_at=c.created_at)
 
 
 def admin_claim_out(db: Session, c: MealClaim) -> AdminMealClaimOut:

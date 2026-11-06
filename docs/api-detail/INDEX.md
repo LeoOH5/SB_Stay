@@ -44,6 +44,8 @@
 - [BD-05](BD-05.md) `GET /buddy/requests` — 버디 요청함 조회 (필수 / 구현)
 - [BD-06](BD-06.md) `GET /buddy/schedule` — 버디 확정 일정 조회 (필수 / 구현)
 - [BD-07](BD-07.md) `GET /buddy/earnings` — 버디 활동 내역·정산 조회 (권장 / 목업)
+- [BD-08](BD-08.md) `GET /buddy/grade` — 내 등급·정산율, 매달 1일 지난달 동행으로 평가 (v3.7, 권장 / 구현)
+- [BD-09](BD-09.md) `/buddy/apply/*` — 버디 지원 6단계: 자격 두 경로 · 사전 교육 영상 · 퀴즈 (v3.7, 필수 / 구현)
 
 ## AI
 
@@ -70,8 +72,8 @@
 
 - [AD-01](AD-01.md) `GET /admin/dashboard` — 어드민 대시보드 (필수 / 구현)
 - [AD-02](AD-02.md) `GET /admin/bookings` — 어드민 예약 목록 조회 (필수 / 구현)
-- [AD-03](AD-03.md) `GET /admin/buddies` — 소속 버디 목록 조회 (필수 / 구현)
-- [AD-04](AD-04.md) `PATCH /admin/buddies/{id}` — 버디 승인·제재 (필수 / 부분 구현)
+- [AD-03](AD-03.md) `GET /admin/buddies` — 버디 목록 조회 · 등급 다시 계산 (필수 / 구현)
+- [AD-04](AD-04.md) `PATCH /admin/buddies/{id}` — 버디 승인·제재 (v3.7 자격 경로·교육 영상 조건, 필수 / 구현)
 - [AD-05](AD-05.md) `GET /admin/users` — 회원 목록 조회 (권장 / 목업)
 - [AD-06](AD-06.md) `GET /admin/settlements` — 정산 내역 조회 (권장 / 목업)
 - [AD-07](AD-07.md) `GET /admin/tours` — 투어 코스 관리 (권장 / 시드 대체)
@@ -82,3 +84,4 @@
 ## 공통 (Common)
 
 - [CM-01](CM-01.md) `GET /contents/{key}` — 약관·환불 규정·고객센터 조회 (권장 / 목업)
+- [UP-01](UP-01.md) `POST /uploads` — 사진 올리기 · `/media` 보기 (v3.6, 권장 / 구현)

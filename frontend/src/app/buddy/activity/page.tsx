@@ -58,11 +58,11 @@ export default function Page() {
           <>
             <div className="divide-y divide-line">
               <InfoRow label="이번 달 동행" value={`${st.walks}회`} />
-              <InfoRow label={`활동비 (정산율 ${pct(st.payout_rate)} 적용)`} value={won(st.net)} />
+              <InfoRow label={`활동비${st.album ? " + 사진 기록" : ""} (정산율 ${pct(st.payout_rate)} 적용)`} value={won(st.net)} />
               <InfoRow label="식비 환급" value={won(st.meals_approved)} sub={st.meals_pending ? ` (확인 중 ${won(st.meals_pending)})` : ""} />
               <InfoRow label="받을 돈" value={<span className="text-navy">{won(st.payout)} · {krDate(st.pay_date)}</span>} />
             </div>
-            <p className="mt-1 text-[13px] leading-relaxed text-muted">활동비는 2시간 {won(walkFee)}이에요. 식비는 영수증을 운영팀이 확인하면 수수료 없이 돌려받아요.</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted">활동비는 2시간 {won(walkFee)}이에요. 사진 기록(앨범) 요금도 같은 정산율로 받아요. 식비는 영수증을 운영팀이 확인하면 수수료 없이 돌려받아요.</p>
             <LinkButton href={`/buddy/settlement?month=${month}`} variant="secondary" className="mt-4 min-h-[48px]">정산 내역 자세히</LinkButton>
           </>
         )}
@@ -100,7 +100,7 @@ export default function Page() {
               {tags.length > 0 && <div className="mt-2.5 flex flex-wrap gap-1.5">{tags.map((t) => <TagChip key={t} variant="navy">{t}</TagChip>)}</div>}
               <div className="mt-2.5 flex items-center gap-1.5 text-[14px] font-semibold text-navy">
                 <span className="h-1.5 w-1.5 rounded-full bg-navy" />
-                {[profile.verified?.school_email || apply?.email_verified ? "학교 인증" : "학교 인증 전", apply?.quiz_score != null ? `교육 ${apply.quiz_score}/10` : profile.verified?.trained ? "교육 이수" : null, `동행 ${profile.walk_count}회`].filter(Boolean).join(" · ")}
+                {[profile.verified?.school_email || apply?.email_verified ? "학교 인증" : profile.verified?.residence || apply?.eligibility === "residence" ? "성북구 거주 확인" : "학교 인증 전", apply?.quiz_score != null ? `교육 ${apply.quiz_score}/10` : profile.verified?.trained ? "교육 이수" : null, `동행 ${profile.walk_count}회`].filter(Boolean).join(" · ")}
               </div>
             </div>
           </div>
@@ -111,7 +111,10 @@ export default function Page() {
   );
 }
 
-/** 등급 카드: 지금 등급·정산율, 이번 평가 기간 실적 vs 다음 등급 기준. 휴면이면 '계속 활동할게요' */
+const ym = (m: string) => `${Number(m.slice(0, 4))}년 ${Number(m.slice(5, 7))}월`;
+
+/** 등급 카드 (v3.7): 지금 등급·정산율, 그 등급을 정한 지난달 동행·누적 후기·평점,
+ *  다음 1일 평가에서 한 단계 위(우수면 유지) 기준 vs 이번 달 동행·누적 후기·평점. 휴면이면 '계속 활동할게요' */
 function GradeCard({ g, onActive }: { g: BuddyGradeInfo; onActive: (g: BuddyGradeInfo) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -119,14 +122,15 @@ function GradeCard({ g, onActive }: { g: BuddyGradeInfo; onActive: (g: BuddyGrad
     setBusy(true); setErr(null);
     try { onActive(await post<BuddyGradeInfo>("/buddy/confirm-active")); } catch { setErr("잠시 뒤 다시 눌러 주세요"); } finally { setBusy(false); }
   };
-  const goal = g.next?.need;
   const s = g.stats;
+  const goal = g.next?.need ?? g.keep;
+  const goalTitle = g.next ? `${label(GRADE, g.next.grade)}(${pct(g.next.payout_rate)})까지` : `${label(GRADE, g.grade)} 지키기`;
   return (
     <section className="mb-9">
       {g.needs_recheck && (
         <Banner variant="warn" className="mb-5">
           30일간 활동이 없어 요청 받기를 멈췄어요
-          <p className="mt-0.5 text-[13px] font-normal">지금은 버디 목록과 AI 추천에 보이지 않아요. 등급과 정산율은 그대로예요.</p>
+          <p className="mt-0.5 text-[13px] font-normal">지금은 버디 목록과 AI 추천에 보이지 않아요. 등급은 그대로 매달 1일에 다시 정해요.</p>
           <Button onClick={confirm} disabled={busy} full={false} className="mt-3 min-h-[40px] px-4 text-[14px]">{busy ? "확인 중…" : "계속 활동할게요"}</Button>
           {err && <p className="mt-2 text-[13px] text-red">{err}</p>}
         </Banner>
@@ -141,16 +145,27 @@ function GradeCard({ g, onActive }: { g: BuddyGradeInfo; onActive: (g: BuddyGrad
           <div className="mt-0.5 text-[20px] font-bold text-navy">{pct(g.payout_rate)}</div>
         </div>
       </div>
-      <div className="flex items-center justify-between pt-3.5 text-[14px]">
-        <span className="font-semibold text-ink">{g.next ? `${label(GRADE, g.next.grade)}까지 (정산율 ${pct(g.next.payout_rate)})` : "가장 높은 등급이에요"}</span>
-        <span className="text-muted">{g.window.label}</span>
-      </div>
-      <div className="mt-3 space-y-2.5">
-        <GoalBar label="평점" value={s.rating ?? 0} goal={goal?.rating ?? 4.5} format={(v) => v.toFixed(1)} />
-        <GoalBar label="동행" value={s.walks} goal={goal?.walks ?? s.walks} format={(v) => `${v}회`} />
-        <GoalBar label="후기" value={s.reviews} goal={goal?.reviews ?? s.reviews} format={(v) => `${v}건`} />
-      </div>
-      <p className="mt-3 text-[13px] leading-relaxed text-muted">등급은 매월 1일 갱신 · 현재와 직전 방학 실적 합산 · 예약 확정 시 정산율 고정</p>
+      <dl className="grid grid-cols-3 border-b border-line py-3 text-center">
+        <div><dt className="text-[13px] text-muted">{Number(s.month.slice(5, 7))}월 동행</dt><dd className="mt-0.5 text-[16px] font-semibold text-ink">{s.last_month_walks}회</dd></div>
+        <div className="border-x border-line"><dt className="text-[13px] text-muted">누적 후기</dt><dd className="mt-0.5 text-[16px] font-semibold text-ink">{s.reviews}건</dd></div>
+        <div><dt className="text-[13px] text-muted">평점</dt><dd className="mt-0.5 text-[16px] font-semibold text-ink">{s.rating != null ? s.rating.toFixed(1) : "—"}</dd></div>
+      </dl>
+      <p className="mt-2 text-[13px] text-muted">{g.evaluated_for ? `${ym(g.evaluated_for)} 동행으로 정한 등급이에요` : "아직 평가 전이에요"}</p>
+      {goal && (
+        <>
+          <div className="flex items-baseline justify-between pt-4 text-[14px]">
+            <span className="font-semibold text-ink">{krDate(g.next_eval_on)} 평가 · {goalTitle}</span>
+            <span className="text-[13px] text-muted">이번 달 동행</span>
+          </div>
+          <div className="mt-3 space-y-2.5">
+            <GoalBar label="동행" value={s.this_month_walks} goal={goal.walks} format={(v) => `${v}회`} />
+            <GoalBar label="후기" value={s.reviews} goal={goal.reviews} format={(v) => `${v}건`} />
+            <GoalBar label="평점" value={s.rating ?? 0} goal={goal.rating} format={(v) => v.toFixed(1)} />
+          </div>
+        </>
+      )}
+      {g.first_month && <p className="mt-3 text-[13px] font-semibold text-orange">승인 후 첫 달은 기본 등급이에요. 다음 달 평가부터 올라갈 수 있어요.</p>}
+      <p className="mt-3 text-[13px] leading-relaxed text-muted">{g.note} 예약이 확정될 때의 정산율로 고정돼요.</p>
     </section>
   );
 }

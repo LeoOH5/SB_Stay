@@ -263,19 +263,24 @@ def album_fee(it: BookingItem) -> int:
 
 
 def activity_fee(it: BookingItem) -> int:
-    """버디 활동비 = 항목 가격 − 식사 보증금 − 앨범 (정산율은 여기에만)"""
+    """버디 활동비 = 항목 가격 − 식사 보증금 − 앨범"""
     return it.price - (it.meal_deposit or 0) - album_fee(it)
+
+
+def payout_base(it: BookingItem) -> int:
+    """정산율을 곱하는 금액 = 활동비 + 앨범(사진 기록) (v3.6). 식사 보증금은 통과 금액이라 뺀다"""
+    return activity_fee(it) + album_fee(it)
 
 
 def recompute_totals(db: Session, booking: Booking) -> None:
     """총액 = 살아 있는 항목 가격 합.
-    수수료 = 숙박 × 10% + 활동비 × (1 − 버디 정산율) + 앨범 전액. 식사 보증금에는 수수료 없음.
+    수수료 = 숙박 × 10% + (활동비 + 앨범) × (1 − 버디 정산율). 식사 보증금에는 수수료 없음.
     정산율은 확정된 항목은 고정값, 아직이면 버디의 지금 정산율로 어림한다."""
     items = db.scalars(select(BookingItem).where(BookingItem.booking_id == booking.id, BookingItem.status.in_(LIVE))).all()
     booking.total_price = sum(i.price for i in items)
     dorm = sum(i.price for i in items if i.type == "dorm")
-    keep = sum(activity_fee(i) - grades.buddy_net(activity_fee(i), grades.item_rate(db, i)) for i in items if i.type == "buddy")
-    booking.platform_fee = rules.pct(dorm, get_settings().platform_fee_percent) + keep + sum(album_fee(i) for i in items)
+    keep = sum(payout_base(i) - grades.buddy_net(payout_base(i), grades.item_rate(db, i)) for i in items if i.type == "buddy")
+    booking.platform_fee = rules.pct(dorm, get_settings().platform_fee_percent) + keep
 
 
 def create_booking(db: Session, tourist: User, traveler: TravelerIn, items: list[BookingItemIn]) -> Booking:

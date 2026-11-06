@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { get, patch } from "@/lib/api";
 import { REPORT_SUSPEND_AT } from "@/lib/codes";
+import { mediaSrc } from "@/lib/uploads";
 import type { AdminBookingRow, AdminBuddyRow, AdminReportRow, ListResponse, ReportAction, ReportCategory, ReportStatus } from "@/lib/types";
 import { Button, Spinner, StatusPill } from "@/components/ui";
 import {
@@ -151,6 +152,12 @@ function ReportPanel({ r, buddy, bookings, onDone }: { r: Row; buddy?: AdminBudd
       <div className="rounded-[14px] border border-[#CDD3DA] px-5 py-4">
         <p className="text-[15px] font-semibold leading-relaxed text-ink">“{r.text}”</p>
         {meta && <p className="mt-2 text-[13px] text-muted">{meta}</p>}
+        {mediaSrc(r.photo_url) && (
+          <a href={mediaSrc(r.photo_url)!} target="_blank" rel="noreferrer" className="mt-3 block h-[180px] overflow-hidden rounded-[10px] bg-[#3B4652]" aria-label="첨부 사진 크게 보기">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={mediaSrc(r.photo_url)!} alt="신고 첨부 사진" className="h-full w-full object-contain" />
+          </a>
+        )}
       </div>
 
       <KeyValues className="mt-2" rows={[
