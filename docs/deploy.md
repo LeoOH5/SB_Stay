@@ -2,13 +2,19 @@
 
 | 대상 | 플랫폼 | 주소 |
 |---|---|---|
-| 프론트 (Next.js) | Vercel 프로젝트 `sbstay` (root: `frontend`) | https://sbstay.site (www 포함, https://sbstay.vercel.app 도 동작) |
+| 프론트 (Next.js) | Vercel 프로젝트 `sbstay` (root: `frontend`) | https://sbstay.site (www·sbstay.vercel.app 은 sbstay.site 로 308 이동) |
 | 백엔드 (FastAPI) | Railway 프로젝트 `sbstay` · 서비스 `backend` (root: `backend`, `Dockerfile`) | https://api.sbstay.site (원래 주소 https://backend-production-c315.up.railway.app 도 동작) |
 | DB | Railway PostgreSQL (같은 프로젝트) | 백엔드 `DATABASE_URL=${{Postgres.DATABASE_URL}}` |
 
+## 자동 배포 (main에 머지하면 반영)
+- 흐름: `feat/*` → PR → `develop`(pytest 필수) → `main` 머지
+- 백엔드: Railway 서비스가 GitHub `LeoOH5/SB_Stay`의 `main`을 본다. `backend/**`가 바뀐 커밋만, **GitHub 체크(pytest)가 통과한 뒤** 배포 (Wait for CI)
+- 프론트: Vercel 프로젝트가 같은 저장소의 `main`을 Production으로 배포, 다른 브랜치·PR은 Preview URL. `frontend/`가 안 바뀐 커밋은 빌드 생략 (`git diff --quiet HEAD^ HEAD -- .`)
+- 손으로 배포해야 할 때: 프론트는 **저장소 루트에서** `vercel deploy --prod`(root가 `frontend`라서), 백엔드는 Railway에서 Redeploy
+
 ## 백엔드 (Railway)
 - `backend/Dockerfile`로 빌드, 시작은 `scripts/start.sh`: `alembic upgrade head` → DB가 비어 있으면 데모 데이터(`scripts/seed_if_empty.py`) → uvicorn (`$PORT`)
-- 헬스체크 `/health` (`backend/railway.json`), 배포는 `cd backend && railway up` (`.railwayignore`로 `.env` 제외)
+- 헬스체크 `/health` (`backend/railway.json`), 설정(root `/backend`, Dockerfile, 헬스체크 `/health`, 감시 경로 `/backend/**`)은 Railway 서비스 설정에 있다
 - 사진 업로드는 볼륨을 `/data`에 붙이고 `UPLOAD_DIR=/data/uploads`
 - `DATABASE_URL`은 Railway가 주는 `postgresql://...` 그대로 넣으면 된다 (앱이 `postgresql+psycopg://`로 바꿈)
 - 하루 뒤 테스트 결제 자동 환불은 서버가 켜져 있는 동안 돈다 (`AUTO_REFUND_AFTER_HOURS`)
@@ -29,7 +35,7 @@
 - `NEXT_PUBLIC_API_URL=https://<railway 주소>/api/v1`, `NEXT_PUBLIC_USE_MOCK=false`
 - `NEXT_PUBLIC_KAKAO_MAP_KEY`(JavaScript 키, 카카오 플랫폼 Web에 `https://sbstay.vercel.app` 등록)
 - 결제: `NEXT_PUBLIC_TOSS_CLIENT_KEY`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID` · 구글: `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
-- 배포: `cd frontend && vercel deploy --prod`
+- 배포: main 머지 시 자동 (위 "자동 배포" 참고)
 
 ## 도메인 (sbstay.site)
 Spaceship에서 구매(1년, 자동 연장은 끔 권장). DNS는 Spaceship Advanced DNS:
