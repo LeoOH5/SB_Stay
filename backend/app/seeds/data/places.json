@@ -33,7 +33,9 @@
         "title": "서울시 내 손안에 서울, 오래 머물고 싶은 성북동 골목 탐방",
         "url": "https://mediahub.seoul.go.kr/archives/2018698"
       }
-    ]
+    ],
+    "photo_url": "http://tong.visitkorea.or.kr/cms/resource/31/3540431_image2_1.jpg",
+    "photo_credit": "한국관광공사 TourAPI · 공공누리 제1유형 (최순우 옛집)"
   },
   {
     "id": 102,
@@ -64,7 +66,9 @@
         "title": "서울시 내 손안에 서울",
         "url": "https://mediahub.seoul.go.kr/archives/2013938"
       }
-    ]
+    ],
+    "photo_url": "http://tong.visitkorea.or.kr/cms/resource/81/3445681_image2_1.JPEG",
+    "photo_credit": "한국관광공사 TourAPI · 공공누리 제1유형 (수연산방)"
   },
   {
     "id": 103,
@@ -97,7 +101,9 @@
         "title": "서울시 내 손안에 서울",
         "url": "https://mediahub.seoul.go.kr/archives/2013938"
       }
-    ]
+    ],
+    "photo_url": "https://tong.visitkorea.or.kr/cms/resource/15/3503015_image2_1.jpg",
+    "photo_credit": "한국관광공사 TourAPI · 공공누리 제1유형 (만해 한용운 심우장)"
   },
   {
     "id": 104,
@@ -125,7 +131,9 @@
         "title": "서울시 내 손안에 서울, 길상사·수연산방에서 나만의 시간 보내기",
         "url": "https://mediahub.seoul.go.kr/archives/2013365"
       }
-    ]
+    ],
+    "photo_url": "http://tong.visitkorea.or.kr/cms/resource/72/3376572_image2_1.jpg",
+    "photo_credit": "한국관광공사 TourAPI · 공공누리 제1유형 (길상사(서울))"
   },
   {
     "id": 105,
@@ -155,7 +163,9 @@
         "title": "서울시 내 손안에 서울",
         "url": "https://mediahub.seoul.go.kr/archives/2005030"
       }
-    ]
+    ],
+    "photo_url": "https://tong.visitkorea.or.kr/cms/resource/96/3530496_image2_1.jpg",
+    "photo_credit": "한국관광공사 TourAPI · 공공누리 제1유형 (서울 정릉(신덕황후) [유네스코 세계유산])"
   },
   {
     "id": 106,
@@ -275,8 +285,8 @@
     "id": 110,
     "name": "한국가구박물관",
     "name_en": "Korea Furniture Museum",
-    "lat": 37.5963,
-    "lng": 126.9919,
+    "lat": 37.600378,
+    "lng": 126.993449,
     "address": "서울 성북구 대사관로 121",
     "hours": "11:00–19:00",
     "closed_days": [
@@ -392,7 +402,9 @@
         "title": "서울시 내 손안에 서울",
         "url": "https://mediahub.seoul.go.kr/archives/2005030"
       }
-    ]
+    ],
+    "photo_url": "https://tong.visitkorea.or.kr/cms/resource/09/4002309_image2_1.jpg",
+    "photo_credit": "한국관광공사 TourAPI · 공공누리 제1유형 (흥천사)"
   },
   {
     "id": 115,
@@ -418,7 +430,9 @@
         "title": "서울시 내 손안에 서울",
         "url": "https://mediahub.seoul.go.kr/archives/2014627"
       }
-    ]
+    ],
+    "photo_url": "https://tong.visitkorea.or.kr/cms/resource/01/3530501_image2_1.jpg",
+    "photo_credit": "한국관광공사 TourAPI · 공공누리 제1유형 (서울 의릉(경종·선의왕후) [유네스코 세계유산])"
   },
   {
     "id": 116,
@@ -650,7 +664,9 @@
         "title": "서울시 내 손안에 서울, 역사·예술·감성 다 있네! 오래 머물고 싶은 성북동 골목 탐방 (2026)",
         "url": "https://mediahub.seoul.go.kr/archives/2018698"
       }
-    ]
+    ],
+    "photo_url": "https://tong.visitkorea.or.kr/cms/resource/30/3551330_image2_1.jpg",
+    "photo_credit": "한국관광공사 TourAPI · 공공누리 제1유형 (북정마을)"
   },
   {
     "id": 122,
@@ -845,6 +861,51 @@
       {
         "title": "Wikipedia, Gyeongguksa",
         "url": "https://en.wikipedia.org/wiki/Gyeongguksa"
+      }
+    ],
+    "photo_url": "https://tong.visitkorea.or.kr/cms/resource/81/3571681_image2_1.jpg",
+    "photo_credit": "한국관광공사 TourAPI · 공공누리 제1유형 (경국사(서울))"
+  },
+  {
+    "id": 129,
+    "name": "성북구립 최만린미술관",
+    "name_en": "Seongbuk Choi Man-lin Museum of Art",
+    "lat": 37.610659,
+    "lng": 127.004289,
+    "address": "서울 성북구 솔샘로7길 23",
+    "hours": "화–토 10:00–18:00 (일·월·공휴일 휴관, 2026년 기준)",
+    "closed_days": [
+      "sun",
+      "mon"
+    ],
+    "fee": 0,
+    "need_reservation": false,
+    "stay_min": 45,
+    "tags": [
+      "museum",
+      "craft"
+    ],
+    "story_doc": "# p129 성북구립 최만린미술관\n\n## 한 줄 소개\n'한국 추상 조각의 개척자' 최만린이 30년 동안 살며 작업한 정릉의 양옥집을 고쳐 만든 구립 미술관.\n\n## 기본 사실\n- 지어진 때 / 만든 사람: 1970년대에 지어진 2층 개인 주택. 2019년 리모델링해 2020년 성북구립미술관 분관으로 개관\n- 관련 인물: 최만린(1935–2020, 조각가, 국립현대미술관장 역임)\n- 문화재 지정 여부: 문화재 지정 없음 (2020년 대한민국 공공건축상 우수상 수상)\n\n## 이야기\n최만린은 1935년 서울에서 태어나 2020년에 세상을 떠난 조각가로, '한국 추상 조각의 개척자'로 불린다. 1958년 데뷔작 '이브'를 발표했고, 국립현대미술관장을 지냈다.\n\n이 집은 1970년대 정릉 주택가에 지어진 2층 양옥이다. 최만린은 1988년 이 집으로 옮겨 와 2018년까지 약 30년 동안 살며 작업했고, 대표작 'O' 시리즈가 이곳에서 시작되었다.\n\n2018년 성북구가 집을 사들였고, 2019년 리모델링 때 외관과 골조, 나무 계단, 나무 천장을 그대로 살렸다. 붉은 벽돌, 사선형 나무 천장, 나무 계단, 아치형 문이 미술관의 상징이 되었다. 2020년 성북구립미술관 분관으로 문을 열었고, 같은 해 대한민국 공공건축상 우수상을 받았다.\n\n미술관에는 최만린이 쓰던 도구와 가구로 꾸민 작업 공간, 작품을 가까이서 볼 수 있는 오픈 수장고, 2층의 원본 스크랩북 등을 모은 아카이브, 작품이 놓인 정원이 있다. 2026년에는 최만린과 박병욱 두 조각가의 2인전 '집: 두 조각가를 잇다'(2026.4.2–11.28)가 열리고 있으며, 정원에는 최만린 작품 8점이 놓여 있다.\n\n## 관광객이 물을 만한 질문과 답\n- Q: 입장료가 있나요?\n  A: 2026년 전시 기준으로 무료입니다. 네이버 예약을 하거나 현장에서 접수하면 됩니다. 전시 기간이 아닐 때는 02-6952-5016으로 먼저 문의하세요.\n- Q: 최만린은 어떤 작가인가요?\n  A: 1935년 서울에서 태어나 2020년 세상을 떠난 조각가로 '한국 추상 조각의 개척자'로 불립니다. 국립현대미술관장을 지냈고, 대표작은 'O' 시리즈입니다.\n- Q: 왜 평범한 집처럼 생겼나요?\n  A: 최만린이 1988년부터 약 30년 동안 실제로 살던 1970년대 양옥을 외관과 골조, 나무 계단과 천장을 살려 미술관으로 고쳤기 때문입니다.\n\n## 볼 때 팁\n우이신설선 북한산보국문역 2번 출구에서 걸어서 약 6분. 붉은 벽돌, 사선형 나무 천장, 나무 계단, 아치형 문 등 집의 원래 모습을 함께 볼 것. 정원 조각도 놓치지 말 것. 일·월·공휴일 휴관.\n\n## English\nIntro: A district art museum made from the two-story house in Jeongneung where sculptor Choi Man-lin, \"the pioneer of Korean abstract sculpture\", lived and worked for 30 years.\nStory: Choi Man-lin, born in Seoul in 1935 and died in 2020, is called the pioneer of Korean abstract sculpture. He debuted with \"Eve\" in 1958 and served as director of the National Museum of Modern and Contemporary Art.\nStory: The house is a two-story Western-style home built in the 1970s in a Jeongneung residential area. Choi moved here in 1988 and lived and worked here for about 30 years until 2018; his signature \"O\" series began here.\nStory: Seongbuk-gu bought the house in 2018, and the 2019 remodeling kept its exterior, frame, wooden stairs and wooden ceilings. The red brick, slanted wooden ceiling, wooden stairs and arched doors became symbols of the museum. It opened in 2020 as a branch of the Seongbuk Museum of Art and won an excellence prize at the Korea Public Architecture Awards that year.\nStory: The museum has a workspace furnished with Choi's own tools and furniture, open storage where works can be seen up close, a second-floor archive with his original scrapbooks, and a sculpture garden. In 2026 the two-person show \"Home: Connecting Two Sculptors\" (Apr 2 - Nov 28, 2026) of Choi Man-lin and Park Byung-wook is on, and eight of Choi's works stand in the garden.\n- Q: Is there an admission fee?\n  A: It is free for the 2026 exhibition. Book through Naver or register on site. Outside exhibition periods, call 02-6952-5016 first.\n- Q: Who was Choi Man-lin?\n  A: A sculptor born in Seoul in 1935 who died in 2020, called the pioneer of Korean abstract sculpture. He was director of the National Museum of Modern and Contemporary Art, and his signature works are the \"O\" series.\n- Q: Why does it look like an ordinary house?\n  A: Because it is the 1970s house Choi actually lived in for about 30 years from 1988, turned into a museum while keeping its exterior, frame, wooden stairs and ceilings.\nTip: About a 6-minute walk from Exit 2 of Bukhansan Bogungmun Station (Ui-Sinseol Line). Notice the original house features such as the red brick, slanted wooden ceiling, wooden stairs and arched doors, and don't miss the garden sculptures. Closed Sundays, Mondays and public holidays.",
+    "sources": [
+      {
+        "title": "서울시 내 손안에 서울, 작가의 작업실이 미술관으로! 집 구경 재미까지 쏠쏠한 예술가의 집 3곳 (2026)",
+        "url": "https://mediahub.seoul.go.kr/archives/2018446"
+      },
+      {
+        "title": "서울시 내 손안에 서울, 평범한 양옥집이 아니다! 최만린미술관에서 만난 세계 (2023)",
+        "url": "https://mediahub.seoul.go.kr/archives/2007609"
+      },
+      {
+        "title": "서울시 내 손안에 서울, 예술가의 자취가 고스란히! '작가의 집'이 미술관이 되다 (2020)",
+        "url": "https://mediahub.seoul.go.kr/archives/1303312"
+      },
+      {
+        "title": "서울신문, 추상조각 개척 최만린 자택, 미술관 된다 (2018)",
+        "url": "https://m.go.seoul.co.kr/news/2018/04/06/20180406012017"
+      },
+      {
+        "title": "헤럴드경제, 최만린미술관 2인전 '집: 두 조각가를 잇다' (2026)",
+        "url": "https://mbiz.heraldcorp.com/article/10909741"
       }
     ]
   },

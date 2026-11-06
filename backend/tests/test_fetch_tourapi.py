@@ -50,3 +50,12 @@ def test_apply_moves_pending(tmp_path, monkeypatch):
     out = json.loads((tmp_path / "places.json").read_text(encoding="utf-8"))
     assert [p["id"] for p in out] == [101, 124] and out[0]["lat"] == 37.5 and out[1]["lat"] == 37.59
     assert json.loads((tmp_path / "places_pending.json").read_text(encoding="utf-8")) == []
+
+
+def test_name_norm_and_far_guard():
+    assert ft.name_score("심우장", "만해한용운심우장") == 2
+    assert ft.name_score("정릉", "서울 정릉 [유네스코 세계유산]") == 3
+    assert ft.name_score("성북천(한성대입구역 분수마루)", "[북악하늘길 2산책로] 하늘마루") == 0
+    far = {**ITEM, "title": "심우장", "mapy": "37.70", "mapx": "127.10"}  # 10 km 넘게 먼 같은 이름
+    assert ft.pick_tour([far], "심우장", (37.5936, 126.9918)) is None
+    assert ft.pick_tour([far, ITEM], "심우장", (37.5936, 126.9918))["contentid"] == "1"

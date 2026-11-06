@@ -32,6 +32,9 @@ TOUR_BASE = "https://apis.data.go.kr/B551011/KorService2"
 KAKAO_URL = "https://dapi.kakao.com/v2/local/search/keyword.json"
 GU = "성북구"
 MOVE_M = 50  # 이보다 멀면 좌표를 바꾸자고 표시
+FAR_M = 1500  # 기존 좌표에서 이보다 먼 결과는 다른 장소로 보고 버린다
+CENTER = (127.0250, 37.6030)  # 성북구 가운데쯤 (경도, 위도)
+RADIUS_M = 6000
 OK_LICENSE = {"Type1"}  # 공공누리 제1유형: 출처표시 후 자유 이용
 COLS = ["apply", "id", "name", "source", "matched", "address", "old_lat", "old_lng", "new_lat", "new_lng",
         "distance_m", "photo_url", "photo_credit", "note"]
@@ -56,6 +59,24 @@ def clean(name: str) -> str:
     return re.sub(r"^서울\s+", "", name)
 
 
+def norm(name: str) -> str:
+    """비교용: 괄호·띄어쓰기·지역 접두어를 뺀다 ('서울 성북동 이종석 별장' → '이종석별장')"""
+    n = re.sub(r"\(.*?\)|\[.*?\]", "", name or "")
+    n = re.sub(r"^(서울특별시|서울)\s*", "", n.strip())
+    n = re.sub(r"^(성북구립|성북구|성북동|동선동|장위동|삼선동|돈암동)\s*", "", n.strip())
+    return re.sub(r"[\s·.,_-]", "", n)
+
+
+def name_score(want: str, title: str) -> int:
+    """3 같음 · 2 한쪽이 다른 쪽을 포함 · 0 다름"""
+    a, b = norm(want), norm(title)
+    if not a or not b:
+        return 0
+    if a == b:
+        return 3
+    return 2 if (a in b or b in a) and min(len(a), len(b)) >= 2 else 0
+
+
 def distance_m(a_lat, a_lng, b_lat, b_lng) -> float | None:
     if None in (a_lat, a_lng, b_lat, b_lng):
         return None
@@ -74,32 +95,59 @@ def items_of(payload: dict) -> list[dict]:
     return it if isinstance(it, list) else [it]
 
 
-def pick_tour(items: list[dict], name: str) -> dict | None:
-    """성북구 주소인 것 중 이름이 가장 비슷한 것"""
-    want = clean(name).replace(" ", "")
-    cands = [i for i in items if GU in (i.get("addr1") or "")]
-    if not cands:
-        return None
-    def score(i):
-        t = (i.get("title") or "").replace(" ", "")
-        return (want in t or t in want, -abs(len(t) - len(want)))
-    return max(cands, key=score)
+def pick_tour(items: list[dict], name: str, old: tuple | None = None) -> dict | None:
+    """성북구 주소이고 이름이 맞는 것. 기존 좌표가 있으면 가까운 것을 고르고 FAR_M보다 먼 것은 버린다"""
+    cands = []
+    for i in items:
+        sc = name_score(name, i.get("title") or "")
+        if sc == 0 or GU not in (i.get("addr1") or ""):
+            continue
+        d = distance_m(old[0], old[1], i.get("mapy"), i.get("mapx")) if old and None not in old and i.get("mapy") else None
+        if d is not None and d > FAR_M:
+            continue
+        cands.append((sc, -(d or 0), i))
+    return max(cands, key=lambda c: (c[0], c[1]))[2] if cands else None
 
 
-def pick_kakao(docs: list[dict]) -> dict | None:
-    return next((d for d in docs if GU in (d.get("address_name") or "") or GU in (d.get("road_address_name") or "")), None)
+def pick_kakao(docs: list[dict], name: str = "", old: tuple | None = None) -> dict | None:
+    """카카오 결과를 TourAPI 모양으로 바꿔 같은 규칙으로 고른다"""
+    items = [{"title": d.get("place_name"), "addr1": d.get("road_address_name") or d.get("address_name"),
+              "mapx": d.get("x"), "mapy": d.get("y"), "_doc": d} for d in docs
+             if GU in (d.get("address_name") or "") or GU in (d.get("road_address_name") or "")]
+    if not name:
+        return items[0]["_doc"] if items else None
+    hit = pick_tour(items, name, old)
+    return hit["_doc"] if hit else None
+
+
+def _tour_get(client: httpx.Client, op: str, params: dict) -> dict:
+    r = client.get(f"{TOUR_BASE}/{op}", params={"MobileOS": "ETC", "MobileApp": "SBStay", "_type": "json", **params})
+    r.raise_for_status()
+    try:
+        return r.json()
+    except ValueError:  # 키 오류는 XML로 온다
+        raise RuntimeError(f"TourAPI 응답이 JSON이 아님 (서비스키 확인): {r.text[:200]}") from None
+
+
+def tour_nearby_all(client: httpx.Client, key: str) -> list[dict]:
+    """성북구 가운데에서 반경 6 km 안의 관광정보 전부 (페이지를 다 돈다). 이름 검색이 놓치는 곳을 잡는다"""
+    out, page = [], 1
+    while page <= 30:
+        data = _tour_get(client, "locationBasedList2", {"serviceKey": key, "mapX": CENTER[0], "mapY": CENTER[1],
+                                                       "radius": RADIUS_M, "numOfRows": 100, "pageNo": page, "arrange": "E"})
+        items = items_of(data)
+        out += items
+        total = int(((data.get("response") or {}).get("body") or {}).get("totalCount") or 0)
+        if not items or len(out) >= total:
+            break
+        page += 1
+        time.sleep(0.1)
+    return [i for i in out if GU in (i.get("addr1") or "")]
 
 
 def tour_search(client: httpx.Client, key: str, name: str) -> list[dict]:
-    r = client.get(f"{TOUR_BASE}/searchKeyword2", params={
-        "serviceKey": key, "MobileOS": "ETC", "MobileApp": "SBStay", "_type": "json",
-        "keyword": clean(name), "areaCode": 1, "numOfRows": 30, "pageNo": 1, "arrange": "A",
-    })
-    r.raise_for_status()
-    try:
-        return items_of(r.json())
-    except ValueError:  # 키 오류는 XML로 온다
-        raise RuntimeError(f"TourAPI 응답이 JSON이 아님 (서비스키 확인): {r.text[:200]}") from None
+    data = _tour_get(client, "searchKeyword2", {"serviceKey": key, "keyword": clean(name), "numOfRows": 100, "pageNo": 1, "arrange": "A"})
+    return items_of(data)
 
 
 def kakao_search(client: httpx.Client, key: str, name: str) -> list[dict]:
@@ -149,19 +197,28 @@ def fetch(out: Path) -> None:
     pending = json.loads(PENDING.read_text(encoding="utf-8")) if PENDING.exists() else []
     rows = []
     with httpx.Client(timeout=15) as c:
-        for p in places + pending:
-            tour = kakao = None
+        nearby = []
+        if tour_key:
             try:
-                if tour_key:
-                    tour = pick_tour(tour_search(c, tour_key, p["name"]), p["name"])
+                nearby = tour_nearby_all(c, tour_key)
+                print(f"TourAPI 성북구 관광정보 {len(nearby)}건을 받았어요\n")
+            except (httpx.HTTPError, RuntimeError) as e:
+                print(f"  ! 위치 기반 목록 실패: {e}")
+        for p in places + pending:
+            old = (p.get("lat"), p.get("lng")) if p.get("lat") is not None else None
+            tour = pick_tour(nearby, p["name"], old)
+            kakao = None
+            try:
+                if not tour and tour_key:
+                    tour = pick_tour(tour_search(c, tour_key, p["name"]), p["name"], old)
                 if not tour and kakao_key:
-                    kakao = pick_kakao(kakao_search(c, kakao_key, p["name"]))
+                    kakao = pick_kakao(kakao_search(c, kakao_key, p["name"]), p["name"], old)
             except (httpx.HTTPError, RuntimeError) as e:
                 print(f"  ! {p['id']} {p['name']}: {e}")
             row = row_for(p, tour, kakao)
             rows.append(row)
-            print(f"{p['id']:>4} {p['name'][:16]:<16} {row['source'] or '-':<10} {row['distance_m'] if row['distance_m'] is not None else '-':>8} m  사진 {'O' if row['photo_url'] else '-'}  → {row['apply']}")
-            time.sleep(0.15)
+            print(f"{p['id']:>4} {p['name'][:16]:<16} {row['source'] or '-':<10} {row['matched'] or '':<18} {row['distance_m'] if row['distance_m'] is not None else '-':>8} m  사진 {'O' if row['photo_url'] else '-'}  → {row['apply']}")
+            time.sleep(0.1)
     write_review(rows, out)
     print(f"\n저장: {out}\napply 칸을 확인한 뒤: uv run python scripts/fetch_tourapi.py apply \"{out}\"")
 
