@@ -2,6 +2,7 @@ from datetime import date
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +13,15 @@ class Settings(BaseSettings):
 
     app_env: str = "dev"
     database_url: str = "postgresql+psycopg://sbstay:sbstay@localhost:5432/sbstay"
+
+    @field_validator("database_url")
+    @classmethod
+    def _psycopg_driver(cls, v: str) -> str:
+        """배포 환경(Railway 등)이 주는 postgres:// · postgresql:// 주소를 psycopg 3 드라이버 주소로 바꾼다"""
+        for prefix in ("postgres://", "postgresql://"):
+            if v.startswith(prefix):
+                return "postgresql+psycopg://" + v[len(prefix):]
+        return v
     jwt_secret: str = "change-me"
     jwt_expire_minutes: int = 60 * 24 * 7
     cors_origins: str = "http://localhost:3000,http://localhost:3100"
