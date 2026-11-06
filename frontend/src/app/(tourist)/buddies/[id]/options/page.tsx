@@ -12,7 +12,7 @@ import { BottomBar, Headline, OutlineBox, Toggle, TotalLine, useHydrated } from 
 import { SS_BUDDY_DRAFT, buddiesIn, clearDraft, iga, koDay, koDuration, saveDraft, wa, type BuddyDraft } from "@/components/tourist/v3/flow";
 import { get, won } from "@/lib/api";
 import { useCart } from "@/lib/cart";
-import { ALBUM_FEE, MEAL_LIMIT, MEAL_MAX, buddyItemPrice, requestChips } from "@/lib/codes";
+import { ALBUM_FEE, MEAL_LIMIT, MEAL_MAX, buddyItemPrice, cleanOther, requestChips } from "@/lib/codes";
 import type { Buddy, BuddyRequestBody, Tour } from "@/lib/types";
 
 const DURATION = 120;
@@ -64,8 +64,11 @@ export default function BuddyOptionsPage() {
   const addToCart = () => {
     if (!buddy) return;
     const r = draft.request;
-    const hasReq = r.diet.length || r.allergies.length || r.pace === "slow" || r.places.length || r.note.trim();
-    const request: BuddyRequestBody | null = hasReq ? { ...r, note: r.note.trim() } : null;
+    const diet_other = cleanOther(r.diet_other), allergy_other = cleanOther(r.allergy_other);
+    const hasReq = r.diet.length || r.allergies.length || r.pace === "slow" || r.places.length || r.note.trim() || diet_other || allergy_other;
+    // '기타'는 비었으면 키를 빼고 보낸다 (백엔드도 같은 모양으로 정리)
+    const { diet_other: _d, allergy_other: _a, ...base } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
+    const request: BuddyRequestBody | null = hasReq ? { ...base, note: r.note.trim(), ...(diet_other ? { diet_other } : {}), ...(allergy_other ? { allergy_other } : {}) } : null;
     const tourCourse = course && course.id === draft.course_id ? course : null;
     // 버디 항목은 하나 — 이미 담긴 버디는 바꾼다
     buddiesIn(cart.items).forEach((i) => cart.remove("buddy", i.ref_id));

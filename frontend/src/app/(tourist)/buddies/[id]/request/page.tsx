@@ -1,21 +1,29 @@
 "use client";
-// T18 버디에게 미리 알릴 요청 — 식단·알레르기·걷는 속도·같이 걸을 코스(TR-01)·더 가 보고 싶은 곳(최대 3, GET /places)·메모(300자)
+// T18 버디에게 미리 알릴 요청 — 식단·알레르기(각각 '기타' 직접 입력 40자)·걷는 속도·같이 걸을 코스(TR-01)·더 가 보고 싶은 곳(최대 3, GET /places)·메모(300자)
 // 상태는 sessionStorage 초안(버디 상세에서 시작)에 두고 다음 단계(식사·사진)로 넘긴다
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Chip, Spinner, TopBar } from "@/components/ui";
+import { Button, Chip, Spinner, TopBar, inputCls } from "@/components/ui";
 import { BottomSheet, ErrorBox, textareaCls } from "@/components/tourist";
 import { errMsg, okv } from "@/components/tourist/format";
 import { useSS } from "@/components/tourist/session";
 import { BottomBar, FieldLabel, Headline, Segmented, useHydrated } from "@/components/tourist/v3";
 import { SS_BUDDY_DRAFT, koMD, saveDraft, wa, type BuddyDraft } from "@/components/tourist/v3/flow";
 import { get } from "@/lib/api";
-import { ALLERGIES, DIET, PACE, REQUEST_NOTE_MAX, REQUEST_PLACES_MAX, keysOf, label } from "@/lib/codes";
+import { ALLERGIES, DIET, PACE, REQUEST_NOTE_MAX, REQUEST_OTHER_MAX, REQUEST_PLACES_MAX, keysOf, label } from "@/lib/codes";
 import { useLang } from "@/lib/i18n";
 import type { Allergy, Buddy, BuddyRequestBody, Diet, ListResponse, Pace, Place, Tour } from "@/lib/types";
 
 const toggle = <T,>(xs: T[], x: T) => (xs.includes(x) ? xs.filter((v) => v !== x) : [...xs, x]);
+
+/** '기타' 직접 입력 한 줄 — 칩을 누르면 열리고(값 "" 부터), 다시 누르면 닫히며 지운다(null) */
+function OtherInput({ value, onChange, placeholder, label: aria }: { value: string; onChange: (v: string) => void; placeholder: string; label: string }) {
+  return (
+    <input className={`${inputCls} mt-2.5`} value={value} maxLength={REQUEST_OTHER_MAX} placeholder={placeholder} aria-label={aria} autoFocus={!value}
+      onChange={(e) => onChange(e.target.value.replace(/[\r\n]/g, " ").slice(0, REQUEST_OTHER_MAX))} />
+  );
+}
 
 export default function BuddyRequestPage() {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +69,10 @@ export default function BuddyRequestPage() {
   // 더 가 보고 싶은 곳 제안: 고른 코스에 없는 장소
   const suggest = places.filter((p) => !r.places.includes(p.id) && !course?.places.some((cp) => cp.id === p.id)).slice(0, r.places.length >= REQUEST_PLACES_MAX ? 0 : 1);
   const full = r.places.length >= REQUEST_PLACES_MAX;
+  // '기타' 칩: 값이 문자열이면(빈 칸 포함) 입력란이 열려 있다
+  const dietOtherOpen = typeof r.diet_other === "string";
+  const allergyOtherOpen = typeof r.allergy_other === "string";
+  const otherLabel = lang === "en" ? "Other" : "기타";
 
   return (
     <>
@@ -71,10 +83,18 @@ export default function BuddyRequestPage() {
         {!buddy && !err && <Spinner />}
 
         <FieldLabel>먹지 않는 것</FieldLabel>
-        <div className="flex flex-wrap gap-2">{keysOf(DIET).map((k) => <Chip key={k} selected={r.diet.includes(k)} onClick={() => setReq({ diet: toggle<Diet>(r.diet, k) })}>{label(DIET, k, lang)}</Chip>)}</div>
+        <div className="flex flex-wrap gap-2">
+          {keysOf(DIET).map((k) => <Chip key={k} selected={r.diet.includes(k)} onClick={() => setReq({ diet: toggle<Diet>(r.diet, k) })}>{label(DIET, k, lang)}</Chip>)}
+          <Chip selected={dietOtherOpen} onClick={() => setReq({ diet_other: dietOtherOpen ? null : "" })}>{otherLabel}</Chip>
+        </div>
+        {dietOtherOpen && <OtherInput value={r.diet_other ?? ""} onChange={(v) => setReq({ diet_other: v })} placeholder={lang === "en" ? "e.g. cilantro, sesame" : "예: 고수, 참깨"} label={lang === "en" ? "Other foods to avoid" : "먹지 않는 것 기타"} />}
 
         <FieldLabel className="mt-6">알레르기</FieldLabel>
-        <div className="flex flex-wrap gap-2">{keysOf(ALLERGIES).map((k) => <Chip key={k} selected={r.allergies.includes(k)} onClick={() => setReq({ allergies: toggle<Allergy>(r.allergies, k) })}>{label(ALLERGIES, k, lang)}</Chip>)}</div>
+        <div className="flex flex-wrap gap-2">
+          {keysOf(ALLERGIES).map((k) => <Chip key={k} selected={r.allergies.includes(k)} onClick={() => setReq({ allergies: toggle<Allergy>(r.allergies, k) })}>{label(ALLERGIES, k, lang)}</Chip>)}
+          <Chip selected={allergyOtherOpen} onClick={() => setReq({ allergy_other: allergyOtherOpen ? null : "" })}>{otherLabel}</Chip>
+        </div>
+        {allergyOtherOpen && <OtherInput value={r.allergy_other ?? ""} onChange={(v) => setReq({ allergy_other: v })} placeholder={lang === "en" ? "e.g. peach" : "예: 복숭아"} label={lang === "en" ? "Other allergies" : "알레르기 기타"} />}
 
         <FieldLabel className="mt-6">걷는 속도</FieldLabel>
         <Segmented<Pace> value={r.pace} onChange={(pace) => setReq({ pace })} options={keysOf(PACE).map((k) => ({ value: k, label: label(PACE, k, lang) }))} />

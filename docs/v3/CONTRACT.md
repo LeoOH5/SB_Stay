@@ -61,7 +61,8 @@ v3.2부터: `booking.platform_fee = round(숙박 × 0.10) + Σ(활동비 − rou
 ## 4. 예약 (BK) — `services/booking_state.py`
 ### BookingItemIn (추가 필드)
 ```
-request: dict | None      # buddy: {diet:[], allergies:[], pace:"slow"|"normal", places:[place_id ≤3], note:"≤300자"}
+request: dict | None      # buddy: {diet:[], allergies:[], pace:"slow"|"normal", places:[place_id ≤3], note:"≤300자",
+                          #         diet_other?: "≤40자", allergy_other?: "≤40자"}   ← '기타' 직접 입력
                           # dorm:  {late_checkin:bool, quiet_room:bool, low_floor:bool}
 course_id: int | None     # buddy 항목: 같이 걸을 코스 (tours.id)
 meal_count: int = 0       # buddy 항목: 0~4
@@ -73,6 +74,7 @@ album: bool = False       # buddy 항목
 - dorm 있는데 buddy 0개 → 422 `BUDDY_REQUIRED` ("기숙사 숙박에는 버디가 1명 필요해요")
 - dorm 있을 때 buddy 날짜가 `dorm.date_from ≤ d ≤ dorm.date_to` 밖 → 422 `BUDDY_OUT_OF_STAY`
 - request·course_id·meal_count 검증 실패 → 422 `VALIDATION`
+- buddy `request.diet_other`·`allergy_other` ('기타' 직접 입력, 둘 다 선택): 앞뒤 공백을 지우고, 40자 넘거나 줄바꿈·제어 문자가 있거나 글자가 아니면 422 `VALIDATION`. 비었으면(`""`·공백·`null`) 키를 빼고 저장 → 예전 요청 모양 그대로. 요청 요약(`rules.request_summary`, 관리자 식비 심사 `request_summary`·AI-04)은 "비건, 기타: 고수, 버섯 알레르기, 복숭아 알레르기, 천천히" 순서. 매칭(AI-03)·도움 매핑에는 쓰지 않는다.
 - buddy만 있는 예약은 허용. tour 즉시 확정 로직 삭제.
 ### BookingItemOut (추가)
 ```
@@ -108,7 +110,7 @@ BD-01 쿼리 추가: `personality`, `style`, `can_help`, `university_id`
 ## 6. AI
 - **AI-01 `/ai/plan`**: 코스는 무료 추천. PlanItem.type에 `"course"` 추가(price 0, meta "무료 코스 · 장소 N곳"). 숙소를 넣으면 버디를 반드시 넣고(숙박 기간 안), 버디 항목에 `course_id`. 버디가 없으면 `warnings: ["NO_BUDDY"]`. 예산 초과 시 숙소가 있으면 버디는 빼지 않고 `warnings: ["OVER_BUDGET"]`. PlanOut에 `warnings: list[str]` 추가. 버디 후보는 숙소와 같은 대학 우선.
 - **AI-03 `/ai/buddy-match`**: body에 `personality?[] style?[] needs?[](can_help 코드) university_id?` 추가. 점수 = 기존 + 성향/스타일 일치 0.05×(최대 2) + needs를 모두 도우면 0.10 + 같은 대학 0.10, 최대 0.99. 이유 문장에 "비건 식당 안내 가능", "같은 대학 숙소" 등.
-- **AI-04 `/ai/buddy-brief`**: 장소는 버디 항목의 `course_id` 코스 → 없으면 request.places → 없으면 관심사. 요청(식단·알레르기·속도)을 brief 템플릿 첫 문장에 넣는다 ("비건, 버섯 알레르기 요청이 있어요. 식당에서 꼭 확인해 주세요."). 투어 관련 문장 삭제.
+- **AI-04 `/ai/buddy-brief`**: 장소는 버디 항목의 `course_id` 코스 → 없으면 request.places → 없으면 관심사. 요청(식단·알레르기·속도, '기타' 직접 입력 포함)을 brief 템플릿 첫 문장에 넣는다 ("비건, 버섯 알레르기 요청이 있어요. 식당에서 꼭 확인해 주세요." / 기타가 있으면 "비건, 기타: 고수, 버섯 알레르기, 복숭아 알레르기 요청이 있어요. …"). LLM 자료(`Traveler requests:`)에도 같은 문장. 투어 관련 문장 삭제.
 
 ## 7. 버디 본인 (BD-03~07, `/buddy/*`, role=buddy만)
 - PUT `/buddy/profile` 필드 추가: personality, style, can_help, bank_account, can_drive(v3.1)

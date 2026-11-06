@@ -73,6 +73,9 @@ export const univShort = (u?: string | null) => (u ?? "").replace("여자대학�
 const LANG_KO: Record<string, string> = { ko: "한국어", en: "영어", ja: "일본어", zh: "중국어" };
 /** 한국어를 빼고 "영어·일본어" */
 export const foreignLangs = (ls: string[]) => ls.filter((l) => l !== "ko").map((l) => LANG_KO[l] ?? l).join("·");
+const LANG_EN: Record<string, string> = { ko: "Korean", en: "English", ja: "Japanese", zh: "Chinese" };
+/** AI-01 일정 meta 와 같은 모양: "한국어·영어·일본어" / "Korean·English·Japanese" */
+export const langNames = (ls: string[], lang: "ko" | "en" = "ko") => ls.map((l) => (lang === "en" ? LANG_EN : LANG_KO)[l] ?? l).join("·");
 /** 모두 "한국어, 영어, 일본어" */
 export const allLangs = (ls: string[]) => ls.map((l) => LANG_KO[l] ?? l).join(", ");
 

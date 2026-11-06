@@ -101,6 +101,45 @@ def test_plan_llm_cannot_drop_buddy(client, tourist, monkeypatch):
     assert bud and bud[0]["course_id"] is None and p["warnings"] == []  # 버디는 필수, 코스 없음은 허용
 
 
+def _timed(plan, kind):
+    return [(d["date"], i) for d in plan["days"] for i in d["items"] if i["type"] == kind]
+
+
+def test_plan_buddy_meta_language_names(client, tourist, monkeypatch):
+    """버디 meta의 언어는 코드(ko/en/ja)가 아니라 이름 — 일정 언어에 맞춰"""
+    _no_llm(monkeypatch)
+    en = next(i for _, i in _timed(_plan(client, tourist), "buddy"))
+    assert "Korean" in en["meta"] and "English" in en["meta"] and "ko/" not in en["meta"] and "/en" not in en["meta"]
+    ko = next(i for _, i in _timed(_plan(client, tourist, language="ko"), "buddy"))
+    assert "한국어·영어" in ko["meta"] and "/" not in ko["meta"].split(" · ")[1]
+
+
+def test_plan_buddy_after_check_in(client, tourist, monkeypatch):
+    """체크인(15:00) 날 버디는 16:00, 다른 날은 14:00. 돈·합계는 그대로"""
+    _no_llm(monkeypatch)
+    p = _plan(client, tourist)  # 3박: 버디는 체크인 다음 날부터
+    (day, bud), = _timed(p, "buddy")
+    assert day != DEMO["check_in"] and bud["time"] == "14:00" and bud["price"] == 30000
+    one = _plan(client, tourist, check_in="2027-01-13", check_out="2027-01-14")  # 1박: 버디는 도착일 오후
+    (day, bud), = _timed(one, "buddy")
+    (dorm_day, dorm), = _timed(one, "dorm")
+    assert day == dorm_day == "2027-01-13" and dorm["time"] == "15:00" and bud["time"] == "16:00"
+    assert [i["type"] for i in one["days"][0]["items"]][:2] == ["dorm", "buddy"]  # 시간 순: 체크인 → 버디
+    assert one["total_price"] == sum(i["price"] for i in _items(one)) == dorm["price"] + bud["price"]
+
+
+def test_plan_course_only_after_check_in(client, tourist, monkeypatch):
+    """버디가 없어 코스만 넣을 때도 체크인 날이면 16:00 (아니면 10:00)"""
+    _no_llm(monkeypatch)
+    one = _plan(client, tourist, check_in="2027-02-02", check_out="2027-02-03")  # 가능한 버디 없음, 1박
+    assert one["warnings"] == ["NO_BUDDY"]
+    (day, course), = _timed(one, "course")
+    assert day == "2027-02-02" and course["time"] == "16:00" and course["price"] == 0
+    three = _plan(client, tourist, check_in="2027-02-01", check_out="2027-02-03")
+    (day, course), = _timed(three, "course")
+    assert day != "2027-02-01" and course["time"] == "10:00"
+
+
 def test_plan_validation_and_role(client, tourist, buddy, monkeypatch):
     _no_llm(monkeypatch)
     bad = DEMO | {"check_in": "2027-01-15", "check_out": "2027-01-12"}

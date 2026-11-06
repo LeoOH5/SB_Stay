@@ -3,8 +3,8 @@
 import { ApiError } from "../errors";
 import {
   ALBUM_FEE, ALLERGIES, BUDDY_MIN_AGE, CAN_HELP, courseTimes, DIET, DIET_TO_HELP, FREE_AI_QUESTIONS, MEAL_LIMIT, MEAL_MAX, PACE, PERSONALITY, QUIZ_PASS, QUIZ_TOTAL,
-  REPORT_CATEGORY, REPORT_SUSPEND_AT, REQUEST_NOTE_MAX, REQUEST_PLACES_MAX, REVIEW_TAGS, STYLE, SUB_SCORES, SURVEY_PAIN, buddyItemPrice, buddyNet,
-  decideGrade, label, payoutBase, platformFee, rateOf, GRADE_NOTE, GRADE_RULES,
+  REPORT_CATEGORY, REPORT_SUSPEND_AT, REQUEST_NOTE_MAX, REQUEST_OTHER_MAX, REQUEST_PLACES_MAX, REVIEW_TAGS, STYLE, SUB_SCORES, SURVEY_PAIN, buddyItemPrice, buddyNet,
+  decideGrade, label, payoutBase, requestChips, platformFee, rateOf, GRADE_NOTE, GRADE_RULES,
 } from "../codes";
 import type {
   Activity, AdminBookingRow, AdminBuddyRow, AdminCourseRow, AdminMealClaimRow, AdminReportRow, AiPlan, AiStory, Booking, BookingItem, CourseSurvey, MyPlan,
@@ -183,7 +183,18 @@ function validateBuddyRequest(r: unknown): BuddyRequestBody | null {
   if (!Array.isArray(places) || places.length > REQUEST_PLACES_MAX) bad(`더 보고 싶은 곳은 ${REQUEST_PLACES_MAX}곳까지예요`);
   const note = x.note ?? "";
   if (!isStr(note) || note.length > REQUEST_NOTE_MAX) bad(`메모는 ${REQUEST_NOTE_MAX}자까지예요`);
-  return { diet: [...diet], allergies: [...allergies], pace, places: places.map(Number), note };
+  const out: BuddyRequestBody = { diet: [...diet], allergies: [...allergies], pace, places: places.map(Number), note };
+  // '기타' 직접 입력 (백엔드 clean_other): 앞뒤 공백 제거, 40자 이하, 제어 문자 안 됨, 비었으면 키 없음
+  for (const key of ["diet_other", "allergy_other"] as const) {
+    const v = x[key];
+    if (v == null) continue;
+    if (!isStr(v)) bad(`${key}는 글자여야 해요`);
+    const t = (v as string).trim();
+    if (/[\u0000-\u001f\u007f-\u009f]/.test(t)) bad("기타 칸에는 줄바꿈을 쓸 수 없어요");
+    if (t.length > REQUEST_OTHER_MAX) bad(`기타는 ${REQUEST_OTHER_MAX}자까지예요`);
+    if (t) out[key] = t;
+  }
+  return out;
 }
 function normalizeDormRequest(r: unknown): DormRequest | null {
   if (r == null) return null;
@@ -240,7 +251,7 @@ function stayOf(b: Booking) {
 function briefFor(it: BookingItem): string {
   const r = it.request as BuddyRequestBody | null | undefined;
   const parts: string[] = [];
-  const needs = [...(r?.diet ?? []).map((d) => label(DIET, d)), ...(r?.allergies ?? []).map((a) => `${label(ALLERGIES, a)} 알레르기`)];
+  const needs = requestChips(r ? { ...r, pace: undefined } : null);  // 식단·기타·알레르기 (속도는 아래 문장)
   if (needs.length) parts.push(`${needs.join(", ")} 요청이 있어요. 식당에서 꼭 확인해 주세요.`);
   if (r?.pace === "slow") parts.push("언덕은 천천히, 중간에 쉬어 가세요.");
   const c = courseOf(it.course_id);
@@ -307,7 +318,7 @@ function toAdminMealClaim(c: D.MealClaimRow): AdminMealClaimRow {
   const deposit = (f?.it.meal_count ?? 0) * MEAL_LIMIT;
   const otherApproved = claimsOf(c.item_id).filter((x) => x.id !== c.id && x.status === "approved").reduce((s, x) => s + x.amount, 0);
   const r = f?.it.request as BuddyRequestBody | null | undefined;
-  const summary = [...(r?.diet ?? []).map((d) => label(DIET, d)), ...(r?.allergies ?? []).map((a) => `${label(ALLERGIES, a)} 알레르기`)].join(", ");
+  const summary = requestChips(r).join(", ");  // 백엔드 rules.request_summary 와 같은 순서 (식단·기타·알레르기·천천히)
   return { ...toMealClaim(c), buddy_name: buddyOf(c.buddy_id)?.name ?? "", deposit, deposit_left: deposit - otherApproved, request_summary: summary || "없음" };
 }
 function toActivity(a: D.ActivityRow): Activity {
@@ -395,13 +406,16 @@ function buddyProfile(id: number): BuddyProfile {
 }
 
 // ------------------------------------------------------------------ AI
+const PLAN_LANG: Record<string, string> = { ko: "한국어", en: "영어", ja: "일본어", zh: "중국어" };
+/** AI-01 (목업): 백엔드 planner 와 같은 규칙 — 버디 14:00(체크인 날이면 16:00), 버디가 있으면 코스는 버디 항목(course_id)에만,
+ *  버디가 없을 때 코스만 10:00(체크인 날이면 16:00). meta 의 언어는 이름("한국어·영어·일본어") */
 function makePlan(b: Record<string, unknown>): AiPlan {
   const ci = isStr(b.check_in) ? b.check_in : "2027-01-12";
   const co = isStr(b.check_out) && b.check_out > ci ? b.check_out : addDays(ci, 3);
   const n = nights(ci, co);
   const room = dormOf(10)!;
   const dates = Array.from({ length: n + 1 }, (_, i) => addDays(ci, i));
-  const walkDay = dates[Math.min(1, dates.length - 1)];
+  const walkDay = dates.slice(1, -1)[0] ?? ci;  // 백엔드 activity_days 와 같이: 1박이면 도착일
   const course = courseOf(3)!;
   // 숙소와 같은 대학 버디 우선, 그날 가능한 사람
   const cand = state.buddies.filter((x) => listed(x.id) && x.university_id === room.university.id).sort((a, c) => (a.id === 31 ? -1 : c.id === 31 ? 1 : 0));
@@ -411,12 +425,18 @@ function makePlan(b: Record<string, unknown>): AiPlan {
   days[0].items.push({ time: "15:00", type: "dorm", ref_id: room.id, title: `${room.building} 체크인`, price: room.price_per_night * n, meta: `${room.university.name} ${ROOM[room.room_type]}, ${n}박` });
   const walk = days.find((d) => d.date === walkDay)!;
   let total = room.price_per_night * n;
+  const onCheckIn = walkDay === ci;  // 1박이면 도착일 오후 — 체크인(15:00) 뒤로
   if (bd) {
     const price = buddyItemPrice(bd.hourly_fee ?? 15000, 120);
     total += price;
-    walk.items.push({ time: "14:00", type: "buddy", ref_id: bd.id, title: `버디 ${bd.name}${wa(bd.name)} ${course.title.replace("의 성북동 산책", " 산책")} 코스`, price, meta: `2시간 · ${course.places.map((p) => p.name).join(", ")}`, course_id: course.id, duration_min: 120 });
-  } else warnings.push("NO_BUDDY");
-  walk.items.push({ time: "14:00", type: "course", ref_id: course.id, title: course.title, price: 0, meta: `무료 코스 · 장소 ${course.places.length}곳` });
+    const langs = bd.languages.map((l) => PLAN_LANG[l] ?? l).join("·");
+    walk.items.push({ time: onCheckIn ? "16:00" : "14:00", type: "buddy", ref_id: bd.id, title: `버디 ${bd.name}${wa(bd.name)} ${course.title}`, price,
+      meta: `버디 ${bd.name} · ${langs} · 2시간 · ${course.places.map((p) => p.name).join(" · ")}`, course_id: course.id, duration_min: 120 });
+  } else {
+    warnings.push("NO_BUDDY");
+    walk.items.push({ time: onCheckIn ? "16:00" : "10:00", type: "course", ref_id: course.id, title: course.title, price: 0, meta: `무료 코스 · 장소 ${course.places.length}곳` });
+  }
+  walk.items.sort((x, y) => (x.time ?? "99:99").localeCompare(y.time ?? "99:99"));
   if (days.length > 3) days[2].items.push({ time: null, type: "free", ref_id: null, title: "정릉과 성북선잠박물관", price: 0, meta: "자유 일정 · AI 제안" });
   days[days.length - 1].items.push({ time: "11:00", type: "free", ref_id: null, title: "체크아웃", price: 0, meta: "11:00" });
   const budget = Number(b.budget ?? 0);

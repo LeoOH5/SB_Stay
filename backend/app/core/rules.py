@@ -80,6 +80,7 @@ REVIEW_TAGS = {"fun_talk": "대화가 즐거워요", "knows_food": "맛집을 �
 REPORT_CATEGORY = {"no_show": "약속 장소에 오지 않았어요", "rude": "불편한 말이나 행동", "money": "돈이나 선물 요구",
                    "unsafe": "안전이 걱정돼요", "other": "기타"}
 NEED_FOR_DIET = {"vegan": "vegan_food", "vegetarian": "vegan_food", "halal": "halal_food"}  # 요청 → 도움 (매칭용)
+REQUEST_OTHER_MAX = 40  # 버디 요청 '기타' 직접 입력(diet_other·allergy_other) 최대 글자 수. 매칭(AI-03)에는 쓰지 않는다
 
 # ---- v3.4 무료 AI 산책 코스 (버디 없이 혼자 걷는 무료 이용)
 FREE_AI_QUESTIONS = 3  # 무료 이용자가 하루에 AI-02에 할 수 있는 질문 수 (장소 소개는 세지 않음)
@@ -94,11 +95,15 @@ DURATION_STEP_MIN = 10  # 코스 전체 시간은 10분 단위로 올린다
 
 
 def request_summary(req: dict | None) -> str:
-    """버디 요청을 한국어 한 줄로: '비건, 버섯 알레르기, 천천히'"""
+    """버디 요청을 한국어 한 줄로: '비건, 기타: 고수, 버섯 알레르기, 복숭아 알레르기, 천천히'"""
     if not req:
         return ""
     parts = [DIET.get(d, d) for d in req.get("diet") or []]
+    if isinstance(req.get("diet_other"), str) and req["diet_other"].strip():
+        parts.append(f"기타: {req['diet_other'].strip()}")
     parts += [f"{ALLERGIES.get(a, a)} 알레르기" for a in req.get("allergies") or []]
+    if isinstance(req.get("allergy_other"), str) and req["allergy_other"].strip():
+        parts.append(f"{req['allergy_other'].strip()} 알레르기")
     if req.get("pace") == "slow":
         parts.append(PACE["slow"])
     return ", ".join(parts)
