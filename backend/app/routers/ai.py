@@ -8,11 +8,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.core.deps import get_current_user, require_role
 from app.core.errors import api_error
-from app.models import AiPlan, User
-from app.schemas.ai import PlanIn, PlanOut
-from app.services import llm, planner
+from app.models import AiPlan, Place, User
+from app.schemas.ai import PlanIn, PlanOut, Source, StoryIn, StoryOut
+from app.services import llm, planner, story
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -41,3 +41,34 @@ async def plan(body: PlanIn, user: User = Depends(require_role("tourist")), db: 
     db.add(AiPlan(id=out.plan_id, user_id=user.id, request=body.model_dump(mode="json"), result=out.model_dump(mode="json")))
     db.commit()
     return out
+
+
+# 장소를 누를 때마다 같은 소개를 다시 만들지 않도록 AI가 쓴 소개만 서버 메모리에 둔다 (서버 재시작 시 비워짐)
+_intro_cache: dict[tuple[int, str], tuple[str, bool]] = {}
+
+
+@router.post("/story", response_model=StoryOut)
+async def place_story(body: StoryIn, _: User = Depends(get_current_user), db: Session = Depends(get_db)) -> StoryOut:
+    """AI-02 역사 스토리. 근거는 places.story_doc뿐. 문서 밖 질문이면 grounded=false. 출처는 항상 DB 값."""
+    place = db.get(Place, body.place_id)
+    if not place:
+        raise api_error(404, "NOT_FOUND", "장소를 찾을 수 없습니다")
+    sources = [Source(**s) for s in (place.sources or []) if s.get("title")]
+    question = (body.question or "").strip() or None
+    doc, _lang = story.pick_doc(story.parse(place.story_doc), body.language)
+    if doc.empty():
+        return StoryOut(answer=story.NO_STORY[body.language], sources=sources, grounded=False)
+
+    key = (place.id, body.language)
+    if question is None and key in _intro_cache:
+        answer, grounded = _intro_cache[key]
+        return StoryOut(answer=answer, sources=sources, grounded=grounded, ai=True)
+    try:
+        system, prompt = story.llm_prompt(place, story.clean_doc(place.story_doc), question, body.language)
+        answer, grounded = story.validate_llm(await llm.complete_json(system, prompt), place.story_doc or "")
+        if question is None:
+            _intro_cache[key] = (answer, grounded)
+        return StoryOut(answer=answer, sources=sources, grounded=grounded, ai=True)
+    except (llm.LLMUnavailable, ValueError):
+        answer, grounded = story.fallback_answer(doc, question, body.language)
+        return StoryOut(answer=answer, sources=sources, grounded=grounded)
