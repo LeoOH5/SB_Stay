@@ -46,6 +46,7 @@ export default function TourDetailPage() {
       .catch((e: unknown) => { if (alive) setStory({ answer: errMsg(e), sources: [], grounded: false }); });
     return () => { alive = false; };
   }, [placeId, lang]);
+  const orderedPlaces = tour ? [...tour.places].sort((a, b) => a.order - b.order) : [];
   const selectPlace = (pid: number) => { setStory(null); setAsked(null); setAnswer(null); setPlaceId(pid); };
   const storyBusy = placeId !== null && story === null;
 
@@ -77,7 +78,8 @@ export default function TourDetailPage() {
         {!tour && !err && <Spinner />}
         {tour && (
           <>
-            <KakaoMap route numbered points={[...tour.places].sort((a, b) => a.order - b.order).map((pl) => ({ lat: pl.lat, lng: pl.lng, label: lang === "en" ? pl.name_en : pl.name }))} />
+            <KakaoMap route numbered points={orderedPlaces.map((pl) => ({ lat: pl.lat, lng: pl.lng, label: lang === "en" ? pl.name_en : pl.name }))}
+              active={Math.max(0, orderedPlaces.findIndex((pl) => pl.id === placeId))} onSelect={(i) => selectPlace(orderedPlaces[i].id)} />
             {tour.description && <p className="text-[13px] text-muted">{tour.description}</p>}
             <div className="flex flex-wrap gap-2">
               {tour.places.map((p, i) => <Chip key={p.id} selected={placeId === p.id} onClick={() => selectPlace(p.id)}>{CIRCLED[i]} {lang === "en" ? p.name_en : p.name}</Chip>)}
