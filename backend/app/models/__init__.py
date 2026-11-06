@@ -20,5 +20,6 @@ from app.models.supply import (  # noqa: F401
     Tour,
     TourPlace,
     University,
+    WalkRoute,
 )
 from app.models.user import User  # noqa: F401

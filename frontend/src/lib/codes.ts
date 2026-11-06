@@ -1,7 +1,7 @@
 // v3 코드값 라벨 + 숫자 규칙 — docs/v3/CONTRACT.md §1·§3
 // 화면은 ko/en 라벨을 고르고, API 에는 key 만 보낸다.
 import type {
-  Allergy, BuddyGrade, CanHelp, Diet, DormRequestKey, Eligibility, Pace, Personality, ReportCategory, ReviewTag, SubScoreKey, SurveyPain, WalkStyle,
+  Allergy, BuddyGrade, CanHelp, CourseLeg, Diet, DormRequestKey, Eligibility, Pace, Personality, ReportCategory, ReviewTag, RouteSource, SubScoreKey, SurveyPain, WalkStyle,
 } from "./types";
 
 // ---- 숫자 규칙 (§1)
@@ -207,19 +207,23 @@ export function straightM(lat1: number, lng1: number, lat2: number, lng2: number
   const h = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
   return 2 * 6371000 * Math.asin(Math.sqrt(h));
 }
-/** 순서대로 놓인 장소 → 구간(walk_m 10 m 반올림, walk_min 올림)과 합계. 좌표가 없으면 그 구간은 null */
-export function courseTimes(stops: XY[]) {
-  const legs = stops.slice(1).map((b, i) => {
+/** 순서대로 놓인 장소 → 구간(walk_m 10 m 반올림, walk_min 올림)과 합계. 좌표가 없으면 그 구간은 null.
+ *  v3.8 목업에는 저장한 실제 경로가 없어 모든 구간이 추정(source "estimate", route_source "estimate") */
+export function courseTimes(stops: XY[]): {
+  stay_min_total: number; walk_m_total: number; walk_min_total: number; duration_min: number; walk_complete: boolean;
+  route_source: RouteSource; legs: CourseLeg[];
+} {
+  const legs: CourseLeg[] = stops.slice(1).map((b, i) => {
     const a = stops[i];
-    if (!a.lat || !a.lng || !b.lat || !b.lng) return { from_place_id: a.id, to_place_id: b.id, walk_m: null, walk_min: null };
+    if (!a.lat || !a.lng || !b.lat || !b.lng) return { from_place_id: a.id, to_place_id: b.id, walk_m: null, walk_min: null, source: null, path: null };
     const route = Math.floor((Math.round(straightM(a.lat, a.lng, b.lat, b.lng)) * WALK_DETOUR_PERCENT + 50) / 100);
-    return { from_place_id: a.id, to_place_id: b.id, walk_m: Math.floor((route + 5) / 10) * 10, walk_min: Math.ceil((route * 60) / WALK_M_PER_HOUR) };
+    return { from_place_id: a.id, to_place_id: b.id, walk_m: Math.floor((route + 5) / 10) * 10, walk_min: Math.ceil((route * 60) / WALK_M_PER_HOUR), source: "estimate", path: null };
   });
   const stay = stops.reduce((s, p) => s + p.stay_min, 0);
   const walkMin = legs.reduce((s, l) => s + (l.walk_min ?? 0), 0);
   return {
     stay_min_total: stay, walk_m_total: legs.reduce((s, l) => s + (l.walk_m ?? 0), 0), walk_min_total: walkMin,
     duration_min: Math.ceil((stay + walkMin) / DURATION_STEP_MIN) * DURATION_STEP_MIN,
-    walk_complete: legs.every((l) => l.walk_m !== null), legs,
+    walk_complete: legs.every((l) => l.walk_m !== null), route_source: "estimate", legs,
   };
 }

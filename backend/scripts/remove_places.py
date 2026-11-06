@@ -1,6 +1,7 @@
 """관광지 빼기: uv run python scripts/remove_places.py <id> [<id>...] [--data 폴더] [--check]
 
 places.json · places_pending.json · tour_places.json 에서 그 id를 지운다 (파일마다 원래 JSON 모양 유지, 코스 순서 seq는 다시 매김).
+v3.8: walk_routes.json(실제 도보 경로, 있으면)에서 그 장소가 낀 쌍도 지운다. 파일이 없으면 만들지 않는다.
 패키지 코스·예약 요청(request.places)·버디 활동 기록(장소 이름)이 아직 그 장소를 쓰면 아무것도 지우지 않고 멈춘다.
 예: 혜화문(112)은 종로구라 서비스에서 뺀다 → uv run python scripts/remove_places.py 112
 """
@@ -10,12 +11,15 @@ import sys
 from pathlib import Path
 
 try:
+    from scripts.fetch_walk_routes import dump_routes
     from scripts.import_seed_xlsx import detect_style, dump
 except ModuleNotFoundError:  # python scripts/remove_places.py 로 직접 실행
+    from fetch_walk_routes import dump_routes
     from import_seed_xlsx import detect_style, dump
 
 DATA = Path(__file__).resolve().parents[1] / "app" / "seeds" / "data"
 PLACE_FILES = ("places.json", "places_pending.json")
+ROUTES_FILE = "walk_routes.json"
 
 
 def _load(data: Path, name: str) -> list[dict]:
@@ -63,6 +67,11 @@ def remove(data: Path, ids: set[int]) -> dict[str, tuple[str, list[str]]]:
             keep.append(s | {"seq": seq[s["tour_id"]]})
         raw = (data / "tour_places.json").read_text(encoding="utf-8")
         out["tour_places.json"] = (dump(keep, detect_style(raw)), [f"코스 {s['tour_id']} · 장소 {s['place_id']}" for s in gone])
+    routes = _load(data, ROUTES_FILE)  # v3.8 도보 경로 (fetch_walk_routes.py 모양 그대로 다시 쓴다)
+    gone = [r for r in routes if r["from_place_id"] in ids or r["to_place_id"] in ids]
+    if gone:
+        keep = [r for r in routes if r not in gone]
+        out[ROUTES_FILE] = (dump_routes(keep), [f"경로 {r['from_place_id']}–{r['to_place_id']}" for r in gone])
     return out
 
 

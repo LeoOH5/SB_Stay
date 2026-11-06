@@ -6,6 +6,9 @@
    LLM이 없거나 실패하거나 후보에 없는 id를 내면 점수 순 규칙 기반 선택(폴백)으로 대신한다.
 3) 일정 조립 (코드): 숙소가 있으면 버디는 반드시 넣는다(BK-01 BUDDY_REQUIRED). 코스는 버디 항목의 course_id.
    버디가 없으면 warnings NO_BUDDY, 예산을 넘으면 버디를 빼지 않고 OVER_BUDGET.
+4) v3.8 순서 (코드): 하루에 자유 장소가 여러 곳이면 걷는 거리가 가장 짧은 순서(courses.best_order, 실제 도보 경로 →
+   없으면 추정)로 놓는다. LLM이 준 순서는 '고르기'로만 쓰고 그날 순서는 늘 코드가 다시 정한다.
+   무료 코스 장소는 정해 둔 코스 순서 그대로 (무료 이용은 코스 순서가 고정).
 """
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -24,6 +27,7 @@ from app.models import (
     User,
 )
 from app.schemas.ai import PlanDay, PlanIn, PlanItem
+from app.services import courses
 from app.services.availability import occupied_rooms
 
 WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -257,7 +261,22 @@ def _warning_text(warnings: list[str], en: bool) -> list[str]:
     return out
 
 
-def assemble(c: Candidates, ch: Choice, req: PlanIn) -> tuple[list[PlanDay], int, str, list[str]]:
+def order_free(picks: list[PlaceC], routes: courses.Routes | None = None) -> tuple[list[PlaceC], int | None, int | None]:
+    """v3.8 그날 자유 장소를 걷는 거리가 가장 짧은 순서로. (순서, 걷는 m 10 m 단위, 걷는 분) — 한 곳이면 걷는 값은 None"""
+    by_id = {p.place.id: p for p in picks}
+    stops = [courses.Stop(p.place.id, p.place.lat, p.place.lng, p.place.stay_min or 0) for p in picks]
+    ordered = courses.best_order(stops, routes=routes)
+    if len(ordered) < 2:
+        return [by_id[s.place_id] for s in ordered], None, None
+    ct = courses.summarize(ordered, routes)
+    if not ct.walk_complete:
+        return [by_id[s.place_id] for s in ordered], None, None
+    return [by_id[s.place_id] for s in ordered], ct.walk_m_total, ct.walk_min_total
+
+
+def assemble(c: Candidates, ch: Choice, req: PlanIn,
+             routes: courses.Routes | None = None) -> tuple[list[PlanDay], int, str, list[str]]:
+    """일정 조립. routes = 자유 장소 사이 저장한 실제 도보 경로 (routers/ai.py가 한 번 읽어 넘긴다)"""
     en = req.language == "en"
     budget = req.budget or None
     warnings: list[str] = []
@@ -304,15 +323,19 @@ def assemble(c: Candidates, ch: Choice, req: PlanIn) -> tuple[list[PlanDay], int
     for d in c.activity_days:
         if co and d == co.day:
             continue
-        picks = [p for p in queue if d in p.open_days][:2]
+        picks = [p for p in queue if d in p.open_days][:2]  # 어느 장소인지는 LLM(또는 점수)이 고른 것
         if not picks:
             continue
         for p in picks:
             queue.remove(p)
+        picks, walk_m, walk_min = order_free(picks, routes)  # 순서는 코드가 (걷는 거리 최소)
         names = " · ".join(p.place.name_en if en else p.place.name for p in picks)
+        meta = "Free time · AI pick" if en else "자유 일정 · AI 제안"
+        if walk_min is not None:
+            meta += f" · {walk_min} min walk between" if en else f" · 사이 도보 {walk_min}분"
         by_day[d].append(PlanItem(time=None, type="free", ref_id=None,
-                                  title=f"{names} " + ("(suggested)" if en else "추천"), price=0,
-                                  meta="Free time · AI pick" if en else "자유 일정 · AI 제안"))
+                                  title=f"{names} " + ("(suggested)" if en else "추천"), price=0, meta=meta,
+                                  place_ids=[p.place.id for p in picks], walk_m=walk_m, walk_min=walk_min))
     if len(c.days) > 1:
         by_day[c.days[-1]].append(PlanItem(time="11:00", type="free", ref_id=None, title="Check-out" if en else "체크아웃",
                                            price=0, meta="Stay" if en else "숙박"))

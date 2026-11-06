@@ -239,3 +239,14 @@ BD-01 쿼리 추가: `personality`, `style`, `can_help`, `university_id`
 - BuddyOut `verified` + `residence`. 매칭(AI-01·03)의 같은 학교 우선은 `university_id`가 같을 때만 → 성북구 밖 대학 거주 버디도 추천되지만 가산점 없음.
 - 시드: 가은(id 38, gaeun@example.com) — 서울시립대 · 성북구 거주 · 승인 대기, 서류 값은 자리 표시(`residence_proof_gaeun.jpg`·`enrollment_gaeun.jpg`), 영상 5 · 퀴즈 9 → 승인 가능.
 
+
+## 17. v3.8 실제 도보 경로(OpenStreetMap) · 장소 순서 정하기 (Alembic `v3h_walk_routes`, down_revision `v3g_monthly_grade`)
+- DB `walk_routes`: `from_place_id INT FK places`(작은 id) · `to_place_id INT FK places`(큰 id, 인덱스) · `distance_m INT` · `path JSON`(`[[위도, 경도], ...]` 소수 6자리, from → to). PK(from, to), CHECK(from < to) → 한 쌍 한 줄. 반대 방향은 path를 뒤집어 쓴다.
+- 받기: `scripts/fetch_walk_routes.py`(PC에서 한 번) → `app/seeds/data/walk_routes.json` → `python -m app.seeds`. OSRM 도보(`routing.openstreetmap.de/routed-foot`, `overview=simplified&geometries=geojson`), 1초에 1번 이하, User-Agent `SBStay-hackathon/1.0 (walk routes script)`. **앱은 요청 중에 외부 경로 서버를 부르지 않는다.** 저장소에는 이 파일을 두지 않는다 → 없으면 0줄, 모든 구간이 추정(테스트·시드 숫자 그대로). `scripts/remove_places.py`는 지운 장소가 낀 쌍도 지운다.
+- 구간(`services/courses.leg`): 두 장소 좌표가 있고 경로가 저장돼 있으면 `walk_m` = `distance_m` 10 m 반올림, `walk_min` = `distance_m` ÷ 4 km/h 올림, `source: "route"`, `path`. 없으면 §14 그대로(직선 × 1.3, `source: "estimate"`, `path: null`). 좌표가 없으면 `walk_*`·`source`·`path` 모두 null. 걷는 속도(4 km/h)·10분 올림은 바뀌지 않는다 — 거리만 실제 값.
+- 코스 `route_source`: 모든 구간이 `route` → `"route"`, `route`가 하나도 없음(구간이 없는 코스 포함) → `"estimate"`, 그 밖 → `"mixed"`.
+- 경로는 한 요청에 한 번 읽는다(`courses.load_routes`, 필요한 장소 쌍 한 번에): TR-01 목록·AD-07은 모든 코스 장소를 모아 한 번.
+- 응답 필드: `CourseLegOut` + `source, path` · `TourOut` + `route_source` · `AdminTourRow` + `route_source` · AI-01 free `PlanItem` + `place_ids, walk_m, walk_min` · AI-04 `BriefOut` + `route[], route_walk_m, route_walk_min, route_source` ([AI-04](../api-detail/AI-04.md)). 모두 기본값이 있어 예전 필드 이름·모양은 그대로.
+- **순서 정하기** `courses.best_order(stops, keep_first=False, routes=None)`: 돌아오지 않는 한 줄 길의 걷는 거리 합(정수 m)이 가장 짧은 순서. 거리 = 저장한 실제 경로 → 없으면 직선 × 1.3. 좌표 있는 곳이 8곳 이하면 모든 순서를 다 보고, 넘으면 가까운 곳 먼저(시작점마다) + 2-opt. 거리가 같으면 장소 id 줄이 사전순으로 앞서는 쪽(늘 같은 답). 좌표 없는 곳은 원래 순서대로 맨 뒤. `keep_first`면 첫 장소는 그대로 처음.
+- 어디에 쓰나: AI-01 하루의 자유 장소(LLM은 고르기만, 순서는 코드) · AI-04 추천 동선(코스 + 더 가 보고 싶은 곳 최대 3, 코스 첫 장소 고정). **무료 코스 순서(`tour_places.seq`)는 바꾸지 않는다** — TR-01·02·AI-01의 코스 장소는 정해 둔 순서 그대로. 스크립트가 코스마다 '지금 순서 vs 가장 짧은 순서'를 보여 줄 뿐.
+- 화면: `legs[].path`가 있으면 지도 선을 그 길을 따라(`components/kakao-map.tsx` `legs` prop, 없는 구간은 직선) + 지도 위 '경로 © OpenStreetMap'(ODbL 출처 표시). 키가 없을 때의 OpenStreetMap 지도(iframe)는 선을 그리지 않는다. 안내 문구: `route_source === "route"` → "걷는 시간은 OpenStreetMap 실제 도보 경로를 시속 4km로 잡은 값이에요.", 그 밖은 직선 × 1.3 문구(T07 목록은 모든 코스가 route일 때만). 버디 요청 카드에 '추천 동선'.

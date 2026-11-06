@@ -262,12 +262,14 @@ def _profit(items: list[SettlementRow], album_net: int, cost_other: int = 0) -> 
 def admin_tours(user: User = Depends(OPERATOR), db: Session = Depends(get_db)) -> ListResponse[AdminTourRow]:
     """AD-07: 무료 산책 코스 (장소·이야기 자료 준비 수·이 코스를 고른 버디 동행 수)"""
     rows = []
-    for t in db.scalars(select(Tour).order_by(Tour.id)).all():
-        stops = courses.stop_rows(db, t.id)
+    tours = [(t, courses.stop_rows(db, t.id)) for t in db.scalars(select(Tour).order_by(Tour.id)).all()]
+    routes = courses.load_routes(db, [p.id for _, stops in tours for _, p in stops])  # v3.8 실제 경로 한 번에
+    for t, stops in tours:
         places = [p for _, p in stops]
         walks = db.scalar(select(func.count()).select_from(BookingItem).where(BookingItem.type == "buddy", BookingItem.course_id == t.id, BookingItem.status != "cancelled")) or 0
-        ct = courses.from_rows(stops)  # v3.5 계산값 (TR-01·02와 같은 함수)
+        ct = courses.from_rows(stops, routes)  # v3.5 계산값 (TR-01·02와 같은 함수)
         rows.append(AdminTourRow(id=t.id, title=t.title, theme=t.theme, duration_min=ct.duration_min, walk_complete=ct.walk_complete,
+                                 route_source=ct.route_source,
                                  places=[p.name for p in places], place_count=len(places),
                                  story_ready=sum(1 for p in places if p.story_doc), buddy_walks=walks))
     return ListResponse(items=rows)

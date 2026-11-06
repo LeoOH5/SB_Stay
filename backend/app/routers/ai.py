@@ -17,6 +17,7 @@ from app.schemas.ai import (
     BriefIn,
     BriefOut,
     BriefPlace,
+    BriefRouteStop,
     MatchIn,
     MatchItem,
     MatchOut,
@@ -28,7 +29,7 @@ from app.schemas.ai import (
     StoryIn,
     StoryOut,
 )
-from app.services import brief, free_tier, llm, matcher, notice, planner, story
+from app.services import brief, courses, free_tier, llm, matcher, notice, planner, story
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -53,7 +54,9 @@ async def plan(body: PlanIn, user: User = Depends(require_role("tourist")), db: 
     except llm.LLMUnavailable:
         choice = planner.fallback_choice(cands, body.budget)
 
-    days, total, reason, warnings = planner.assemble(cands, choice, body)
+    # v3.8 자유 장소 순서는 코드가 정한다 (고른 장소 사이 저장한 실제 도보 경로를 한 번에 읽음)
+    routes = courses.load_routes(db, choice.free_place_ids)
+    days, total, reason, warnings = planner.assemble(cands, choice, body, routes)
     out = PlanOut(plan_id="pl_" + secrets.token_hex(3), reason=reason, total_price=total, days=days, ai=used_ai,
                   warnings=warnings)
     db.add(AiPlan(id=out.plan_id, user_id=user.id, request=body.model_dump(mode="json"), result=out.model_dump(mode="json")))
@@ -155,10 +158,22 @@ async def buddy_brief(body: BriefIn, user: User = Depends(require_role("buddy"))
         used_ai = True
     except (llm.LLMUnavailable, ValueError):
         text, phrases, used_ai = brief.fallback_brief(m), brief.fallback_phrases(m), False
+    ct = m.route_time
+    legs = {(x.from_place_id, x.to_place_id): x for x in (ct.legs if ct else [])}
+    route = []
+    for i, p in enumerate(m.route):
+        lg = legs.get((m.route[i - 1].id, p.id)) if i else None
+        route.append(BriefRouteStop(
+            place_id=p.id, name=p.name, name_en=p.name_en, lat=float(p.lat) if p.lat else None,
+            lng=float(p.lng) if p.lng else None, from_course=p.id in m.course_place_ids,
+            walk_m_from_prev=lg.walk_m if lg else None, walk_min_from_prev=lg.walk_min if lg else None,
+            source=lg.source if lg else None, path=lg.path if lg else None))
     return BriefOut(
         booking_item_id=item.id, brief=text, phrases=phrases, ai=used_ai,
         places=[BriefPlace(name=p.name, name_en=p.name_en, summary=brief.summary(p), tips=brief.place_tips(p))
                 for p in m.places],
+        route=route, route_walk_m=ct.walk_m_total if ct else 0, route_walk_min=ct.walk_min_total if ct else 0,
+        route_source=ct.route_source if ct else "estimate",
     )
 
 

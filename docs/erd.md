@@ -24,6 +24,7 @@ erDiagram
   guides ||--o{ tours : "guide_id"
   tours ||--|{ tour_places : "tour_id"
   places ||--o{ tour_places : "place_id"
+  places ||--o{ walk_routes : "from_place_id · to_place_id (v3.8)"
   buddy_profiles ||--o{ buddy_availability : "buddy_id"
   bookings ||--|{ booking_items : "booking_id"
   dorm_rooms ||..o{ booking_items : "ref_id (type=dorm)"
@@ -99,6 +100,12 @@ erDiagram
     bigint place_id PK,FK
     smallint order "코스 내 순서"
     int stay_min
+  }
+  walk_routes {
+    int from_place_id PK,FK "작은 id"
+    int to_place_id PK,FK "큰 id"
+    int distance_m "실제 도보 거리"
+    json path "[[위도,경도],...] from → to"
   }
   places {
     bigint id PK
@@ -329,6 +336,16 @@ erDiagram
 | story_doc | text | **RAG 문서 원문**. AI-02 `/ai/story` 가 이 텍스트만 근거로 답한다 (밖이면 `grounded=false`). 길면 문단 단위로 청크 테이블 분리 가능 |
 | sources | jsonb | **RAG 출처** `[{title, url}]`. AI-02 응답 `sources` 로 그대로 반환 |
 
+### walk_routes — 두 장소 사이 실제 도보 경로 (v3.8, Alembic `v3h_walk_routes`)
+OpenStreetMap 도보 경로(OSRM `routing.openstreetmap.de/routed-foot`)를 `scripts/fetch_walk_routes.py`로 **미리** 받아 `app/seeds/data/walk_routes.json` → 시드로 넣는다. 앱은 요청 중에 외부 서버를 부르지 않는다. 지도 자료 © OpenStreetMap contributors (ODbL).
+
+| 컬럼 | 타입 | 제약/설명 |
+|---|---|---|
+| from_place_id | int | PK, FK → places.id. 쌍의 **작은** id |
+| to_place_id | int | PK, FK → places.id. 쌍의 큰 id (인덱스). CHECK(from_place_id < to_place_id) → 한 쌍에 한 줄 |
+| distance_m | int | 실제 도보 거리 m (정수) |
+| path | json | `[[위도, 경도], ...]` 소수 6자리, from → to 방향 (반대 방향은 뒤집어 쓴다) |
+
 ### buddy_profiles — 대학생 버디
 | 컬럼 | 타입 | 제약/설명 |
 |---|---|---|
@@ -484,6 +501,7 @@ GROUP BY 1, 2, 3;
 | users → guides / buddy_profiles | 1 : 0..1 | 역할별 확장 프로필 (`user_id` UNIQUE) |
 | guides → tours | 1 : N | 해설사의 코스 |
 | tours ↔ places (tour_places) | N : M | 코스 안 장소 순서·체류 시간 |
+| places ↔ places (walk_routes) | N : M | v3.8 두 장소 사이 실제 도보 경로 (한 쌍 한 줄, 작은 id → 큰 id) |
 | buddy_profiles → buddy_availability | 1 : N | 가능 날짜. BD-01 `?date` 필터 |
 | users(tourist) → bookings | 1 : N | 관광객의 예약 |
 | bookings → booking_items | 1 : N | 예약 하나 = 숙박·투어·버디 항목 묶음 |
@@ -506,6 +524,7 @@ GROUP BY 1, 2, 3;
 | dorm_rooms | (university_id, active) | DM-02 `?university_id`, AD-02 `?university_id`(dorm 항목 ⋈ dorm_rooms) |
 | tours | (theme) · (guide_id) | TR-01 필터 · BD-05 해설사 요청함 |
 | tour_places | PK(tour_id, place_id) · UNIQUE(tour_id, order) | TR-02 순서 조회 |
+| walk_routes | PK(from_place_id, to_place_id) · (to_place_id) | v3.8 코스·동선의 장소 쌍 경로를 한 번에 읽기 |
 | buddy_profiles | UNIQUE(user_id) · (university_id, status) · (status) | AD-03 `?status=pending` · BD-01 승인 버디 |
 | buddy_availability | PK(buddy_id, date) · (date) | BD-01 `?date` |
 | bookings | UNIQUE(code) · **(tourist_id, status)** · (created_at) | BK-02 내 예약 · AD-01 기간 집계 |

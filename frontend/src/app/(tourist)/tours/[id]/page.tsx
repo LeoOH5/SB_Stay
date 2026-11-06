@@ -2,6 +2,7 @@
 // T08 무료 산책 코스 상세 — TR-02 GET /tours/{id}, PL GET /places (운영 정보), AI-02 POST /ai/story (장소 이야기 · 질문)
 // 코스는 예약 항목이 아니다 (COURSE_NOT_BOOKABLE). 버디와 걸으면 버디 항목의 course_id 로 들어간다.
 // v3.5 걸리는 시간은 서버 계산값(duration_min = 머무는 시간 + 걷는 시간), 장소 사이에 걷는 구간(legs) "도보 N분 · Mm"
+// v3.8 legs[].path(OpenStreetMap 실제 도보 경로)가 있으면 지도 선을 그 길을 따라 그린다. 안내 문구는 route_source 에 따라
 // v3.4 무료 이용(AU-09 plan=free): 기본 순서 안내 · 이야기 전 광고(T08a) · 질문 하루 3번(T08b, 429 AI_LIMIT) · 도움 안내 · 완료 설문(T08c, TR-05)
 import { useParams, useRouter } from "next/navigation";
 import { KakaoMap } from "@/components/kakao-map";
@@ -11,7 +12,7 @@ import { ErrorBox } from "@/components/tourist";
 import { AdInterstitial, FixedCourseNote, HelpSheet, QuestionLimit, QuestionsLeft, SurveySheet, useMyPlan } from "@/components/tourist/free-tier";
 import { DAY_LABEL, errMsg, okv } from "@/components/tourist/format";
 import { ArrowUp, BottomBar, InfoRow, SectionHead } from "@/components/tourist/v3";
-import { aboutDuration, hasXY, koDuration, walkText } from "@/components/tourist/v3/flow";
+import { aboutDuration, hasXY, koDuration, walkNote, walkText } from "@/components/tourist/v3/flow";
 import { ApiError, get, post, won } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { useLang } from "@/lib/i18n";
@@ -62,6 +63,8 @@ export default function CourseDetailPage() {
 
   const orderedPlaces = tour ? [...tour.places].sort((a, b) => a.order - b.order) : [];
   const mapPlaces = orderedPlaces.filter(hasXY); // 좌표 없는 장소는 지도에서만 뺀다
+  // 지도 점 i → i+1 구간 (좌표 없는 장소를 건너뛴 구간은 legs 에 없어서 직선)
+  const mapLegs = mapPlaces.slice(1).map((b, i) => tour?.legs.find((l) => l.from_place_id === mapPlaces[i].id && l.to_place_id === b.id));
   const legAfter = (i: number) => {
     const a = orderedPlaces[i], b = orderedPlaces[i + 1];
     return b && tour ? tour.legs.find((l) => l.from_place_id === a.id && l.to_place_id === b.id) : undefined;
@@ -116,6 +119,7 @@ export default function CourseDetailPage() {
                 머무는 {koDuration(tour.stay_min_total)} + 걷는 {tour.walk_min_total}분 · {tour.walk_m_total.toLocaleString("ko-KR")}m
                 {!tour.walk_complete && " · 걷는 시간 일부 빠짐"}
               </span>
+              <span className="mt-0.5 block text-[12px] font-normal text-muted">{walkNote(tour.route_source, lang)}</span>
             </InfoRow>
             <InfoRow label="가격"><span className="text-navy">{tour.price === 0 ? `무료${anyFee ? " (입장료는 장소마다)" : ""}` : won(tour.price)}</span></InfoRow>
             <InfoRow label="시작">{tour.meeting_point}</InfoRow>
@@ -124,7 +128,7 @@ export default function CourseDetailPage() {
           </div>
           {my.free && <FixedCourseNote courseId={tour.id} className="mt-4" />}
 
-          <KakaoMap className="mt-5" route numbered
+          <KakaoMap className="mt-5" route numbered legs={mapLegs}
             points={mapPlaces.map((pl) => ({ lat: pl.lat, lng: pl.lng, label: lang === "en" ? pl.name_en : pl.name }))}
             active={placeId === null ? undefined : Math.max(0, mapPlaces.findIndex((pl) => pl.id === placeId))}
             onSelect={(i) => { const pid = mapPlaces[i]?.id; if (pid !== undefined && pid !== placeId) select(pid); }} />

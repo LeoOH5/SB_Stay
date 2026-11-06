@@ -75,7 +75,7 @@ def test_admin_courses(client, univ_admin, operator):
     by_id = {r["id"]: r for r in rows}
     assert by_id[3]["places"] == ["성북근현대문학관", "수연산방(이태준 가옥)", "심우장", "길상사"] and by_id[3]["place_count"] == 4
     assert by_id[3]["story_ready"] == 4 and by_id[3]["buddy_walks"] == 1 and by_id[6]["buddy_walks"] == 2
-    assert set(rows[0]) == {"id", "title", "theme", "duration_min", "walk_complete", "places", "place_count", "story_ready", "buddy_walks"}
+    assert set(rows[0]) == {"id", "title", "theme", "duration_min", "walk_complete", "route_source", "places", "place_count", "story_ready", "buddy_walks"}
 
 
 def test_reports_auto_suspend_and_actions(client, operator, reset_db):

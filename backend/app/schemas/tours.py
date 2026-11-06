@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -23,11 +24,14 @@ class TourPlaceOut(BaseModel):
 
 
 class CourseLegOut(BaseModel):
-    """v3.5 장소 → 다음 장소 걷는 구간 (직선 × 1.3, 4 km/h 추정). 좌표가 없으면 walk_m·walk_min null"""
+    """v3.5 장소 → 다음 장소 걷는 구간. 좌표가 없으면 walk_m·walk_min·source null.
+    v3.8 실제 도보 경로(OpenStreetMap)가 저장돼 있으면 그 거리 + path, 없으면 직선 × 1.3 추정. 속도는 둘 다 4 km/h"""
     from_place_id: int
     to_place_id: int
     walk_m: int | None = None  # 10 m 단위
     walk_min: int | None = None  # 분, 올림
+    source: Literal["route", "estimate"] | None = None  # v3.8 route = 실제 경로 · estimate = 직선 × 1.3
+    path: list[list[float]] | None = None  # v3.8 route일 때 [[위도, 경도], ...] (from → to). 지도 선, 표시할 때 '경로 © OpenStreetMap'
 
 
 class TourOut(BaseModel):
@@ -42,6 +46,7 @@ class TourOut(BaseModel):
     walk_m_total: int = 0  # Σ legs[].walk_m (좌표 없는 구간 제외)
     walk_min_total: int = 0  # Σ legs[].walk_min
     walk_complete: bool = True  # false = 좌표 없는 장소가 있어 걷는 시간 일부 빠짐
+    route_source: Literal["route", "estimate", "mixed"] = "estimate"  # v3.8 legs 전부 실제 경로 / 전부 추정 / 섞임
     price: int
     operating_days: list[str] = []
     languages: list[str] = []

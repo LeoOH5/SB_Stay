@@ -71,7 +71,7 @@ const P = (order: number, id: number, stay_min?: number) => {
   return { order, id: p.id, name: p.name, name_en: p.name_en, lat: p.lat, lng: p.lng, stay_min: stay_min ?? p.stay_min, photo_url: p.photo_url ?? null, photo_credit: p.photo_credit ?? null };
 };
 /** v3.5 코스 시간은 계산값 — 백엔드와 같은 식(직선 × 1.3, 4 km/h, 10분 올림)으로 목업 좌표에서 구한다 */
-const course = (t: Omit<Tour, "duration_min" | "stay_min_total" | "walk_m_total" | "walk_min_total" | "walk_complete" | "legs">): Tour => ({ ...t, ...courseTimes(t.places) });
+const course = (t: Omit<Tour, "duration_min" | "stay_min_total" | "walk_m_total" | "walk_min_total" | "walk_complete" | "route_source" | "legs">): Tour => ({ ...t, ...courseTimes(t.places) });
 const ALL_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 /** 무료 AI 산책 코스 — 해설사 없음(guide null), price 0 */

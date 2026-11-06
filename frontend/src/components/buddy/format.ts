@@ -1,5 +1,5 @@
 // 버디 화면 공용 포맷·라벨 헬퍼 (B1~B5)
-import type { BuddyEarning, Role } from "@/lib/types";
+import type { BuddyEarning, LatLng, LegSource, Role, RouteSource } from "@/lib/types";
 
 /** 데모 기준일 — 목 데이터가 2027년 1월(겨울방학)이라 "오늘"을 고정한다 */
 export const DEMO_TODAY = "2027-01-14";
@@ -52,8 +52,19 @@ export const roleLabel = (_role?: Role | null) => "버디";
 export interface BuddyEarnings {
   month: string; activities: number; total_fee: number; paid: number; pending: number; items: BuddyEarning[];
 }
-/** POST /ai/buddy-brief (AI-04) 응답 */
-export interface BuddyBrief { brief: string }
+/** v3.8 AI-04 추천 동선 한 곳 (첫 곳은 walk_*_from_prev null) */
+export interface BriefRouteStop {
+  place_id: number; name: string; name_en: string; lat?: number | null; lng?: number | null;
+  /** true = 코스 장소, false = 여행자가 고른 '더 가 보고 싶은 곳' */
+  from_course?: boolean;
+  walk_m_from_prev: number | null; walk_min_from_prev: number | null;
+  source?: LegSource | null; path?: LatLng[] | null;
+}
+/** POST /ai/buddy-brief (AI-04) 응답. v3.8 route = 코스 + 더 갈 곳, 걷는 거리가 가장 짧은 순서 (코스 첫 장소 고정) */
+export interface BuddyBrief {
+  brief: string;
+  route?: BriefRouteStop[]; route_walk_m?: number; route_walk_min?: number; route_source?: RouteSource;
+}
 /** AU-07 응답 */
 export interface CalendarOut { calendar_connected: boolean }
 /** BD-04 응답 */

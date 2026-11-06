@@ -2,7 +2,7 @@
 // 상태 변경은 메모리에 유지(새로고침 시 초기화). 오류는 실제 API처럼 ApiError(status, code, message)로 던진다.
 import { ApiError } from "../errors";
 import {
-  ALBUM_FEE, ALLERGIES, BUDDY_MIN_AGE, CAN_HELP, DIET, DIET_TO_HELP, FREE_AI_QUESTIONS, MEAL_LIMIT, MEAL_MAX, PACE, PERSONALITY, QUIZ_PASS, QUIZ_TOTAL,
+  ALBUM_FEE, ALLERGIES, BUDDY_MIN_AGE, CAN_HELP, courseTimes, DIET, DIET_TO_HELP, FREE_AI_QUESTIONS, MEAL_LIMIT, MEAL_MAX, PACE, PERSONALITY, QUIZ_PASS, QUIZ_TOTAL,
   REPORT_CATEGORY, REPORT_SUSPEND_AT, REQUEST_NOTE_MAX, REQUEST_PLACES_MAX, REVIEW_TAGS, STYLE, SUB_SCORES, SURVEY_PAIN, buddyItemPrice, buddyNet,
   decideGrade, label, payoutBase, platformFee, rateOf, GRADE_NOTE, GRADE_RULES,
 } from "../codes";
@@ -247,6 +247,22 @@ function briefFor(it: BookingItem): string {
   if (c) parts.push(`같이 걸을 코스는 ${c.title} — ${c.places.map((p) => p.name).join(" → ")}.`);
   else if (r?.places?.length) parts.push(`더 보고 싶은 곳: ${r.places.map((id) => D.places.find((p) => p.id === id)?.name ?? id).join(", ")}.`);
   return parts.join(" ") || "관심사를 먼저 물어보고 동선을 같이 정해 보세요.";
+}
+/** v3.8 AI-04 추천 동선 (목업): 코스 장소 + 더 가 보고 싶은 곳(최대 3). 목업은 순서를 다시 정하지 않고 추정 거리만 붙인다 */
+function briefRoute(it: BookingItem) {
+  const r = it.request as BuddyRequestBody | null | undefined;
+  const c = courseOf(it.course_id);
+  const stops = [...(c ? [...c.places].sort((x, y) => x.order - y.order).map((p) => ({ id: p.id, name: p.name, name_en: p.name_en, lat: p.lat, lng: p.lng, course: true })) : [])];
+  for (const id of (r?.places ?? []).slice(0, 3)) {
+    const p = D.places.find((x) => x.id === id);
+    if (p && !stops.some((s) => s.id === id)) stops.push({ id: p.id, name: p.name, name_en: p.name_en, lat: p.lat, lng: p.lng, course: false });
+  }
+  const t = courseTimes(stops.map((s) => ({ id: s.id, lat: s.lat, lng: s.lng, stay_min: 0 })));
+  return {
+    route: stops.map((s, i) => ({ place_id: s.id, name: s.name, name_en: s.name_en, lat: s.lat, lng: s.lng, from_course: s.course,
+      walk_m_from_prev: i ? t.legs[i - 1].walk_m : null, walk_min_from_prev: i ? t.legs[i - 1].walk_min : null, source: i ? t.legs[i - 1].source : null, path: null })),
+    route_walk_m: t.walk_m_total, route_walk_min: t.walk_min_total, route_source: t.route_source,
+  };
 }
 function toBuddyRequest(b: Booking, it: BookingItem): BuddyRequest {
   const tv = b.traveler;
@@ -533,7 +549,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     return hit ? ({ answer: hit.a, sources: s.sources, grounded: true, questions_left: left } satisfies AiStory) : ({ answer: "자료에 없는 내용이에요. 다른 질문을 해 보거나 버디에게 같이 찾아보자고 해 보세요.", sources: s.sources, grounded: false, questions_left: left } satisfies AiStory);
   }
   if (method === "POST" && path === "/ai/buddy-match") return buddyMatch(b);
-  if (method === "POST" && path === "/ai/buddy-brief") { const f = findItem(Number(b.item_id)); return { brief: f ? briefFor(f.it) : "관심사를 먼저 물어보고 동선을 같이 정해 보세요." }; }
+  if (method === "POST" && path === "/ai/buddy-brief") { const f = findItem(Number(b.item_id)); return { brief: f ? briefFor(f.it) : "관심사를 먼저 물어보고 동선을 같이 정해 보세요.", ...(f ? briefRoute(f.it) : {}) }; }
 
   // ---- 예약
   if (method === "POST" && path === "/bookings") {
@@ -858,7 +874,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if (method === "GET" && path === "/admin/tours") {
     requireOperator();
     const walks = (id: number) => state.bookings.flatMap((bk) => bk.items).filter((i) => i.type === "buddy" && i.course_id === id && i.status !== "cancelled").length;
-    return list<AdminCourseRow>(D.tours.map((t) => ({ id: t.id, title: t.title, theme: t.theme, duration_min: t.duration_min, walk_complete: t.walk_complete, places: t.places.map((p) => p.name), place_count: t.places.length, story_ready: t.places.filter((p) => !!D.stories[p.id]).length, buddy_walks: walks(t.id) })));
+    return list<AdminCourseRow>(D.tours.map((t) => ({ id: t.id, title: t.title, theme: t.theme, duration_min: t.duration_min, walk_complete: t.walk_complete, route_source: t.route_source ?? "estimate", places: t.places.map((p) => p.name), place_count: t.places.length, story_ready: t.places.filter((p) => !!D.stories[p.id]).length, buddy_walks: walks(t.id) })));
   }
 
   return fail(404, "NOT_FOUND", `mock: ${method} ${path} 핸들러 없음`);

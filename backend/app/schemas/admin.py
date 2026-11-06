@@ -136,6 +136,7 @@ class AdminTourRow(BaseModel):
     theme: str
     duration_min: int  # v3.5 계산값 (services/courses.py: 머무는 시간 + 걷는 시간, 10분 올림)
     walk_complete: bool = True  # false = 좌표 없는 장소가 있어 걷는 시간 일부 빠짐
+    route_source: str = "estimate"  # v3.8 route(모든 구간 OpenStreetMap 실제 경로) | estimate(직선 × 1.3) | mixed
     places: list[str] = []
     place_count: int
     story_ready: int  # 이야기 자료(story_doc)가 있는 장소 수

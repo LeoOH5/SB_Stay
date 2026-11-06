@@ -8,7 +8,7 @@ import { Chip, Hero, Icon, Spinner } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { errMsg, THEMES } from "@/components/tourist/format";
 import { CourseSection } from "@/components/tourist/v3/course";
-import { hasXY } from "@/components/tourist/v3/flow";
+import { hasXY, walkNote } from "@/components/tourist/v3/flow";
 import { get } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 import type { ListResponse, Tour } from "@/lib/types";
@@ -64,7 +64,7 @@ export default function ToursPage() {
             <p>버디와 같이 걷고 싶다면 버디 요청에서 코스를 골라요. <Link href="/buddies" className="font-semibold text-navy">버디 보기 →</Link></p>
           </div>
         )}
-        {tours && tours.length > 0 && <p className="mt-3 text-[12px] text-muted">걷는 시간은 장소 사이 직선거리에 1.3배, 시속 4km로 잡은 어림값이에요.</p>}
+        {tours && tours.length > 0 && <p className="mt-3 text-[12px] text-muted">{walkNote(tours.every((t) => t.route_source === "route") ? "route" : "estimate", lang)}</p>}
       </div>
     </>
   );

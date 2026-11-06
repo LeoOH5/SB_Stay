@@ -1,6 +1,7 @@
 "use client";
 // 동행 요청 카드 (B02 홈 · B03 요청함) — 여행자·날짜·숙박·언어, 요청 사항(감 주황 태그), 코스·더 보고 싶은 곳, 메모,
 // 식사·앨범 옵션, AI 동행 준비 자료(POST /ai/buddy-brief), 수락/거절(거절 사유 고르기)
+// v3.8 AI-04 응답에 route 가 있으면 추천 동선(코스 + 더 가 보고 싶은 곳, 걷는 거리가 가장 짧은 순서)과 구간마다 도보 시간
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, Icon, StatusPill, TagChip, cn, inputCls, type IconName } from "@/components/ui";
@@ -21,6 +22,39 @@ function Line({ icon, children }: { icon: IconName; children: ReactNode }) {
   );
 }
 
+/** v3.8 추천 동선: "1. 장소" 줄 사이에 "도보 N분 · Nm". 더 가 보고 싶은 곳은 '고른 곳' 표시 */
+function RouteList({ brief }: { brief: BuddyBrief }) {
+  const stops = brief.route ?? [];
+  return (
+    <div className="mt-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[13px] font-bold text-navy">추천 동선</span>
+        <span className="text-[12px] text-muted">걷는 약 {brief.route_walk_min ?? 0}분 · {(brief.route_walk_m ?? 0).toLocaleString("ko-KR")}m</span>
+      </div>
+      <ol className="mt-2 space-y-1">
+        {stops.map((s, i) => (
+          <li key={s.place_id}>
+            {i > 0 && (
+              <p className="pl-5 text-[12px] text-muted">
+                {s.walk_min_from_prev == null || s.walk_m_from_prev == null ? "좌표가 없어 걷는 시간 빠짐" : `도보 ${s.walk_min_from_prev}분 · ${s.walk_m_from_prev.toLocaleString("ko-KR")}m`}
+              </p>
+            )}
+            <p className="text-[15px] text-ink">
+              <span className="inline-block w-5 font-semibold">{i + 1}.</span>{s.name}
+              {s.from_course === false && <span className="ml-1.5 text-[12px] text-orange-ink">고른 곳</span>}
+            </p>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-2 text-[12px] text-muted">
+        {brief.route_source === "route" ? "걷는 시간은 OpenStreetMap 실제 도보 경로를 시속 4km로 잡은 값이에요. 경로 © OpenStreetMap"
+          : brief.route_source === "mixed" ? "일부 구간은 OpenStreetMap 실제 도보 경로(경로 © OpenStreetMap), 나머지는 직선거리 × 1.3 어림이에요."
+            : "걷는 시간은 장소 사이 직선거리에 1.3배, 시속 4km로 잡은 어림값이에요."}
+      </p>
+    </div>
+  );
+}
+
 export function RequestCard({ req, placeNames = {}, compact, onDecide, busy }: {
   req: BuddyRequest; placeNames?: Record<number, string>; compact?: boolean;
   onDecide?: (action: DecideAction, reason?: string) => void; busy?: boolean;
@@ -28,6 +62,7 @@ export function RequestCard({ req, placeNames = {}, compact, onDecide, busy }: {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [brief, setBrief] = useState<string | null>(null);
+  const [route, setRoute] = useState<BuddyBrief | null>(null);
   const r = req.request;
   const chips = requestChips(r);
   const places = (r?.places ?? []).map((id) => placeNames[id] ?? `장소 ${id}`);
@@ -38,7 +73,7 @@ export function RequestCard({ req, placeNames = {}, compact, onDecide, busy }: {
     if (!showBrief) return;
     let alive = true;
     post<BuddyBrief>("/ai/buddy-brief", { item_id: req.item_id, booking_code: req.booking_code })
-      .then((b) => { if (alive) setBrief(b.brief); })
+      .then((b) => { if (alive) { setBrief(b.brief); setRoute(b.route && b.route.length > 1 ? b : null); } })
       .catch(() => { /* 실패하면 목록에 온 ai_brief 를 쓴다 */ });
     return () => { alive = false; };
   }, [showBrief, req.item_id, req.booking_code]);
@@ -89,6 +124,7 @@ export function RequestCard({ req, placeNames = {}, compact, onDecide, busy }: {
               <p className="mt-1 text-[15px] leading-relaxed text-ink">{briefText}</p>
             </div>
           )}
+          {route?.route && <RouteList brief={route} />}
         </>
       )}
 

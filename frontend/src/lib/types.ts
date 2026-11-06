@@ -50,8 +50,18 @@ export interface TourPlace {
   /** v3.5 장소 대표 사진. 없으면 화면은 색 블록 */
   photo_url?: string | null; photo_credit?: string | null;
 }
-/** v3.5 장소 → 다음 장소 걷는 구간 (직선 × 1.3, 4 km/h 추정). 좌표가 없으면 walk_m·walk_min null */
-export interface CourseLeg { from_place_id: number; to_place_id: number; walk_m: number | null; walk_min: number | null }
+/** v3.8 걷는 길 출처: route = OpenStreetMap 실제 도보 경로 · estimate = 직선 × 1.3 추정 */
+export type LegSource = "route" | "estimate";
+/** v3.8 코스 전체: 모든 구간 실제 경로 / 전부 추정 / 섞임 */
+export type RouteSource = LegSource | "mixed";
+/** [위도, 경도] */
+export type LatLng = [number, number] | number[];
+/** v3.5 장소 → 다음 장소 걷는 구간 (4 km/h). 좌표가 없으면 walk_m·walk_min null.
+ *  v3.8 source = route 면 실제 도보 거리 + path(지도 선, from → to), estimate 면 직선 × 1.3 (path null) */
+export interface CourseLeg {
+  from_place_id: number; to_place_id: number; walk_m: number | null; walk_min: number | null;
+  source?: LegSource | null; path?: LatLng[] | null;
+}
 /** 무료 AI 산책 코스 (경로·테이블 이름은 tours 그대로). price 는 항상 0, guide 는 null */
 export interface Tour {
   id: number; title: string; title_en: string; theme: string; guide: Guide | null;
@@ -60,6 +70,8 @@ export interface Tour {
   stay_min_total: number; walk_m_total: number; walk_min_total: number;
   /** false = 좌표 없는 장소가 있어 걷는 시간 일부 빠짐 */
   walk_complete: boolean;
+  /** v3.8 route = 모든 구간 OpenStreetMap 실제 경로 · estimate = 직선 × 1.3 · mixed = 섞임 (없으면 estimate) */
+  route_source?: RouteSource;
   price: number;
   operating_days: string[]; languages: string[]; meeting_point: string; places: TourPlace[]; description?: string;
   /** places 순서대로 n−1개 */
@@ -106,6 +118,8 @@ export interface PlanItem {
   /** buddy 항목: 같이 걸을 코스 */
   course_id?: number | null;
   duration_min?: number | null;
+  /** v3.8 free 항목: 장소 id 걷는 순서 (걷는 거리가 가장 짧은 순서, 서버 코드가 정함) · 그 사이 걷는 거리·분 */
+  place_ids?: number[] | null; walk_m?: number | null; walk_min?: number | null;
 }
 export interface PlanDay { date: string; items: PlanItem[] }
 export interface AiPlan { plan_id: string; reason: string; total_price: number; days: PlanDay[]; warnings: PlanWarning[]; ai?: boolean }
@@ -329,6 +343,8 @@ export interface AdminCourseRow {
   duration_min: number;
   /** false = 좌표 없는 장소가 있어 걷는 시간 일부 빠짐 */
   walk_complete: boolean;
+  /** v3.8 route | estimate | mixed */
+  route_source?: RouteSource;
   places: string[]; place_count: number;
   /** 이야기 자료가 있는 장소 수 */
   story_ready: number;

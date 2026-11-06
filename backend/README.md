@@ -57,3 +57,12 @@ uv run python scripts/fetch_tourapi.py apply      # places.json 반영, 좌표�
 uv run python -m app.seeds
 ```
 사진은 공공누리 제1유형(출처표시)만 쓴다.
+
+## 실제 도보 경로 받기 (OpenStreetMap, v3.8)
+키는 필요 없다. 장소 사이 도보 경로를 `app/seeds/data/walk_routes.json`에 받아 시드로 DB에 넣는다 (앱은 요청 중에 경로 서버를 부르지 않는다).
+```
+uv run python scripts/fetch_walk_routes.py --dry-run   # 받을 쌍 개수
+uv run python scripts/fetch_walk_routes.py             # 모든 장소 쌍 (1초에 1번, 25곳이면 약 5분) · --only-courses 는 코스 쌍만
+uv run python -m app.seeds
+```
+파일이 없으면 걷는 시간은 직선 × 1.3 추정. 경로를 그린 화면에는 '경로 © OpenStreetMap'을 표시한다(ODbL). 자세히는 `docs/v3/CHANGES.md` v3.8.

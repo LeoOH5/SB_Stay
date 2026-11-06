@@ -37,8 +37,28 @@ def test_remove_hyehwamun(seed_dir, capsys):
     assert 112 not in _ids(seed_dir, "places.json") and len(_ids(seed_dir, "places.json")) == n - 1
     raw = (seed_dir / "places.json").read_text(encoding="utf-8")
     assert raw.startswith("[\n  {\n") and raw.endswith("}\n]\n")  # 원래 들여쓰기 2칸 유지
-    assert {p.name for p in seed_dir.glob("*.json") if p.read_bytes() != before[p.name]} == {"places.json"}
+    # v3.8 walk_routes.json 은 저장소에 없다(PC에서 받음). 받아 둔 파일에 112가 낀 쌍이 있을 때만 그 파일도 바뀐다
+    routes = json.loads(before["walk_routes.json"]) if "walk_routes.json" in before else []
+    touched = {"walk_routes.json"} if any(112 in (r["from_place_id"], r["to_place_id"]) for r in routes) else set()
+    assert {p.name for p in seed_dir.glob("*.json") if p.read_bytes() != before[p.name]} == {"places.json"} | touched
+    assert not (seed_dir / "walk_routes.json").exists() or "walk_routes.json" in before  # 없던 파일은 만들지 않는다
     assert rp.main(["112", "--data", str(seed_dir)]) == 1  # 이미 없음
+
+
+def test_remove_drops_walk_routes(seed_dir, capsys):
+    """v3.8 도보 경로 파일이 있으면 그 장소가 낀 쌍만 지우고 같은 모양으로 다시 쓴다"""
+    from scripts.fetch_walk_routes import dump_routes
+    _ensure_hyehwamun(seed_dir)
+    rows = [{"from_place_id": 101, "to_place_id": 102, "distance_m": 500, "path": [[37.5, 127.0], [37.51, 127.01]]},
+            {"from_place_id": 101, "to_place_id": 112, "distance_m": 900, "path": [[37.5, 127.0], [37.52, 127.02]]},
+            {"from_place_id": 112, "to_place_id": 120, "distance_m": 700, "path": [[37.52, 127.02], [37.53, 127.03]]}]
+    (seed_dir / "walk_routes.json").write_text(dump_routes(rows), encoding="utf-8")
+    before = {p.name: p.read_bytes() for p in seed_dir.glob("*.json")}
+    assert rp.main(["112", "--data", str(seed_dir)]) == 0
+    assert "경로 101–112" in capsys.readouterr().out
+    assert {p.name for p in seed_dir.glob("*.json") if p.read_bytes() != before[p.name]} == {"places.json", "walk_routes.json"}
+    raw = (seed_dir / "walk_routes.json").read_text(encoding="utf-8")
+    assert raw == dump_routes(rows[:1]) and json.loads(raw) == rows[:1]
 
 
 def test_refuses_when_referenced_and_reorders_course(seed_dir, capsys):

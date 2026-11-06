@@ -6,9 +6,12 @@
 - 장소 요약·팁은 DB 값(story_doc 소개, 운영시간, 휴무, 요금)으로만 만든다.
 - LLM은 버디에게 줄 2~3문장 안내(brief)와 관광객에게 쓸 영어 문장(phrases)만 쓴다. 실패하면 템플릿.
 버디 화면은 한국어라 brief와 장소 요약은 한국어, phrases는 관광객에게 말할 영어다.
+v3.8 추천 동선(route): 코스 장소(그날 여는 곳) + 여행자가 고른 '더 가 보고 싶은 곳'(최대 3, 코스에 없는 곳)을
+걷는 거리가 가장 짧은 순서로 놓는다(courses.best_order, 코스 첫 장소는 그대로 처음). 코스도 요청 장소도 없으면 위의 추천 장소로.
+구간 거리는 저장한 OpenStreetMap 실제 도보 경로 → 없으면 직선 × 1.3 추정, 4 km/h. 순서는 코드가 정하고 LLM은 바꾸지 않는다.
 """
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 from sqlalchemy import select
@@ -16,13 +19,14 @@ from sqlalchemy.orm import Session
 
 from app.core import rules
 from app.models import Booking, BookingItem, BuddyProfile, Place, Tour, TourPlace, User
-from app.services import story
+from app.services import courses, story
 
 WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 DOW_KO = {"mon": "월", "tue": "화", "wed": "수", "thu": "목", "fri": "금", "sat": "토", "sun": "일"}
 TAG_FOR_INTEREST = {"literature": "literature", "independence": "independence", "hanok": "hanok",
                     "architecture": "hanok", "history": "royal", "craft": "craft", "walking": "nature",
                     "photo": "photo", "cafe": "literature"}
+EXTRA_MAX = 3  # 더 가 보고 싶은 곳 최대 개수 (버디 요청 화면과 같음)
 GENERIC_PHRASES = [
     "Please take off your shoes here.",
     "Shall we take a photo here?",
@@ -37,6 +41,9 @@ class Material:
     nationality: str
     course: Tour | None
     places: list[Place]
+    route: list[Place] = field(default_factory=list)  # v3.8 추천 동선 (걷는 순서)
+    route_time: courses.CourseTime | None = None  # route 구간·합계
+    course_place_ids: set[int] = field(default_factory=set)  # route 중 코스 장소
 
 
 def _open_on(p: Place, d: date) -> bool:
@@ -56,15 +63,39 @@ def gather(db: Session, item: BookingItem, buddy: BuddyProfile | None) -> Materi
     tourist = traveler.get("name") or (db.get(User, booking.tourist_id).name if booking else "")
 
     course = db.get(Tour, item.course_id) if item.course_id else None
-    places = [p for p in tour_places(db, course.id) if _open_on(p, item.date_from)] if course else []
-    if not places:  # 요청에서 고른 장소(그날 여는 곳)
-        ids = (item.request or {}).get("places") or []
-        places = [p for p in (db.get(Place, i) for i in ids) if p and _open_on(p, item.date_from)]
+    course_places = [p for p in tour_places(db, course.id) if _open_on(p, item.date_from)] if course else []
+    ids = (item.request or {}).get("places") or []
+    requested = [p for p in (db.get(Place, i) for i in ids) if p and _open_on(p, item.date_from)]
+    places = course_places or requested  # 코스 → 요청에서 고른 장소(그날 여는 곳)
     if not places:  # 버디 관심사에 맞고 그날 여는 장소
         tags = {TAG_FOR_INTEREST.get(i, i) for i in (buddy.interests if buddy else []) or []}
         pool = [p for p in db.scalars(select(Place).order_by(Place.id)).all() if _open_on(p, item.date_from) and p.story_doc]
         places = sorted(pool, key=lambda p: -len(tags & set(p.tags or [])))
-    return Material(item, tourist.split(" ")[0], traveler.get("nationality", ""), course, places[:3])
+    m = Material(item, tourist.split(" ")[0], traveler.get("nationality", ""), course, places[:3])
+    in_course = {p.id for p in course_places}
+    extra = [p for p in dict.fromkeys(requested) if p.id not in in_course][:EXTRA_MAX]
+    plan_route(db, m, course_places, extra if (course_places or extra) else m.places)
+    return m
+
+
+def plan_route(db: Session, m: Material, course_places: list[Place], extra: list[Place]) -> None:
+    """v3.8 추천 동선: 코스 장소 + 더 갈 곳 → 걷는 거리가 가장 짧은 순서 (코스가 있으면 코스 첫 장소를 처음에 고정)"""
+    pool = list(dict.fromkeys([*course_places, *extra]))
+    by_id = {p.id: p for p in pool}
+    routes = courses.load_routes(db, by_id)
+    stops = [courses.Stop(p.id, p.lat, p.lng, p.stay_min or 0) for p in pool]
+    ordered = courses.best_order(stops, keep_first=bool(course_places), routes=routes)
+    m.route = [by_id[s.place_id] for s in ordered]
+    m.route_time = courses.summarize(ordered, routes)
+    m.course_place_ids = {p.id for p in course_places}
+
+
+def route_text(m: Material) -> str:
+    """'성북근현대문학관 → 수연산방 → 심우장 (걷는 약 20분)' — 숫자는 계산값만"""
+    if len(m.route) < 2 or not m.route_time:
+        return ""
+    names = " → ".join(p.name for p in m.route)
+    return f"{names} (걷는 약 {m.route_time.walk_min_total}분)"
 
 
 def place_tips(p: Place) -> str:
@@ -121,10 +152,11 @@ def fallback_brief(m: Material) -> str:
     when = f"{m.item.date_from.month}/{m.item.date_from.day}" + (f" {m.item.time}" if m.item.time else "")
     names = "·".join(p.name for p in m.places)
     who = f"{m.tourist} 님" + (f"({m.nationality})" if m.nationality else "")
+    order = route_text(m)
     if m.course:
-        body = f"{who}과 {when}에 '{m.course.title}' 코스를 함께 걸어요. 순서는 {names}이고, 장소 이야기는 AI가 들려줘요."
+        body = f"{who}과 {when}에 '{m.course.title}' 코스를 함께 걸어요. 추천 순서는 {order or names}이고, 장소 이야기는 AI가 들려줘요."
     else:
-        body = f"{who}과 {when}에 만나요. 그날 여는 {names} 쪽으로 걸어 보세요."
+        body = f"{who}과 {when}에 만나요. 그날 여는 {order or names} 쪽으로 걸어 보세요."
     return " ".join(x for x in [request_sentence(m), body] if x)
 
 
@@ -134,6 +166,7 @@ def material_text(m: Material) -> str:
         f"Tourist: {m.tourist} ({m.nationality or 'unknown'}), meeting {d.month}/{d.day} ({d.isoformat()}) {m.item.time or ''}",
         f"Course to walk together: {m.course.title} / {m.course.title_en}" if m.course else "Course: none",
         f"Traveler requests: {request_sentence(m) or 'none'}",
+        f"Suggested walking order (fixed by the app, do not change it): {route_text(m) or 'none'}",
     ]
     for p in m.places:
         en = story.parse(p.story_doc)["en"].intro

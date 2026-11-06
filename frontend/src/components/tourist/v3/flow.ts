@@ -1,7 +1,7 @@
 "use client";
 // v3 관광객 흐름 보조 — 날짜 문구, 숙박 기간, 버디 고르기 단계 사이 상태(sessionStorage), 예약 오류 문구
 import { ApiError } from "@/lib/api";
-import type { BuddyRequestBody, CartItem, DormRequest } from "@/lib/types";
+import type { BuddyRequestBody, CartItem, DormRequest, RouteSource } from "@/lib/types";
 import { BOOKING_ERROR, DEFAULT_BUDDY_DATE, DEFAULT_FROM, DEFAULT_TO, addDays, errMsg, nightsBetween, parseDate } from "../format";
 import { readSS, writeSS } from "../session";
 
@@ -47,6 +47,11 @@ export function walkText(leg: { walk_m: number | null; walk_min: number | null }
   if (!leg) return "";
   if (leg.walk_m === null || leg.walk_min === null) return lang === "en" ? "Walking time unknown (no map point)" : "좌표가 없어 걷는 시간 빠짐";
   return lang === "en" ? `${leg.walk_min} min walk · ${meters(leg.walk_m, lang)}` : `도보 ${leg.walk_min}분 · ${meters(leg.walk_m, lang)}`;
+}
+/** v3.8 걷는 시간 안내 문구: 모든 구간이 실제 도보 경로(route)일 때만 OpenStreetMap 문구, 아니면 추정 문구 */
+export function walkNote(source: RouteSource | undefined, lang: "ko" | "en" = "ko"): string {
+  if (source === "route") return lang === "en" ? "Walking time uses real OpenStreetMap walking routes at 4 km/h." : "걷는 시간은 OpenStreetMap 실제 도보 경로를 시속 4km로 잡은 값이에요.";
+  return lang === "en" ? "Walking time is an estimate: straight-line distance × 1.3 at 4 km/h." : "걷는 시간은 장소 사이 직선거리에 1.3배, 시속 4km로 잡은 어림값이에요.";
 }
 /** 지도에 찍을 수 있는 장소만 (좌표 없는 장소는 빼고) */
 export const hasXY = <T extends { lat: number | null; lng: number | null }>(p: T): p is T & { lat: number; lng: number } => !!p.lat && !!p.lng;

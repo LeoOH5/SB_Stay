@@ -5,6 +5,7 @@ from decimal import Decimal
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
@@ -102,6 +103,17 @@ class TourPlace(Base):
     place_id: Mapped[int] = mapped_column(ForeignKey("places.id"), primary_key=True)
     seq: Mapped[int] = mapped_column(SmallInteger)  # 코스 내 순서 ("order"는 예약어)
     stay_min: Mapped[int | None] = mapped_column(Integer)
+
+
+class WalkRoute(Base):
+    """v3.8 두 장소 사이 실제 도보 경로 (OpenStreetMap OSRM 도보, scripts/fetch_walk_routes.py로 미리 받아 seeds로 넣음).
+    한 쌍에 한 줄: from_place_id < to_place_id, path는 from → to 방향. 반대 방향은 services/courses.py가 path를 뒤집어 쓴다."""
+    __tablename__ = "walk_routes"
+    __table_args__ = (CheckConstraint("from_place_id < to_place_id", name="ck_walk_routes_order"),)
+    from_place_id: Mapped[int] = mapped_column(ForeignKey("places.id"), primary_key=True)
+    to_place_id: Mapped[int] = mapped_column(ForeignKey("places.id"), primary_key=True, index=True)
+    distance_m: Mapped[int] = mapped_column(Integer)  # 실제 도보 거리 (m, 정수)
+    path: Mapped[list] = mapped_column(JSON)  # [[위도, 경도], ...] 소수 6자리 (지도 선)
 
 
 class BuddyProfile(Base):

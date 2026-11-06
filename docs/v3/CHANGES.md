@@ -343,3 +343,56 @@ cd backend
 uv run alembic upgrade head
 uv run python -m app.seeds
 ```
+
+## v3.8 실제 도보 경로(OpenStreetMap) · 장소 순서 최적화
+Alembic `v3h_walk_routes` 하나 (이전 `v3g_monthly_grade`). 백엔드 테스트 223개(+22, `tests/test_walk_routes.py` · `tests/test_fetch_walk_routes.py` 새 파일, `tests/test_remove_places.py` +1).
+
+### 1. 왜
+- v3.5부터 걷는 시간은 직선거리 × 1.3 **추정**이었다. 성북동은 언덕·골목이 많아 실제 길과 차이가 크고, 지도에는 장소 사이 직선이 그려졌다.
+- 이제 두 장소 사이 **OpenStreetMap 실제 도보 경로**(거리 + 길 모양)를 쓴다. 걷는 속도는 그대로 4 km/h — **거리만 실제 값**으로 바뀐다. 지도 선도 실제 길을 따라 그린다.
+- 여러 장소를 이어 걸을 때(AI 일정의 자유 장소, 버디 동선) 순서를 코드가 **가장 덜 걷는 순서**로 정한다.
+
+### 2. 어떻게 (공공 데이터는 미리 받아 DB에 — 팀 규칙)
+- 경로 서버(OSRM 도보, `routing.openstreetmap.de`)는 **앱이 요청 중에 부르지 않는다.** `scripts/fetch_walk_routes.py`를 PC에서 한 번 돌려 `app/seeds/data/walk_routes.json`에 받고, `python -m app.seeds`가 DB `walk_routes` 표에 넣는다.
+- 받는 대상: places.json에서 좌표가 있는 장소끼리 모든 쌍(25곳 → 300쌍, 1초에 1번이라 약 5분). `--only-courses`면 코스에서 이어지는 쌍만(지금 8쌍).
+- 서버 이용 규칙: 1초에 1번 이하, User-Agent `SBStay-hackathon/1.0 (walk routes script)`(이메일 없음). 실패하면 한 번 더, 그래도 안 되면 경고만 내고 건너뛴다. 이미 받은 쌍은 건너뛰어(이어 받기) 끊겨도 같은 명령을 다시 돌리면 된다(10쌍마다 저장, Ctrl+C 때도 저장).
+- 받은 뒤 코스마다 **지금 순서 걷는 거리 vs 가장 짧은 순서**(첫 장소 그대로 / 자유)를 보여 준다. 코스 순서는 바꾸지 않는다 — 큐레이션 순서가 비효율적인지 팀이 보고 정한다.
+- **저장소에는 walk_routes.json을 두지 않는다.** 없으면 0줄 → 모든 구간이 지금처럼 추정이라 테스트·시드 숫자가 늘 같다. 받은 파일을 커밋할지는 팀이 정한다(커밋하면 시드 걷는 시간·코스 시간이 실제 값으로 바뀐다. 돈 숫자는 걷는 시간과 상관없어 그대로).
+- 없는 장소가 낀 줄은 시드가 건너뛴다. `scripts/remove_places.py`는 지운 장소가 낀 쌍을 walk_routes.json에서도 지운다(파일이 없으면 만들지 않음).
+- 경로가 없는 쌍은 예전처럼 직선 × 1.3 (`source: "estimate"`). 코스 전체는 `route_source` = route(모든 구간 실제) · estimate(실제 없음) · mixed(섞임).
+
+### 3. 출처 표시 (ODbL)
+OpenStreetMap 자료는 ODbL이라 출처를 밝혀야 한다. 실제 경로를 그린 지도 위에 **'경로 © OpenStreetMap'**(openstreetmap.org/copyright 링크), 버디 추천 동선에도 같은 문구. 안내 문구는 `route_source`가 route일 때 "걷는 시간은 OpenStreetMap 실제 도보 경로를 시속 4km로 잡은 값이에요.", 아니면 예전 추정 문구.
+
+### 4. 순서 정하기 규칙 (`services/courses.best_order`)
+- 돌아오지 않는 한 줄 길에서 **걷는 거리 합이 가장 짧은 순서**. 거리 = 실제 경로 → 없으면 직선 × 1.3 (정수 m).
+- 좌표 있는 장소가 8곳 이하면 모든 순서를 다 본다(정답). 넘으면 가까운 곳 먼저(시작점마다) + 2-opt.
+- 거리가 같으면 장소 id 순서가 앞서는 쪽 → 같은 입력이면 늘 같은 답. 좌표 없는 장소는 원래 순서대로 맨 뒤.
+- **AI-01 일정**: 하루 자유 장소(지금 2곳)는 이 순서. LLM은 어느 장소인지 **고르기만**, 순서는 코드("AI는 고르기·순서 정하기·설명만" 중 순서는 코드가 맡음). free 항목에 `place_ids`(걷는 순서) · `walk_m` · `walk_min`, meta 끝에 "사이 도보 N분". **무료 코스 장소는 코스 순서 그대로**(무료 이용은 순서 고정).
+- **AI-04 버디 준비 자료**: 추천 동선 = 코스 장소 + '더 가 보고 싶은 곳'(최대 3) → 이 순서, **코스 첫 장소는 그대로 처음**. `route[]`(구간마다 도보 m·분·path) · `route_walk_m` · `route_walk_min` · `route_source`. 버디 요청 카드에 '추천 동선'.
+
+### 5. 바뀐 API (예전 필드 이름·모양 그대로, 새 필드만 추가)
+- TR-01·TR-02 `legs[]` + `source`, `path` · 코스 + `route_source`. AD-07 + `route_source`. AI-01 free 항목 + `place_ids, walk_m, walk_min`. AI-04 + `route, route_walk_m, route_walk_min, route_source`. 자세히는 CONTRACT §17, [TR-02](../api-detail/TR-02.md), [AI-01](../api-detail/AI-01.md), [AI-04](../api-detail/AI-04.md), ERD `walk_routes`.
+- 경로는 한 요청에 한 번만 읽는다(TR-01·AD-07은 모든 코스 장소를 모아 한 번).
+
+### 6. 지금 코스 순서 (추정 거리 기준, 경로를 받으면 다시 볼 것)
+| 코스 | 지금 순서 | 걷는 거리 | 가장 짧은 순서 (첫 장소 그대로) |
+|---|---|---|---|
+| 문인의 성북동 산책 | 111→102→103→104 | 1,626 m | 111→103→102→104 · 1,546 m |
+| 독립운동가의 길 | 103→107 | 902 m | 그대로 |
+| 정릉과 성곽길 | 105→106→107 | 2,106 m | 105→107→106 · 1,744 m |
+| 길상사와 한옥 골목 | 104→106 | 917 m | 그대로 |
+| 왕릉과 산사 | 105→114 | 458 m | 그대로 |
+(스크립트 출력과 같은 계산. 10 m 반올림 전 값이라 위 v3.5 표와 조금 다르다.)
+
+### 적용 후 실행 (Windows PowerShell)
+```
+cd backend
+uv run alembic upgrade head
+uv run python scripts/fetch_walk_routes.py --dry-run
+uv run python scripts/fetch_walk_routes.py
+uv run python -m app.seeds
+```
+- 코스 쌍만 빨리 받으려면 `uv run python scripts/fetch_walk_routes.py --only-courses` (약 10초). 끊기면 같은 명령을 다시.
+- 받기 전에도 앱은 그대로 동작한다(모든 구간 추정).
+- 바뀌지 않은 돈: 지우 1월 정산 **111,750**, AD-06 이익 **62,150**.

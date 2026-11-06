@@ -36,14 +36,17 @@ def _coord(v) -> float | None:
     return float(v) if v else None
 
 
-def to_out(db: Session, t: Tour) -> TourOut:
-    """코스 + 장소(순서대로) + v3.5 걷는 구간·계산한 전체 시간"""
-    rows = courses.stop_rows(db, t.id)
-    ct = courses.from_rows(rows)
+def to_out(db: Session, t: Tour, routes: courses.Routes | None = None,
+           rows: list | None = None) -> TourOut:
+    """코스 + 장소(순서대로) + v3.5 걷는 구간·계산한 전체 시간. v3.8 routes(저장한 실제 경로)를 안 주면 여기서 한 번 읽는다"""
+    rows = courses.stop_rows(db, t.id) if rows is None else rows
+    if routes is None:
+        routes = courses.load_routes(db, [p.id for _, p in rows])
+    ct = courses.from_rows(rows, routes)
     return TourOut(
         id=t.id, title=t.title, title_en=t.title_en, theme=t.theme, guide=None,
         duration_min=ct.duration_min, stay_min_total=ct.stay_min_total, walk_m_total=ct.walk_m_total,
-        walk_min_total=ct.walk_min_total, walk_complete=ct.walk_complete,
+        walk_min_total=ct.walk_min_total, walk_complete=ct.walk_complete, route_source=ct.route_source,
         price=t.price, operating_days=t.operating_days or [],
         languages=t.languages or [], meeting_point=t.meeting_point, description=t.description,
         places=[TourPlaceOut(order=tp.seq, id=p.id, name=p.name, name_en=p.name_en, lat=_coord(p.lat), lng=_coord(p.lng),
@@ -62,14 +65,16 @@ def list_tours(
     q = select(Tour).order_by(Tour.id)
     if theme:
         q = q.where(Tour.theme == theme)
-    items = []
+    tours = []
     for t in db.scalars(q).all():
         if date and t.operating_days and WEEKDAYS[date.weekday()] not in t.operating_days:
             continue
         if language and language not in (t.languages or []):
             continue
-        items.append(to_out(db, t))
-    return ListResponse(items=items)
+        tours.append((t, courses.stop_rows(db, t.id)))
+    # v3.8 모든 코스 장소 사이 경로를 한 번에 읽는다
+    routes = courses.load_routes(db, [p.id for _, rows in tours for _, p in rows])
+    return ListResponse(items=[to_out(db, t, routes, rows) for t, rows in tours])
 
 
 @router.get("/tours/{tour_id}", response_model=TourOut)
