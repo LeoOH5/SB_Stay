@@ -49,6 +49,7 @@ export type Course = Tour;
 export interface Place {
   id: number; name: string; name_en: string; lat: number; lng: number; address?: string; hours?: string;
   closed_days?: string[]; fee: number; need_reservation: boolean; stay_min: number; tags: string[];
+  photo_url?: string | null; photo_credit?: string | null; // TourAPI 대표 사진 (공공누리 제1유형만)
 }
 
 /** 버디 공개 활동 기록 (여행자 이름 없음) — BuddyDetailOut.recent_activities, GET /buddies/{id}/activities */

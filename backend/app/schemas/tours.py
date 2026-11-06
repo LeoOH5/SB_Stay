@@ -50,6 +50,8 @@ class PlaceOut(BaseModel):
     need_reservation: bool = False
     stay_min: int = 20
     tags: list[str] = []
+    photo_url: str | None = None
+    photo_credit: str | None = None
 
     model_config = {"from_attributes": True}
 

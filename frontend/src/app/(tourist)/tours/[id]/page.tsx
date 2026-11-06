@@ -119,6 +119,13 @@ export default function CourseDetailPage() {
                     </button>
                     {open && (
                       <div className="mt-3">
+                        {info?.photo_url && (
+                          <figure className="mb-3 overflow-hidden rounded-[12px] bg-gray-bg">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={info.photo_url} alt={info.name} className="h-40 w-full object-cover" loading="lazy" />
+                            {info.photo_credit && <figcaption className="px-2 py-1 text-[11px] text-muted">사진: {info.photo_credit}</figcaption>}
+                          </figure>
+                        )}
                         <div className="border-l-[3px] border-navy py-1 pl-4">
                           <div className="text-[13px] font-bold text-navy">AI가 자료에서 찾은 이야기</div>
                           {!story && <p className="mt-1.5 text-[14px] text-muted">이야기를 찾는 중…</p>}

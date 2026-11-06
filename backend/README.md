@@ -48,3 +48,12 @@ uv run python -m app.seeds                           # 고친 JSON을 DB에 다�
    ```
 4. 로그인: 프론트가 받은 authorization code 또는 id_token을 `POST /api/v1/auth/google`로 보낸다. 첫 로그인이면 `needs_role_setup=true` → `PATCH /api/v1/auth/me/role`.
 5. 캘린더: 버디가 연동 버튼을 누르면 `scope=https://www.googleapis.com/auth/calendar.events&access_type=offline&prompt=consent`로 받은 code를 `POST /api/v1/auth/google/calendar`에 보낸다. 이후 동행이 확정되면 이벤트가 자동 생성되고, 취소되면 삭제된다. 실패해도 승인은 유지되고 로그만 남는다.
+
+## 관광지 좌표·사진 채우기 (공공데이터)
+`.env`에 `TOUR_API_KEY`(공공데이터포털 TourAPI 서비스키), `KAKAO_REST_KEY`를 넣고:
+```
+uv run python scripts/fetch_tourapi.py fetch      # tourapi_review.xlsx 생성 (apply 칸 확인)
+uv run python scripts/fetch_tourapi.py apply      # places.json 반영, 좌표가 생긴 places_pending 장소는 places.json으로
+uv run python -m app.seeds
+```
+사진은 공공누리 제1유형(출처표시)만 쓴다.

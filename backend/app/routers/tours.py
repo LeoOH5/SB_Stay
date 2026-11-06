@@ -83,7 +83,7 @@ def _place_out(p: Place) -> PlaceOut:
     return PlaceOut(
         id=p.id, name=p.name, name_en=p.name_en, lat=float(p.lat), lng=float(p.lng), address=p.address,
         hours=p.hours, closed_days=p.closed_days or [], fee=p.fee, need_reservation=p.need_reservation,
-        stay_min=p.stay_min, tags=p.tags or [],
+        stay_min=p.stay_min, tags=p.tags or [], photo_url=p.photo_url, photo_credit=p.photo_credit,
     )
 
 

@@ -91,6 +91,8 @@ class Place(Base):
     tags: Mapped[list | None] = mapped_column(JSON)
     story_doc: Mapped[str | None] = mapped_column(Text)  # RAG 원문
     sources: Mapped[list | None] = mapped_column(JSON)  # RAG 출처
+    photo_url: Mapped[str | None] = mapped_column(String(500))  # 대표 사진 (TourAPI firstimage)
+    photo_credit: Mapped[str | None] = mapped_column(String(200))  # 사진 출처·공공누리 유형
 
 
 class TourPlace(Base):
