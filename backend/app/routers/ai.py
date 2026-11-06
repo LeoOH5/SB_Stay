@@ -5,14 +5,29 @@ LLM은 services/llm.py로만 부른다. 키가 없거나 실패하면 규칙 기
 import secrets
 
 from fastapi import APIRouter, Depends, Header
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import get_current_user, require_role
 from app.core.errors import api_error
-from app.models import AiPlan, Place, User
-from app.schemas.ai import MatchIn, MatchItem, MatchOut, PlanIn, PlanOut, Source, StoryIn, StoryOut
-from app.services import llm, matcher, planner, story
+from app.models import AiPlan, BookingItem, BuddyProfile, Guide, Place, Tour, User
+from app.schemas.ai import (
+    BriefIn,
+    BriefOut,
+    BriefPlace,
+    MatchIn,
+    MatchItem,
+    MatchOut,
+    NoticeIn,
+    NoticeOut,
+    PlanIn,
+    PlanOut,
+    Source,
+    StoryIn,
+    StoryOut,
+)
+from app.services import brief, llm, matcher, notice, planner, story
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -107,3 +122,48 @@ async def buddy_match(
         reason=overall, ai=used_ai,
         matches=[MatchItem(buddy_id=c.profile.id, score=c.score, reason=r) for c, r in picked],
     )
+
+
+@router.post("/buddy-brief", response_model=BriefOut)
+async def buddy_brief(body: BriefIn, user: User = Depends(require_role("buddy", "guide")),
+                      db: Session = Depends(get_db)) -> BriefOut:
+    """AI-04 동행 준비 자료. 버디는 본인에게 온 버디 항목, 해설사는 본인 투어 항목만."""
+    item = db.get(BookingItem, body.booking_item_id)
+    if not item:
+        raise api_error(404, "NOT_FOUND", "예약 항목을 찾을 수 없습니다")
+    profile = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
+    guide = db.scalar(select(Guide).where(Guide.user_id == user.id))
+    tour = db.get(Tour, item.ref_id) if item.type == "tour" else None
+    mine = (item.type == "buddy" and profile is not None and item.ref_id == profile.id) or (
+        tour is not None and guide is not None and tour.guide_id == guide.id)
+    if not mine:
+        raise api_error(403, "FORBIDDEN", "본인에게 배정된 항목이 아닙니다")
+
+    m = brief.gather(db, item, profile)
+    try:
+        system, prompt = brief.llm_prompt(m)
+        text, phrases = brief.validate_llm(await llm.complete_json(system, prompt), m)
+        used_ai = True
+    except (llm.LLMUnavailable, ValueError):
+        text, phrases, used_ai = brief.fallback_brief(m), brief.fallback_phrases(m), False
+    return BriefOut(
+        booking_item_id=item.id, brief=text, phrases=phrases, ai=used_ai,
+        places=[BriefPlace(name=p.name, name_en=p.name_en, summary=brief.summary(p), tips=brief.place_tips(p))
+                for p in m.places],
+    )
+
+
+@router.post("/translate-notice", response_model=NoticeOut)
+async def translate_notice(body: NoticeIn, _: User = Depends(require_role("operator"))) -> NoticeOut:
+    """AI-05 다국어 안내문 초안. 초안만 만들고 저장·게시는 운영자가 따로. 키가 없으면 원문 그대로 + ai=false."""
+    targets = list(dict.fromkeys(body.target_languages))
+    try:
+        system, prompt = notice.llm_prompt(body.text, targets)
+        raw = await llm.complete_json(system, prompt)
+        drafts = {t: str(raw[t]).strip() for t in targets if isinstance(raw.get(t), str) and raw[t].strip()}
+        if len(drafts) != len(targets):
+            raise ValueError("언어 누락")
+        return NoticeOut(drafts=drafts, warnings=notice.check(body.text, drafts), ai=True)
+    except (llm.LLMUnavailable, ValueError):
+        return NoticeOut(drafts={t: body.text for t in targets},
+                         warnings=["AI 키가 없어 번역하지 못했어요. 원문을 그대로 넣었어요."])

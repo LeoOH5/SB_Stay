@@ -2,7 +2,7 @@ import datetime as dt
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import AliasChoices, BaseModel, Field, StringConstraints
 
 
 class PlanIn(BaseModel):
@@ -74,3 +74,36 @@ class MatchOut(BaseModel):
     reason: str
     matches: list[MatchItem]  # 최대 3명, 후보가 적으면 있는 만큼
     ai: bool = False
+
+
+# ---------- AI-04 동행 준비 자료 ----------
+class BriefIn(BaseModel):
+    # 명세는 booking_item_id, 프론트 버디 화면은 item_id로 보낸다 → 둘 다 받는다
+    booking_item_id: int = Field(validation_alias=AliasChoices("booking_item_id", "item_id"))
+
+
+class BriefPlace(BaseModel):
+    name: str
+    name_en: str
+    summary: str
+    tips: str
+
+
+class BriefOut(BaseModel):
+    booking_item_id: int
+    places: list[BriefPlace]
+    phrases: list[str]  # 관광객에게 쓸 영어 문장
+    brief: str  # 버디 요청 카드에 보이는 2~3문장 안내 (프론트 BuddyBrief.brief)
+    ai: bool = False
+
+
+# ---------- AI-05 다국어 안내문 초안 ----------
+class NoticeIn(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+    target_languages: list[Literal["en", "ja", "zh", "ko"]] = Field(min_length=1, max_length=4)
+
+
+class NoticeOut(BaseModel):
+    drafts: dict[str, str]
+    warnings: list[str] = []  # 원문 숫자(시간·금액)가 빠진 초안
+    ai: bool = False  # false면 번역하지 못하고 원문을 그대로 넣은 것
