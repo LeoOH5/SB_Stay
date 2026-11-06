@@ -13,6 +13,10 @@ export const DEFAULT_TOUR_DATE = DEFAULT_BUDDY_DATE;
 export const DEMO_TODAY = "2027-01-14";
 
 export const SS_PLAN = "sbstay.plan";
+/** AI-01 일정을 만들 때 고른 값 (T12에서 다른 버디를 찾을 때 AI-03에 그대로 넘긴다) */
+export const SS_PLAN_INPUT = "sbstay.planInput";
+/** T12에서 직접 고른 버디 — plan_id 가 같은 일정에만 적용 */
+export const SS_PLAN_BUDDY = "sbstay.planBuddy";
 export const SS_TRAVELER = "sbstay.traveler";
 
 export function parseDate(s: string): Date {
