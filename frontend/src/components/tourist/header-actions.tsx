@@ -1,14 +1,16 @@
 "use client";
-// 탭 화면 제목 줄 오른쪽 — 언어 선택 + 알림 + 내 정보 (BK-10 GET /notifications, AU-04 PATCH /auth/me)
+// 탭 화면 제목 줄 오른쪽 — 언어 선택 + 장바구니(담은 게 있을 때) + 알림 + 내 정보 (BK-10 GET /notifications, AU-04 PATCH /auth/me)
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { get, patch } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
 import { useLang } from "@/lib/i18n";
 import type { Lang, ListResponse, Notification, User } from "@/lib/types";
 import { BottomSheet } from "@/components/tourist";
 import { Icon } from "@/components/ui";
-import { dateTime } from "@/components/tourist/format";
+import { dateTime, loginHref } from "@/components/tourist/format";
 
 const READ_KEY = "sbstay.readNotis";
 
@@ -20,7 +22,20 @@ function markRead(ids: number[]) {
   try { localStorage.setItem(READ_KEY, JSON.stringify([...new Set([...readIds(), ...ids])])); } catch { /* 저장 못 해도 화면만 영향 */ }
 }
 
+/** v3.9 장바구니 바로가기 — 담은 게 1개 이상일 때만 보인다 (서버 렌더·첫 그림에서는 빈 장바구니로 보고 숨김) */
+export function CartButton({ className }: { className?: string }) {
+  const { items } = useCart();
+  if (items.length === 0) return null;
+  return (
+    <Link href="/cart" aria-label={`장바구니 ${items.length}개`} className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink hover:bg-gray-bg ${className ?? ""}`}>
+      <Icon name="bag" className="h-[21px] w-[21px]" />
+      <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold leading-none text-white">{items.length}</span>
+    </Link>
+  );
+}
+
 export function HeaderActions() {
+  const path = usePathname();
   const { user } = useUser();
   const { lang, set: setLang } = useLang();
   const [notis, setNotis] = useState<Notification[] | null>(null);
@@ -52,7 +67,7 @@ export function HeaderActions() {
     setTimeout(() => setNotis((ns) => ns?.map((n) => (n.read_at ? n : { ...n, read_at: "local" })) ?? ns), 1200);
   };
 
-  const meHref = user?.role === "buddy" ? "/buddy/me" : user && user.role !== "tourist" ? "/admin" : user ? "/me" : "/login";
+  const meHref = user?.role === "buddy" ? "/buddy/me" : user && user.role !== "tourist" ? "/admin" : user ? "/me" : loginHref(path);
   return (
     <>
       <div className="-mr-1 flex shrink-0 items-center gap-1.5 text-ink">
@@ -70,6 +85,7 @@ export function HeaderActions() {
             </div>
           )}
         </div>
+        <CartButton />
         {user && (
           <button type="button" onClick={openNotis} className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-gray-bg" aria-label={`알림${unread ? ` ${unread}개` : ""}`}>
             <Icon name="bell" className="h-[21px] w-[21px]" />

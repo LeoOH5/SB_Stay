@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Banner, Button, LinkButton, ListRow, Spinner, TagChip, TopBar } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { submitBooking } from "@/components/tourist/booking";
-import { nightsBetween, okv, SS_TRAVELER } from "@/components/tourist/format";
+import { loginHref, nightsBetween, okv, SS_TRAVELER } from "@/components/tourist/format";
 import { useSS } from "@/components/tourist/session";
 import { BottomBar, Headline, TotalLine, useHydrated } from "@/components/tourist/v3";
 import { EMPTY_REQUEST, bookingErr, buddiesIn, iga, inStay, isBuddyRequest, isDormRequest, koDay, koDuration, koRange, saveDraft, stayIn, univShort } from "@/components/tourist/v3/flow";
@@ -71,7 +71,7 @@ export default function CartPage() {
 
   const submit = async () => {
     if (cart.items.length === 0 || blocked) return;
-    if (!user) { router.push("/login"); return; }
+    if (!user) { router.push(loginHref("/cart")); return; }
     if (!traveler) { router.push("/checkout"); return; }
     setBusy(true); setErr(null);
     try {
@@ -195,7 +195,7 @@ export default function CartPage() {
           <Button className="mt-3" onClick={() => void submit()} disabled={busy || blocked}>
             {missing ? "버디를 고르면 신청할 수 있어요" : outside.length ? "버디 날짜를 숙박 기간 안으로 바꿔 주세요" : dorms.length > 1 ? "숙박을 하나만 남겨 주세요" : busy ? "신청 중…" : "예약 신청하기"}
           </Button>
-          {!user && !blocked && <p className="mt-2 text-center text-[13px] text-muted">예약 신청에는 로그인이 필요해요. <Link href="/login" className="font-semibold text-navy">로그인</Link></p>}
+          {!user && !blocked && <p className="mt-2 text-center text-[13px] text-muted">예약 신청에는 로그인이 필요해요. <Link href={loginHref("/cart")} className="font-semibold text-navy">로그인</Link></p>}
         </BottomBar>
       )}
     </>

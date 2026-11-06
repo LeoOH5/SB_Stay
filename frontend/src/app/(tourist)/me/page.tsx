@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { BottomSheet, ErrorBox, LoginRequired } from "@/components/tourist";
+import { CartButton } from "@/components/tourist/header-actions";
 import { dateTime, errMsg, okv, ROLE_LABEL } from "@/components/tourist/format";
 import { Avatar } from "@/components/tourist/trips/util";
-import { Button, Hero, Icon, Spinner, cn, inputCls } from "@/components/ui";
+import { Button, Hero, Icon, ListRow, Spinner, cn, inputCls } from "@/components/ui";
 import { del, get, patch, post } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
 import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
@@ -21,6 +22,11 @@ const DOCS: { key: string; label: string }[] = [
 ];
 const PRIVACY_FALLBACK: ContentDoc = { key: "privacy", language: "ko", title: "개인정보 처리방침", body: "여권번호는 숙박 항목이 있을 때 예약 시점에만 입력받고, 승인 후 대학 담당자에게만 전달해요. 버디에게는 이름과 국적만 보여요. 채팅은 앱 안에서만 이뤄져요." };
 const CURRENCY_KEY = "sbstay.currency";
+
+/** v3.9 여행자 앱 → 버디 앱 입구 */
+function BuddyEntry({ className }: { className?: string }) {
+  return <ListRow href="/buddy/login" icon="users" title="버디로 활동하기" meta="성북구 대학생이라면 버디로 지원할 수 있어요" className={className} />;
+}
 
 /** 두 칸 고르기 (선택 = 쪽빛 채움) */
 function Segmented<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
@@ -108,13 +114,13 @@ export default function MePage() {
   const logout = () => { session.clear(); router.push("/login"); };
 
   if (!user) {
-    return (<><Hero title="마이페이지" /><div className="px-5 pb-6 pt-2"><LoginRequired what="마이페이지" /></div></>);
+    return (<><Hero title="마이페이지" right={<CartButton className="-mr-1" />} /><div className="px-5 pb-6 pt-2"><LoginRequired what="마이페이지" /><BuddyEntry className="mt-4" /></div></>);
   }
 
   const unread = (notis ?? []).filter((n) => !n.read_at);
   return (
     <>
-      <Hero title="마이페이지" />
+      <Hero title="마이페이지" right={<CartButton className="-mr-1" />} />
       <div className="px-5 pb-8">
         <div className="flex items-center gap-4 pt-1">
           <Avatar name={user.name} size="lg" />
@@ -155,6 +161,9 @@ export default function MePage() {
             </button>
           ))}
         </div>
+
+        <h2 className="mb-1 mt-9 text-[18px] font-bold text-ink">버디</h2>
+        <BuddyEntry />
         <button type="button" onClick={logout} className="mt-2 py-3 text-[15px] text-muted">로그아웃</button>
       </div>
 

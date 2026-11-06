@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Banner, Button, Chip, GradeBadge, Hero, Icon, Spinner, TagChip } from "@/components/ui";
 import { BottomSheet, ErrorBox } from "@/components/tourist";
+import { CartButton } from "@/components/tourist/header-actions";
 import { addDays, errMsg, INTEREST_LABEL, okv } from "@/components/tourist/format";
 import { Avatar, Headline } from "@/components/tourist/v3";
 import { SS_BUDDY_DRAFT, datesBetween, defaultBuddyDate, foreignLangs, koDay, koRange, lastRequest, stayIn, univShort, type BuddyDraft } from "@/components/tourist/v3/flow";
@@ -117,7 +118,7 @@ function Buddies() {
 
   return (
     <>
-      <Hero title="버디" className="pb-2" />
+      <Hero title="버디" className="pb-2" right={<CartButton className="-mr-1" />} />
       <Headline className="pt-3" title={"동네를 같이 걸을\n대학생 친구"} sub="숙소와 같은 학교 학생이에요. 역사 이야기는 앱의 AI가, 버디는 캠퍼스와 골목, 밥집을 맡아요." />
 
       <div className="px-5 pb-8 pt-5">

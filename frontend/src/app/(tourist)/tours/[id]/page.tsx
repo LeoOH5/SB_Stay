@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Spinner, TopBar, cn } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { AdInterstitial, FixedCourseNote, HelpSheet, QuestionLimit, QuestionsLeft, SurveySheet, useMyPlan } from "@/components/tourist/free-tier";
-import { DAY_LABEL, errMsg, okv } from "@/components/tourist/format";
+import { DAY_LABEL, errMsg, herePath, loginHref, okv } from "@/components/tourist/format";
 import { ArrowUp, BottomBar, InfoRow, SectionHead } from "@/components/tourist/v3";
 import { aboutDuration, hasXY, koDuration, walkNote, walkText } from "@/components/tourist/v3/flow";
 import { ApiError, get, post, won } from "@/lib/api";
@@ -204,7 +204,7 @@ export default function CourseDetailPage() {
           <p className="pb-6 text-[14px] leading-relaxed text-muted">AI는 장소마다 확인한 자료 안에서만 답해요. 자료에 없으면 없다고 말해요.</p>
           {my.free && (
             <div className="grid grid-cols-2 gap-3 pb-8">
-              <Button variant="secondary" onClick={() => (user ? setSurveyOpen(true) : router.push("/login"))}>코스 다 걸었어요</Button>
+              <Button variant="secondary" onClick={() => (user ? setSurveyOpen(true) : router.push(loginHref(herePath())))}>코스 다 걸었어요</Button>
               <Button variant="ghost" onClick={() => setHelpOpen(true)}>도움이 필요해요</Button>
             </div>
           )}

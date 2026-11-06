@@ -1,10 +1,10 @@
 "use client";
-// T03 첫 로그인 역할 선택 — AU-06 PATCH /users/me/role (관광객 · 버디만)
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Brand, Button, cn } from "@/components/ui";
+// T03 첫 로그인 역할 선택 — AU-06 PATCH /users/me/role (관광객 · 버디만). v3.9 ?next= 가 고른 역할 영역이면 그 화면으로
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { Brand, Button, Spinner, cn } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
-import { errMsg, homeFor } from "@/components/tourist/format";
+import { afterLogin, errMsg } from "@/components/tourist/format";
 import { BottomBar } from "@/components/tourist/v3";
 import { patch } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
@@ -15,8 +15,9 @@ const ROLES: { role: Role; title: string; desc: string }[] = [
   { role: "buddy", title: "버디", desc: "성북구 대학생이에요. 여행자와 캠퍼스·동네를 함께 걸어요" },
 ];
 
-export default function RolePage() {
+function RolePage() {
   const router = useRouter();
+  const next = useSearchParams().get("next");
   const { user } = useUser();
   const [sel, setSel] = useState<Role>("tourist");
   const [busy, setBusy] = useState(false);
@@ -27,7 +28,7 @@ export default function RolePage() {
     try {
       const u = await patch<User | null>("/users/me/role", { role: sel });
       session.update({ role: u?.role ?? sel });
-      router.push(homeFor(u?.role ?? sel));
+      router.push(afterLogin(u?.role ?? sel, next));
     } catch (e) { setErr(errMsg(e)); setBusy(false); }
   };
 
@@ -56,4 +57,8 @@ export default function RolePage() {
       <BottomBar><Button onClick={submit} disabled={busy}>{busy ? "저장 중…" : "시작하기"}</Button></BottomBar>
     </div>
   );
+}
+
+export default function Page() {
+  return <Suspense fallback={<Spinner />}><RolePage /></Suspense>;
 }
