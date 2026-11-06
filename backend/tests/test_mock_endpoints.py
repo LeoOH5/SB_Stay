@@ -6,7 +6,7 @@ def test_pay_checkin_chat_notifications(client, tourist, univ_admin, reset_db):
     assert r.status_code == 403  # 남의 예약
     yuki = login(client, "yuki@example.com")
     r = client.post("/api/v1/bookings/502/pay", headers=yuki)
-    assert r.status_code == 200 and r.json()["status"] == "paid" and r.json()["payment"]["amount"] == 80000
+    assert r.status_code == 200 and r.json()["status"] == "paid" and r.json()["payment"]["amount"] == 80000 + 30000
     g = client.get("/api/v1/bookings/501/checkin-guide", headers=tourist).json()
     assert g["building"] == "고려대학교 프런티어관" and g["checkin"] == "15:00" and g["wifi"] == "KU-GUEST" and len(g["emergency"]) == 3
     c = client.get("/api/v1/bookings/501/chat", headers=tourist).json()
@@ -21,9 +21,10 @@ def test_pay_checkin_chat_notifications(client, tourist, univ_admin, reset_db):
 
 
 def test_review_once(client, tourist, reset_db):
-    r = client.post("/api/v1/bookings/480/reviews", json={"item_id": 12, "rating": 5, "text": "좋았어요"}, headers=tourist)
-    assert r.status_code == 201
-    assert client.post("/api/v1/bookings/480/reviews", json={"item_id": 12, "rating": 4}, headers=tourist).status_code == 409
+    r = client.post("/api/v1/bookings/480/reviews", json={"item_id": 11, "rating": 5, "text": "좋았어요"}, headers=tourist)
+    assert r.status_code == 201 and r.json()["sub_scores"] is None and r.json()["tags"] == []
+    assert client.post("/api/v1/bookings/480/reviews", json={"item_id": 11, "rating": 4}, headers=tourist).status_code == 409
+    assert client.post("/api/v1/bookings/480/reviews", json={"item_id": 13, "rating": 4}, headers=tourist).status_code == 409  # 시드 후기
     assert client.post("/api/v1/bookings/480/reviews", json={"item_id": 11, "rating": 9}, headers=tourist).status_code == 422
     assert client.post("/api/v1/bookings/480/reviews", json={"item_id": 1, "rating": 5}, headers=tourist).status_code == 404  # 다른 예약 항목
 

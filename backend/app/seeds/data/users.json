@@ -22,15 +22,8 @@
   "name": "지우",
   "role": "buddy",
   "university_id": 1,
-  "language": "ko"
- },
- {
-  "id": 4,
-  "email": "guide.park@example.com",
-  "password": "demo1234",
-  "name": "박해설",
-  "role": "guide",
-  "language": "ko"
+  "language": "ko",
+  "birth_date": "2004-03-15"
  },
  {
   "id": 5,
@@ -50,29 +43,14 @@
   "language": "ko"
  },
  {
-  "id": 7,
-  "email": "guide.kim@example.com",
-  "password": "demo1234",
-  "name": "김해설",
-  "role": "guide",
-  "language": "ko"
- },
- {
-  "id": 8,
-  "email": "guide.lee@example.com",
-  "password": "demo1234",
-  "name": "이해설",
-  "role": "guide",
-  "language": "ko"
- },
- {
   "id": 9,
   "email": "minho@b-univ.ac.kr",
   "password": "demo1234",
   "name": "민호",
   "role": "buddy",
   "university_id": 2,
-  "language": "ko"
+  "language": "ko",
+  "birth_date": "2005-06-02"
  },
  {
   "id": 10,
@@ -81,7 +59,8 @@
   "name": "하린",
   "role": "buddy",
   "university_id": 1,
-  "language": "ko"
+  "language": "ko",
+  "birth_date": "2003-09-21"
  },
  {
   "id": 11,
@@ -90,7 +69,8 @@
   "name": "도윤",
   "role": "buddy",
   "university_id": 1,
-  "language": "ko"
+  "language": "ko",
+  "birth_date": "2005-01-30"
  },
  {
   "id": 12,
@@ -99,7 +79,8 @@
   "name": "서연",
   "role": "buddy",
   "university_id": 2,
-  "language": "ko"
+  "language": "ko",
+  "birth_date": "2004-11-08"
  },
  {
   "id": 13,
@@ -108,6 +89,106 @@
   "name": "준서",
   "role": "buddy",
   "university_id": 1,
-  "language": "ko"
+  "language": "ko",
+  "birth_date": "2003-04-17"
+ },
+ {
+  "id": 14,
+  "email": "lena@example.com",
+  "password": "demo1234",
+  "name": "Lena Weber",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 15,
+  "email": "mia@example.com",
+  "password": "demo1234",
+  "name": "Mia Chen",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 16,
+  "email": "lucas@example.com",
+  "password": "demo1234",
+  "name": "Lucas Martin",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 17,
+  "email": "sua@a-univ.ac.kr",
+  "password": "demo1234",
+  "name": "수아",
+  "role": "buddy",
+  "university_id": 1,
+  "language": "ko",
+  "birth_date": "2005-04-20"
+ },
+ {
+  "id": 18,
+  "email": "gaeun@example.com",
+  "password": "demo1234",
+  "name": "가은",
+  "role": "buddy",
+  "language": "ko",
+  "birth_date": "2004-07-09"
+ },
+ {
+  "id": 21,
+  "email": "sofia@example.com",
+  "password": "demo1234",
+  "name": "Sofia Rossi",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 22,
+  "email": "daniel@example.com",
+  "password": "demo1234",
+  "name": "Daniel Park",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 23,
+  "email": "aiko@example.com",
+  "password": "demo1234",
+  "name": "Aiko Tanaka",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 24,
+  "email": "chloe@example.com",
+  "password": "demo1234",
+  "name": "Chloé Dubois",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 25,
+  "email": "liam@example.com",
+  "password": "demo1234",
+  "name": "Liam Walsh",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 26,
+  "email": "ana@example.com",
+  "password": "demo1234",
+  "name": "Ana Silva",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 27,
+  "email": "noah@example.com",
+  "password": "demo1234",
+  "name": "Noah Becker",
+  "role": "tourist",
+  "language": "en"
  }
 ]

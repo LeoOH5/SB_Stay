@@ -1,94 +1,177 @@
 "use client";
-// T4c 버디 목록 (AI 매칭) — BD-01 GET /buddies, AI-03 POST /ai/buddy-match
+// T09 버디 고르기 — BD-01 GET /buddies (언어·날짜·성향 거르기), AI-03 POST /ai/buddy-match (요청 needs · 같은 대학)
+// ?stay=객실&from=&to= (숙박 상세에서) · ?course=코스 (코스 상세에서). 장바구니 숙박이 있으면 그 기간·대학을 쓴다.
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { AiBlock, Card, Chip, Hero, inputCls, Spinner } from "@/components/ui";
-import { ErrorBox } from "@/components/tourist";
-import { DEFAULT_TOUR_DATE, errMsg, INTEREST_LABEL, interestsLabel, langsShort, md } from "@/components/tourist/format";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { Banner, Button, Chip, GradeBadge, Hero, Icon, Spinner, TagChip } from "@/components/ui";
+import { BottomSheet, ErrorBox } from "@/components/tourist";
+import { addDays, errMsg, INTEREST_LABEL, okv } from "@/components/tourist/format";
+import { Avatar, Headline } from "@/components/tourist/v3";
+import { SS_BUDDY_DRAFT, datesBetween, defaultBuddyDate, foreignLangs, koDay, koRange, lastRequest, stayIn, univShort, type BuddyDraft } from "@/components/tourist/v3/flow";
+import { useSS } from "@/components/tourist/session";
 import { get, post } from "@/lib/api";
-import { useLang } from "@/lib/i18n";
-import type { Buddy, BuddyMatch, ListResponse } from "@/lib/types";
+import { useCart } from "@/lib/cart";
+import { CAN_HELP, DIET_TO_HELP, PERSONALITY, label, requestChips } from "@/lib/codes";
+import type { Buddy, BuddyMatch, CanHelp, DormRoom, ListResponse, Personality, WalkStyle } from "@/lib/types";
 
-const INTEREST_CHIPS: string[] = ["literature", "independence", "food", "hanok", "craft", "walking"];
+const LANGS: { key: string; label: string }[] = [{ key: "en", label: "English" }, { key: "ja", label: "日本語" }, { key: "zh", label: "中文" }];
+/** 성향 칩 — BD-01 personality · style · can_help 쿼리 */
+type Trait = { key: string; label: string; personality?: Personality; style?: WalkStyle; can_help?: CanHelp };
+const TRAITS: Trait[] = [
+  { key: "calm", label: "차분해요", personality: "calm" },
+  { key: "lively", label: "활발해요", personality: "lively" },
+  { key: "photo", label: "사진 잘 찍어요", can_help: "photo" },
+  { key: "slow_walk", label: "천천히 걸어요", style: "slow_walk" },
+  { key: "cafe_break", label: "카페에서 쉬어 가요", style: "cafe_break" },
+];
+const OPEN_FROM = "2027-01-05", OPEN_TO = "2027-02-20";
 
-function BuddyCard({ b, reason }: { b: Buddy; reason?: string }) {
+function BuddyRow({ b, reason, href, needs }: { b: Buddy; reason?: string; href: string; needs: CanHelp[] }) {
+  const help = b.can_help.find((h) => needs.includes(h)) ?? b.can_help[0];
+  const tags = [b.personality[0] && label(PERSONALITY, b.personality[0]), b.interests[0] && (INTEREST_LABEL[b.interests[0]] ?? b.interests[0]), help && label(CAN_HELP, help)].concat(b.can_drive ? ["운전 가능"] : []).filter(Boolean) as string[];
   return (
-    <Link href={`/buddies/${b.id}`} className="block">
-      <Card className="flex items-center gap-3 p-3">
-        <div className="h-11 w-11 shrink-0 rounded-full bg-navy-bg flex items-center justify-center text-[16px] font-semibold text-navy">{b.name[0]}</div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[14px] font-semibold text-ink break-keep">{b.name} · {b.university.replace("학교", "")} {b.major} {b.year}학년</div>
-          <div className="text-[12px] text-muted break-keep">{langsShort(b.languages)} · {interestsLabel(b.interests)} · ★ {b.rating} ({b.review_count})</div>
-          {reason && <div className="text-[12px] text-green-dark mt-0.5">AI · {reason}</div>}
+    <Link href={href} className="flex gap-4 py-5">
+      <Avatar name={b.name} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1 text-[15px] text-muted"><span className="text-[17px] font-bold text-ink">{b.name}</span> {univShort(b.university)} {b.major} {b.year}학년<GradeBadge grade={b.grade} className="ml-1.5 align-[2px]" /></div>
+          <Icon name="chevron-right" className="h-5 w-5 text-ink" />
         </div>
-        <span className="text-muted">›</span>
-      </Card>
+        <div className="mt-1 flex items-center gap-1.5 text-[14.5px] text-muted">
+          <span>{foreignLangs(b.languages) || "한국어"} ·</span>
+          {b.review_count > 0 ? <><Icon name="star" className="h-[17px] w-[17px] fill-orange text-orange" /><span>{b.rating.toFixed(1)}</span></> : <span>새 버디</span>}
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">{tags.map((t) => <TagChip key={t}>{t}</TagChip>)}</div>
+        {reason && <p className="mt-2.5 border-l-2 border-navy pl-3 text-[15px] leading-relaxed text-navy">{reason}</p>}
+      </div>
     </Link>
   );
 }
 
-export default function BuddiesPage() {
-  const { lang } = useLang();
-  const [language, setLanguage] = useState<string>("en");
-  const [date, setDate] = useState(DEFAULT_TOUR_DATE);
-  const [useDate, setUseDate] = useState(true);
-  const [interest, setInterest] = useState<string>("literature");
+function Buddies() {
+  const params = useSearchParams();
+  const cart = useCart();
+  const cartStay = stayIn(cart.items);
+  const stayId = Number(params.get("stay") ?? cartStay?.ref_id ?? 0) || null;
+  const from = params.get("from") ?? cartStay?.date_from ?? undefined;
+  const to = params.get("to") ?? cartStay?.date_to ?? undefined;
+  const course = params.get("course");
+  const draft = useSS<BuddyDraft | null>(SS_BUDDY_DRAFT, null);
+  const req = lastRequest(cart.items, draft);
+  const needs = [...new Set((req?.diet ?? []).map((d) => DIET_TO_HELP[d]).filter((v): v is CanHelp => !!v))];
+
+  const [univId, setUnivId] = useState<number | null>(null);
+  const [language, setLanguage] = useState("en");
+  const [date, setDate] = useState<string | null>(() => defaultBuddyDate(from, to));
+  const [traits, setTraits] = useState<string[]>([]);
+  const [dateSheet, setDateSheet] = useState(false);
   const [buddies, setBuddies] = useState<Buddy[] | null>(null);
-  const [all, setAll] = useState<Buddy[]>([]);
   const [match, setMatch] = useState<BuddyMatch | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  // 숙박 대학 (같은 학교 버디 먼저)
   useEffect(() => {
+    if (!stayId) return;
     let alive = true;
-    get<ListResponse<Buddy>>("/buddies").then((r) => { if (alive) setAll(r.items); }).catch(() => { /* 추천 카드 보조용 */ });
+    okv(get<DormRoom>(`/dorms/${stayId}`)).then((d) => { if (alive) setUnivId(d.university.id); }).catch(() => { /* 대학 우선은 보조 */ });
     return () => { alive = false; };
-  }, []);
+  }, [stayId]);
 
-  /** 필터 변경 시 목록·추천·오류를 비우고(로딩 표시) 조건을 바꾼다 */
-  const pick = (fn: () => void) => { setErr(null); setBuddies(null); setMatch(null); fn(); };
+  const sel = TRAITS.filter((t) => traits.includes(t.key));
+  const personality = sel.flatMap((t) => (t.personality ? [t.personality] : []));
+  const style = sel.flatMap((t) => (t.style ? [t.style] : []));
+  const canHelp = sel.flatMap((t) => (t.can_help ? [t.can_help] : []));
+  const qKey = JSON.stringify([language, date, personality, style, canHelp, univId, needs]);
 
   useEffect(() => {
     let alive = true;
-    const d = useDate ? date : undefined;
-    get<ListResponse<Buddy>>("/buddies", { language: language || undefined, date: d, interest: interest || undefined })
+    const [lg, d, ps, st, ch, uid, nd] = JSON.parse(qKey) as [string, string | null, string[], string[], string[], number | null, string[]];
+    get<ListResponse<Buddy>>("/buddies", { language: lg || undefined, date: d ?? undefined, personality: ps.join(",") || undefined, style: st.join(",") || undefined, can_help: ch.join(",") || undefined })
       .then((r) => { if (alive) setBuddies(r.items); })
       .catch((e: unknown) => { if (alive) setErr(errMsg(e)); });
-    post<BuddyMatch>("/ai/buddy-match", { language: language || lang, date: d, interests: interest ? [interest] : [] })
+    post<BuddyMatch>("/ai/buddy-match", { language: lg || undefined, date: d ?? undefined, interests: [], personality: ps, style: st, needs: nd, university_id: uid ?? undefined })
       .then((m) => { if (alive) setMatch(m); })
-      .catch(() => { /* 추천은 선택 */ });
+      .catch(() => { /* 추천은 보조 */ });
     return () => { alive = false; };
-  }, [language, date, useDate, interest, lang]);
+  }, [qKey]);
+  const reset = (fn: () => void) => { setErr(null); setBuddies(null); setMatch(null); fn(); };
 
-  const byId = new Map<number, Buddy>([...all, ...(buddies ?? [])].map((b) => [b.id, b]));
-  const top = (match?.matches ?? []).slice(0, 3).map((m) => ({ m, b: byId.get(m.buddy_id) })).filter((x): x is { m: BuddyMatch["matches"][number]; b: Buddy } => !!x.b);
-  const topIds = new Set(top.map((x) => x.b.id));
-  const rest = (buddies ?? []).filter((b) => !topIds.has(b.id));
+  const list = buddies ?? [];
+  const reasons = new Map((match?.matches ?? []).map((m) => [m.buddy_id, m]));
+  const top = (match?.matches ?? []).map((m) => list.find((b) => b.id === m.buddy_id)).filter((b): b is Buddy => !!b).slice(0, 3);
+  const topIds = new Set(top.map((b) => b.id));
+  const rest = list.filter((b) => !topIds.has(b.id)).sort((a, c) => Number(c.university_id === univId) - Number(a.university_id === univId) || c.rating - a.rating);
+
+  const qs = new URLSearchParams();
+  if (stayId) qs.set("stay", String(stayId));
+  if (from) qs.set("from", from);
+  if (to) qs.set("to", to);
+  if (course) qs.set("course", course);
+  if (date) qs.set("date", date);
+  const hrefOf = (id: number) => `/buddies/${id}${qs.toString() ? `?${qs}` : ""}`;
+
+  const dateChoices = from && to ? datesBetween(from, to) : datesBetween(addDays(OPEN_FROM, 7), addDays(OPEN_FROM, 20)).filter((d) => d <= OPEN_TO);
+  const reqChips = requestChips(req);
+  const loading = !buddies && !err;
 
   return (
     <>
-      <Hero back="/home" title="Buddies" sub="성북구 대학생과 캠퍼스·동네를 함께 걸어요" />
-      <div className="px-5 pb-6 pt-4 space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <Chip selected={language === "en"} onClick={() => pick(() => setLanguage((v) => (v === "en" ? "" : "en")))}>EN</Chip>
-          <Chip selected={language === "ja"} onClick={() => pick(() => setLanguage((v) => (v === "ja" ? "" : "ja")))}>JA</Chip>
-          <Chip selected={language === "zh"} onClick={() => pick(() => setLanguage((v) => (v === "zh" ? "" : "zh")))}>ZH</Chip>
-          <Chip selected={useDate} onClick={() => pick(() => setUseDate((v) => !v))}>{useDate ? md(date) : "날짜 전체"}</Chip>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Chip selected={interest === ""} onClick={() => pick(() => setInterest(""))}>관심사 전체</Chip>
-          {INTEREST_CHIPS.map((k) => <Chip key={k} selected={interest === k} onClick={() => pick(() => setInterest(k))}>{INTEREST_LABEL[k]}</Chip>)}
-        </div>
-        {useDate && <input type="date" className={inputCls} value={date} min="2027-01-05" max="2027-02-20" onChange={(e) => pick(() => setDate(e.target.value))} />}
+      <Hero title="버디" className="pb-2" />
+      <Headline className="pt-3" title={"동네를 같이 걸을\n대학생 친구"} sub="숙소와 같은 학교 학생이에요. 역사 이야기는 앱의 AI가, 버디는 캠퍼스와 골목, 밥집을 맡아요." />
 
-        <AiBlock title={`추천 ${top.length || 3}명`}>{match?.reason ?? "조건에 맞는 버디를 고르는 중…"}</AiBlock>
-        {top.map(({ m, b }) => <BuddyCard key={b.id} b={b} reason={m.reason} />)}
+      <div className="px-5 pb-8 pt-5">
+        <div className="flex flex-wrap gap-2">
+          {LANGS.map((l) => <Chip key={l.key} selected={language === l.key} onClick={() => reset(() => setLanguage((v) => (v === l.key ? "" : l.key)))}>{l.label}</Chip>)}
+          <Chip selected={!!date} onClick={() => setDateSheet(true)}>{date ? koDay(date) : "날짜 상관없이"}</Chip>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {TRAITS.map((t) => <Chip key={t.key} selected={traits.includes(t.key)} onClick={() => reset(() => setTraits((s) => (s.includes(t.key) ? s.filter((x) => x !== t.key) : [...s, t.key])))}>{t.label}</Chip>)}
+        </div>
 
-        <ErrorBox message={err} />
-        {!buddies && !err && <Spinner />}
-        {buddies && rest.length > 0 && <div className="text-[13px] font-semibold text-ink pt-2">다른 버디 {rest.length}명</div>}
-        {rest.map((b) => <BuddyCard key={b.id} b={b} />)}
-        {buddies && buddies.length === 0 && top.length === 0 && <Card tint className="text-center text-[13px] text-muted py-6">이 조건에 가능한 버디가 없어요. 날짜·언어를 바꿔 보세요.</Card>}
+        {!(from && to) && (
+          <p className="mt-4 text-[14.5px] leading-relaxed text-muted">
+            숙소가 이미 있어도 괜찮아요. 숙박 없이 버디만 신청할 수 있어요. <Link href="/stay" className="font-semibold text-navy">숙박도 같이 보기</Link>
+          </p>
+        )}
+        {(reqChips.length > 0 || (from && to)) && (
+          <Banner variant="soft" icon={reqChips.length ? "fork" : "bed"} className="mt-5">
+            <span className="font-normal text-muted">{reqChips.length > 0 ? <>내 요청: {reqChips.join(", ")} · 이걸 도와줄 수 있는 버디가 위에 와요</> : <>숙박 {koRange(from, to)} 안에 만날 수 있는 버디예요. 같은 학교 버디가 위에 와요</>}</span>
+          </Banner>
+        )}
+
+        <ErrorBox message={err} className="mt-4" />
+        {loading && <Spinner />}
+
+        {top.length > 0 && (
+          <>
+            <h2 className="mt-8 text-[18px] font-bold text-ink">AI가 고른 {top.length}명</h2>
+            <div className="divide-y divide-line">
+              {top.map((b) => <BuddyRow key={b.id} b={b} reason={reasons.get(b.id)?.reason} href={hrefOf(b.id)} needs={needs} />)}
+            </div>
+          </>
+        )}
+        {rest.length > 0 && (
+          <>
+            <h2 className="mt-8 text-[18px] font-bold text-ink">{top.length ? `다른 버디 ${rest.length}명` : `버디 ${rest.length}명`}</h2>
+            <div className="divide-y divide-line">
+              {rest.map((b) => <BuddyRow key={b.id} b={b} href={hrefOf(b.id)} needs={needs} />)}
+            </div>
+          </>
+        )}
+        {buddies && list.length === 0 && <p className="py-10 text-center text-[14px] text-muted">이 조건에 만날 수 있는 버디가 없어요. 날짜나 언어를 바꿔 보세요.</p>}
       </div>
+
+      <BottomSheet open={dateSheet} onClose={() => setDateSheet(false)} title={from && to ? `숙박 ${koRange(from, to)} 안에서` : "언제 만날까요"}>
+        <div className="flex flex-wrap gap-2">
+          {dateChoices.map((d) => <Chip key={d} selected={date === d} onClick={() => { reset(() => setDate(d)); setDateSheet(false); }}>{koDay(d)}</Chip>)}
+        </div>
+        <Button variant="ghost" className="mt-4" onClick={() => { reset(() => setDate(null)); setDateSheet(false); }}>날짜 상관없이 보기</Button>
+      </BottomSheet>
     </>
   );
+}
+
+export default function BuddiesPage() {
+  return <Suspense fallback={<Spinner />}><Buddies /></Suspense>;
 }

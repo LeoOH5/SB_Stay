@@ -1,11 +1,13 @@
 "use client";
-// 탭 화면 제목 줄 오른쪽 — 언어 선택 + 알림 (BK-10 GET /notifications, AU-04 PATCH /auth/me)
+// 탭 화면 제목 줄 오른쪽 — 언어 선택 + 알림 + 내 정보 (BK-10 GET /notifications, AU-04 PATCH /auth/me)
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { get, patch } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
 import { useLang } from "@/lib/i18n";
 import type { Lang, ListResponse, Notification, User } from "@/lib/types";
 import { BottomSheet } from "@/components/tourist";
+import { Icon } from "@/components/ui";
 import { dateTime } from "@/components/tourist/format";
 
 const READ_KEY = "sbstay.readNotis";
@@ -50,28 +52,33 @@ export function HeaderActions() {
     setTimeout(() => setNotis((ns) => ns?.map((n) => (n.read_at ? n : { ...n, read_at: "local" })) ?? ns), 1200);
   };
 
+  const meHref = user?.role === "buddy" ? "/buddy/me" : user && user.role !== "tourist" ? "/admin" : user ? "/me" : "/login";
   return (
     <>
-      <div className="-mr-2 -mt-1 flex shrink-0 items-center gap-0.5 text-white">
+      <div className="-mr-1 flex shrink-0 items-center gap-1.5 text-ink">
         <div className="relative">
-          <button type="button" onClick={() => setLangOpen((v) => !v)} className="flex h-9 items-center gap-1 rounded-lg px-1.5 text-[13px] font-semibold text-white/90 hover:bg-white/10" aria-label="언어 선택">
-            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" /></svg>
+          <button type="button" onClick={() => setLangOpen((v) => !v)} className="flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-[13px] font-semibold text-ink hover:bg-gray-bg" aria-label="언어 선택">
+            <Icon name="globe" className="h-[18px] w-[18px]" />
             {lang === "en" ? "EN" : "KO"}
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2}><path d="m6 9 6 6 6-6" /></svg>
           </button>
           {langOpen && <button type="button" aria-label="닫기" className="fixed inset-0 z-20 cursor-default" onClick={() => setLangOpen(false)} />}
           {langOpen && (
-            <div className="absolute right-0 top-10 z-30 w-32 overflow-hidden rounded-xl bg-white py-1 text-ink shadow-lg ring-1 ring-line">
+            <div className="absolute right-0 top-11 z-30 w-32 overflow-hidden rounded-xl bg-white py-1 text-ink shadow-lg ring-1 ring-line">
               {([["en", "English"], ["ko", "한국어"]] as const).map(([l, label]) => (
                 <button key={l} type="button" onClick={() => void changeLang(l)} className={`block w-full px-3 py-2 text-left text-[14px] ${lang === l ? "font-semibold text-navy" : ""}`}>{label}{lang === l ? " ✓" : ""}</button>
               ))}
             </div>
           )}
         </div>
-        <button type="button" onClick={openNotis} className="relative flex h-9 w-9 items-center justify-center rounded-lg text-white/90 hover:bg-white/10" aria-label={`알림${unread ? ` ${unread}개` : ""}`}>
-          <svg viewBox="0 0 24 24" className="h-[21px] w-[21px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-          {unread > 0 && <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold leading-none text-white">{unread}</span>}
-        </button>
+        {user && (
+          <button type="button" onClick={openNotis} className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-gray-bg" aria-label={`알림${unread ? ` ${unread}개` : ""}`}>
+            <Icon name="bell" className="h-[21px] w-[21px]" />
+            {unread > 0 && <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold leading-none text-white">{unread}</span>}
+          </button>
+        )}
+        <Link href={meHref} aria-label={user ? "마이페이지" : "로그인"} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-bg text-[15px] font-bold text-navy">
+          {user ? user.name.trim().charAt(0).toUpperCase() : <Icon name="user" className="h-[18px] w-[18px]" />}
+        </Link>
       </div>
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title="알림">

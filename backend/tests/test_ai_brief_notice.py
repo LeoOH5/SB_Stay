@@ -17,17 +17,23 @@ def test_brief_for_own_buddy_item(client, buddy, monkeypatch):
     assert r.status_code == 200, r.text
     b = r.json()
     assert b["booking_item_id"] == 3 and b["ai"] is False
-    assert b["places"][0]["name"] == "성북근현대문학관"  # 같은 예약의 투어 3번 코스 순서
-    assert "문인의 성북동 산책" in b["brief"] and b["phrases"]
+    assert b["places"][0]["name"] == "성북근현대문학관"  # 버디 항목 course_id 3번 코스 순서
+    assert b["brief"].startswith("비건, 버섯 알레르기 요청이 있어요. 식당에서 꼭 확인해 주세요.")  # 요청이 첫 문장
+    assert "천천히" in b["brief"] and "문인의 성북동 산책" in b["brief"] and "투어" not in b["brief"] and b["phrases"]
     assert "입장료 1,000원" in b["places"][0]["tips"]  # 요금은 DB 값
     spec = client.post(BRIEF, json={"booking_item_id": 3}, headers=buddy)  # 명세 형식
     assert spec.status_code == 200
 
 
-def test_brief_guide_gets_own_tour_item(client, guide, monkeypatch):
+def test_brief_places_from_request_without_course(client, buddy, db, monkeypatch, reset_db):
+    """코스가 없으면 요청의 places (그날 여는 곳)"""
+    from app.models import BookingItem
     _no_llm(monkeypatch)
-    r = client.post(BRIEF, json={"booking_item_id": 2}, headers=guide)
-    assert r.status_code == 200 and "코스 순서" in r.json()["brief"]
+    it = db.get(BookingItem, 3)
+    it.course_id = None
+    db.commit()
+    b = client.post(BRIEF, json={"booking_item_id": 3}, headers=buddy).json()
+    assert [p["name"] for p in b["places"]] == ["길상사", "수연산방(이태준 가옥)"]
 
 
 def test_brief_llm_and_number_guard(client, buddy, monkeypatch):
@@ -37,7 +43,7 @@ def test_brief_llm_and_number_guard(client, buddy, monkeypatch):
     ]
 
     async def fake(system, user):
-        assert "MATERIAL:" in user and "Simujang" in user
+        assert "MATERIAL:" in user and "Simujang" in user and "Traveler requests: 비건, 버섯 알레르기" in user
         return replies.pop(0)
 
     monkeypatch.setattr(llm, "complete_json", fake)
@@ -50,7 +56,7 @@ def test_brief_llm_and_number_guard(client, buddy, monkeypatch):
 def test_brief_permissions(client, buddy, tourist, monkeypatch):
     _no_llm(monkeypatch)
     assert client.post(BRIEF, json={"booking_item_id": 13}, headers=buddy).status_code == 403  # 다른 버디(32번) 항목
-    assert client.post(BRIEF, json={"booking_item_id": 2}, headers=buddy).status_code == 403  # 투어 항목
+    assert client.post(BRIEF, json={"booking_item_id": 1}, headers=buddy).status_code == 403  # 숙박 항목
     assert client.post(BRIEF, json={"booking_item_id": 3}, headers=tourist).status_code == 403
     assert client.post(BRIEF, json={"booking_item_id": 99999}, headers=buddy).status_code == 404
     assert client.post(BRIEF, json={}, headers=buddy).status_code == 422

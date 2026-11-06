@@ -1,15 +1,26 @@
-"""예약 — BK-01 신청 · BK-02 내 예약 · BK-03 상세 · BK-04 승인/거절 · BK-05 취소 · BK-06~10 목업 (B 담당)"""
+"""예약 — BK-01 신청 · BK-02 내 예약 · BK-03 상세 · BK-04 승인/거절 · BK-05 취소 · BK-06~10 목업 · 버디 바꾸기 · 앨범 (B 담당)"""
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import rules
 from app.core.db import get_db
 from app.core.deps import get_current_user, require_role
 from app.core.errors import api_error
-from app.models.booking import Booking, BookingItem
+from app.models.booking import Booking, BookingItem, Review
+from app.models.supply import BuddyActivity, BuddyProfile, DormRoom, University
 from app.models.user import User
-from app.schemas.bookings import BookingCreateIn, BookingItemOut, BookingOut, DecideIn
+from app.schemas.bookings import (
+    AlbumItem,
+    AlbumOut,
+    BookingCreateIn,
+    BookingItemOut,
+    BookingOut,
+    DecideIn,
+    ReplaceBuddyIn,
+    ReviewIn,
+)
 from app.schemas.common import ListResponse
 from app.services import booking_state as bs
 from app.services import payments as ps
@@ -34,7 +45,7 @@ def _wrap(fn):
 
 @router.post("", response_model=BookingOut, status_code=201)
 def create_booking(body: BookingCreateIn, user: User = Depends(require_role("tourist", "operator")), db: Session = Depends(get_db)) -> BookingOut:
-    """BK-01: 숙박·투어·버디 항목 묶음 신청. 투어는 즉시 confirmed."""
+    """BK-01: 숙박 1개 + 기간 안 버디(필수), 또는 버디만. 코스(tour)는 422 COURSE_NOT_BOOKABLE."""
     booking = _wrap(lambda: bs.create_booking(db, user, body.traveler, body.items))
     return bs.booking_out(db, booking)
 
@@ -48,14 +59,11 @@ def my_bookings(user: User = Depends(get_current_user), db: Session = Depends(ge
 
 @router.get("/{booking_id}", response_model=BookingOut)
 def get_booking(booking_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> BookingOut:
-    """BK-03: 본인, 해당 항목 공급자, 관리자"""
+    """BK-03: 본인·운영자는 전체, 대학 담당자는 자기 대학 항목이 있는 예약, 버디는 traveler 최소 정보 + 자기 항목만"""
     b = _get_booking(db, booking_id)
-    if user.role in ("univ_admin", "operator") or b.tourist_id == user.id:
-        return bs.booking_out(db, b)
-    items = db.scalars(select(BookingItem).where(BookingItem.booking_id == b.id)).all()
-    if any(bs.can_decide(db, user, it) for it in items):
-        return bs.booking_out(db, b)
-    raise api_error(403, "FORBIDDEN", "이 예약을 볼 권한이 없습니다")
+    if not bs.can_view(db, user, b):
+        raise api_error(403, "FORBIDDEN", "이 예약을 볼 권한이 없습니다")
+    return bs.booking_out(db, b, viewer=user)
 
 
 @router.patch("/{booking_id}/items/{item_id}", response_model=BookingItemOut)
@@ -66,8 +74,18 @@ def decide(booking_id: int, item_id: int, body: DecideIn, user: User = Depends(g
         raise api_error(404, "NOT_FOUND", "예약 항목을 찾을 수 없습니다")
     _wrap(lambda: bs.decide_item(db, user, it, body.action, body.reason))
     db.refresh(it)
-    out = bs.item_out(db, it)
-    return out
+    return bs.item_out(db, it)
+
+
+@router.post("/{booking_id}/items/{item_id}/replace-buddy", response_model=BookingOut)
+def replace_buddy(booking_id: int, item_id: int, body: ReplaceBuddyIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> BookingOut:
+    """버디 바꾸기 (예약자 본인): 기존 항목은 취소(거절이면 그대로), 새 버디 항목을 requested로. 요청·코스·식사·앨범 복사."""
+    b = _get_booking(db, booking_id)
+    it = db.get(BookingItem, item_id)
+    if not it or it.booking_id != b.id:
+        raise api_error(404, "NOT_FOUND", "예약 항목을 찾을 수 없습니다")
+    _wrap(lambda: bs.replace_buddy(db, user, b, it, body.buddy_id, body.date, body.time))
+    return bs.booking_out(db, b, viewer=user)
 
 
 class CancelIn(BaseModel):
@@ -87,21 +105,10 @@ def cancel(booking_id: int, body: CancelIn | None = None, user: User = Depends(g
     except ps.PaymentError as e:
         raise api_error(e.status, e.code, e.message) from e
     _wrap(lambda: bs.cancel_booking(db, user, b))
-    return bs.booking_out(db, b)
+    return bs.booking_out(db, b, viewer=user)
 
 
 # ---------- 목업·보조 (BK-06~09). 경로·형식은 명세와 같고 내부 로직만 단순.
-
-from pydantic import BaseModel
-
-from app.models.booking import Review
-from app.models.supply import DormRoom, University
-
-
-class ReviewIn(BaseModel):
-    item_id: int
-    rating: int
-    text: str | None = None
 
 
 @router.post("/{booking_id}/pay")
@@ -143,7 +150,7 @@ def checkin_guide(booking_id: int, user: User = Depends(get_current_user), db: S
 
 @router.post("/{booking_id}/reviews", status_code=201)
 def create_review(booking_id: int, body: ReviewIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
-    """BK-08: 항목별 리뷰 1회"""
+    """BK-08: 항목별 후기 1회. 확정된 항목이고 날짜가 지났을 때만 (아니면 409 TRIP_NOT_DONE)"""
     b = _get_booking(db, booking_id)
     if b.tourist_id != user.id:
         raise api_error(403, "FORBIDDEN", "본인 예약만 리뷰할 수 있습니다")
@@ -152,13 +159,40 @@ def create_review(booking_id: int, body: ReviewIn, user: User = Depends(get_curr
         raise api_error(404, "NOT_FOUND", "예약 항목을 찾을 수 없습니다")
     if not 1 <= body.rating <= 5:
         raise api_error(422, "VALIDATION", "rating은 1~5")
+    subs = body.sub_scores or None
+    if subs and (set(subs) - set(rules.SUB_SCORES) or any(not 1 <= v <= 5 for v in subs.values())):
+        raise api_error(422, "VALIDATION", "sub_scores는 kind·talk·punctual·local, 각 1~5")
+    tags = list(dict.fromkeys(body.tags or [])) or None
+    if tags and any(t not in rules.REVIEW_TAGS for t in tags):
+        raise api_error(422, "VALIDATION", f"tags는 {', '.join(rules.REVIEW_TAGS)}")
+    if it.status not in bs.OK or it.date_from > bs.today():
+        raise api_error(409, "TRIP_NOT_DONE", "여행이 끝난 뒤에 후기를 남길 수 있어요")
     if db.scalar(select(Review).where(Review.booking_item_id == it.id)):
         raise api_error(409, "CONFLICT", "이미 리뷰를 남긴 항목입니다")
-    rv = Review(booking_item_id=it.id, rating=body.rating, text=body.text)
+    rv = Review(booking_item_id=it.id, rating=body.rating, text=body.text, sub_scores=subs, tags=tags)
     db.add(rv)
     db.commit()
     db.refresh(rv)
-    return {"id": rv.id, "booking_item_id": it.id, "rating": rv.rating, "text": rv.text, "created_at": rv.created_at}
+    return {"id": rv.id, "booking_item_id": it.id, "rating": rv.rating, "text": rv.text, "sub_scores": rv.sub_scores,
+            "tags": rv.tags or [], "created_at": rv.created_at}
+
+
+@router.get("/{booking_id}/album", response_model=AlbumOut)
+def album(booking_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> AlbumOut:
+    """여행 앨범 (본인): album=true 버디 항목의 활동 기록 사진"""
+    b = _get_booking(db, booking_id)
+    if b.tourist_id != user.id:
+        raise api_error(403, "FORBIDDEN", "본인 예약만 볼 수 있습니다")
+    rows = db.scalars(select(BookingItem).where(BookingItem.booking_id == b.id, BookingItem.type == "buddy",
+                                                BookingItem.album.is_(True), BookingItem.status != "cancelled").order_by(BookingItem.id)).all()
+    out = []
+    for it in rows:
+        prof = db.get(BuddyProfile, it.ref_id)
+        acts = db.scalars(select(BuddyActivity).where(BuddyActivity.booking_item_id == it.id).order_by(BuddyActivity.id)).all()
+        places = list(dict.fromkeys(p for a in acts for p in (a.places or [])))
+        out.append(AlbumItem(item_id=it.id, buddy_name=db.get(User, prof.user_id).name if prof else "", date=it.date_from,
+                             places=places, photos=[p for a in acts for p in (a.photos or [])]))
+    return AlbumOut(items=out)
 
 
 @router.get("/{booking_id}/chat")

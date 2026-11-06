@@ -15,10 +15,43 @@
    "walking",
    "cafe"
   ],
-  "intro": "성북동 골목이랑 캠퍼스 맛집을 같이 걸어요. 역사 해설은 해설사·AI가, 저는 친구가 되어 드려요.",
+  "intro": "성북동 골목이랑 캠퍼스 맛집을 같이 걸어요. 장소 이야기는 AI가, 저는 친구가 되어 드려요.",
   "avatar": "illust_01",
   "status": "approved",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "calm",
+   "listener"
+  ],
+  "style": [
+   "slow_walk",
+   "cafe_break"
+  ],
+  "can_help": [
+   "vegan_food",
+   "photo",
+   "subway"
+  ],
+  "school_email": "jiwoo@a-univ.ac.kr",
+  "school_email_verified_at": "2026-06-10T10:00:00Z",
+  "code_agreed_at": "2026-06-10T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": "신한 110-123-456482",
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-06-10T10:00:00Z",
+  "approved_on": "2026-06-15",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 32,
@@ -37,7 +70,39 @@
   "intro": "성북동 답사 동아리에서 활동해요.",
   "avatar": "illust_02",
   "status": "approved",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "lively",
+   "humor"
+  ],
+  "style": [
+   "explore",
+   "photo_walk"
+  ],
+  "can_help": [
+   "photo",
+   "subway"
+  ],
+  "school_email": "minho@b-univ.ac.kr",
+  "school_email_verified_at": "2026-11-01T10:00:00Z",
+  "code_agreed_at": "2026-11-01T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": "국민 123-45-678901",
+  "can_drive": true,
+  "korean_national_confirmed_at": "2026-11-01T10:00:00Z",
+  "approved_on": "2026-11-03",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 33,
@@ -57,7 +122,37 @@
   "intro": "교환학생 버디 경험 2회.",
   "avatar": "illust_03",
   "status": "pending",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "lively"
+  ],
+  "style": [
+   "cafe_break"
+  ],
+  "can_help": [
+   "halal_food",
+   "shopping"
+  ],
+  "school_email": "harin@a-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 7,
+  "bank_account": null,
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z",
+  "approved_on": null,
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 34,
@@ -76,7 +171,37 @@
   "intro": "캠퍼스 투어와 야경 산책 담당.",
   "avatar": "illust_04",
   "status": "pending",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "humor"
+  ],
+  "style": [
+   "explore"
+  ],
+  "can_help": [
+   "subway",
+   "shopping"
+  ],
+  "school_email": "doyun@a-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": null,
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z",
+  "approved_on": null,
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 35,
@@ -95,7 +220,37 @@
   "intro": "영어 토론 동아리.",
   "avatar": "illust_05",
   "status": "approved",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "listener"
+  ],
+  "style": [
+   "slow_walk"
+  ],
+  "can_help": [
+   "vegan_food",
+   "shopping"
+  ],
+  "school_email": "seoyeon@b-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": "우리 1002-345-678901",
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z",
+  "approved_on": "2026-12-03",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  },
  {
   "id": 36,
@@ -115,6 +270,137 @@
   "intro": "근대 건축과 한옥 이야기를 좋아해요.",
   "avatar": "illust_06",
   "status": "approved",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "calm"
+  ],
+  "style": [
+   "photo_walk"
+  ],
+  "can_help": [
+   "photo"
+  ],
+  "school_email": "junseo@a-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": "하나 391-910-123456",
+  "can_drive": true,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z",
+  "approved_on": "2026-12-03",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
+ },
+ {
+  "id": 37,
+  "user_id": 17,
+  "university_id": 1,
+  "major": "영어영문",
+  "year": 2,
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "interests": [
+   "photo",
+   "cafe"
+  ],
+  "intro": "사진 찍는 걸 좋아해요. 성북동 예쁜 카페 골목을 같이 걸어요.",
+  "avatar": "illust_05",
+  "status": "approved",
+  "hourly_fee": 15000,
+  "personality": [
+   "lively",
+   "listener"
+  ],
+  "style": [
+   "photo_walk",
+   "cafe_break"
+  ],
+  "can_help": [
+   "photo",
+   "shopping",
+   "subway"
+  ],
+  "school_email": "sua@a-univ.ac.kr",
+  "school_email_verified_at": "2026-06-08T10:00:00Z",
+  "code_agreed_at": "2026-06-10T10:05:00Z",
+  "quiz_score": 10,
+  "bank_account": "우리 1002-345-678901",
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-06-08T10:00:00Z",
+  "approved_on": "2026-06-12",
+  "eligibility": "school_email",
+  "school_name": null,
+  "residence_proof_url": null,
+  "enrollment_proof_url": null,
+  "residence_submitted_at": null,
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
+ },
+ {
+  "id": 38,
+  "user_id": 18,
+  "university_id": null,
+  "major": "도시공학",
+  "year": 3,
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "interests": [
+   "walking",
+   "architecture"
+  ],
+  "intro": "정릉동에 살아요. 동네 산책길과 버스 타는 법을 잘 알아요.",
+  "avatar": "illust_04",
+  "status": "pending",
+  "hourly_fee": 15000,
+  "personality": [
+   "calm"
+  ],
+  "style": [
+   "slow_walk",
+   "explore"
+  ],
+  "can_help": [
+   "subway",
+   "photo"
+  ],
+  "school_email": null,
+  "school_email_verified_at": null,
+  "code_agreed_at": "2027-01-11T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": null,
+  "can_drive": false,
+  "korean_national_confirmed_at": "2027-01-11T10:00:00Z",
+  "approved_on": null,
+  "eligibility": "residence",
+  "school_name": "서울시립대학교",
+  "residence_proof_url": "residence_proof_gaeun.jpg",
+  "enrollment_proof_url": "enrollment_gaeun.jpg",
+  "residence_submitted_at": "2027-01-11T10:00:00Z",
+  "education_watched": [
+   "seongbuk_overview",
+   "getting_around",
+   "safety",
+   "history_basics",
+   "promises"
+  ]
  }
 ]

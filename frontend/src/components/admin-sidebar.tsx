@@ -1,31 +1,59 @@
 "use client";
+// 어드민 왼쪽 메뉴 — v3: 흰 바탕 + 로고 "관리" 배지. 대학 담당자는 대시보드·객실·예약·정산(자기 학교)만, 나머지는 운영팀(operator)만.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { get } from "@/lib/api";
 import { useUser } from "@/lib/auth";
-import { ROLE_LABEL } from "./admin/shell";
-import { cn } from "./ui";
+import type { AdminReportRow, ListResponse } from "@/lib/types";
+import { Brand, Icon, cn, type IconName } from "./ui";
 
-const MENU = [
-  { href: "/admin", label: "대시보드" },
-  { href: "/admin/rooms", label: "대학 / 객실 관리" },
-  { href: "/admin/bookings", label: "예약 관리" },
-  { href: "/admin/members", label: "회원 관리 (버디 승인)" },
-  { href: "/admin/tours", label: "투어 코스 관리" },
-  { href: "/admin/settlements", label: "정산 관리" },
+const MENU: { href: string; label: string; icon: IconName; operatorOnly?: boolean }[] = [
+  { href: "/admin", label: "대시보드", icon: "grid" },
+  { href: "/admin/rooms", label: "대학·객실", icon: "building" },
+  { href: "/admin/bookings", label: "예약", icon: "list" },
+  { href: "/admin/members", label: "회원·버디 승인", icon: "users", operatorOnly: true },
+  { href: "/admin/tours", label: "산책 코스", icon: "route", operatorOnly: true },
+  { href: "/admin/meal-claims", label: "식비 청구", icon: "receipt", operatorOnly: true },
+  { href: "/admin/reports", label: "신고", icon: "flag", operatorOnly: true },
+  { href: "/admin/settlements", label: "정산", icon: "wallet" },
 ];
 
 export function AdminSidebar() {
   const path = usePathname();
   const { user } = useUser();
-  const who = user ? `${user.name} · ${ROLE_LABEL[user.role]}` : "고려대학교 프런티어관 담당자";
+  const isOperator = user?.role === "operator";
+  const [openReports, setOpenReports] = useState(0);
+
+  useEffect(() => {
+    if (!isOperator) return;
+    let alive = true;
+    get<ListResponse<AdminReportRow>>("/admin/reports", { status: "open" }).then((r) => { if (alive) setOpenReports(r.items.length); }).catch(() => { /* 배지는 선택 */ });
+    return () => { alive = false; };
+  }, [isOperator, path]);
+
+  const who = user ? (user.role === "operator" ? "성북스테이 운영팀" : user.name) : "성북스테이 관리";
+  const menu = MENU.filter((m) => !m.operatorOnly || isOperator);
   return (
-    <aside className="w-60 shrink-0 bg-navy text-white flex flex-col">
-      <div className="px-5 py-5"><div className="text-[15px] font-bold">SB Stay Admin</div><div className="text-[12px] text-white/60 mt-0.5 truncate">{who}</div></div>
-      <nav className="flex-1 px-3 space-y-1">
-        {MENU.map((m) => { const active = m.href === "/admin" ? path === "/admin" : path.startsWith(m.href); return (
-          <Link key={m.href} href={m.href} className={cn("block rounded-lg px-3 py-2.5 text-[14px] border-l-4", active ? "bg-white/10 border-l-green font-semibold" : "border-l-transparent text-white/80 hover:bg-white/5")}>{m.label}</Link>
-        ); })}
+    <aside className="sticky top-0 flex h-dvh w-[248px] shrink-0 flex-col border-r border-line bg-white">
+      <div className="px-8 pb-7 pt-7">
+        <Brand badge="관리" href="/admin" />
+        <div className="mt-3 truncate text-[13px] text-muted">{who}</div>
+      </div>
+      <nav className="flex-1 space-y-1.5 px-5" aria-label="관리 메뉴">
+        {menu.map((m) => {
+          const active = m.href === "/admin" ? path === "/admin" : path.startsWith(m.href);
+          const badge = m.href === "/admin/reports" && isOperator ? openReports : 0;
+          return (
+            <Link key={m.href} href={m.href} aria-current={active ? "page" : undefined} className={cn("flex h-11 items-center gap-3 rounded-[10px] px-3.5 text-[15px]", active ? "bg-navy-bg font-bold text-navy" : "text-ink hover:bg-gray-bg")}>
+              <Icon name={m.icon} className="h-5 w-5" />
+              <span className="flex-1">{m.label}</span>
+              {badge > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1.5 text-[11px] font-bold text-white" aria-label={`처리 전 신고 ${badge}건`}>{badge}</span>}
+            </Link>
+          );
+        })}
       </nav>
+      <p className="px-5 pb-6 text-[13px] leading-relaxed text-muted">버디 승인·산책 코스·식비·신고는 운영팀 계정에서만 보여요</p>
     </aside>
   );
 }

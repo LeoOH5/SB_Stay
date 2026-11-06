@@ -1,10 +1,14 @@
 """AI-01 여행 설계: 후보는 코드가 DB에서 거르고, LLM은 고르기·설명만 한다.
 
-1) 후보 만들기 (코드): 숙소(개방 기간·잔여 객실·예산), 투어(운영 요일·코스 장소 휴관일),
-   버디(승인·가능 날짜·언어), 자유 일정 장소(관심사·휴관일). 가격·날짜는 전부 DB 값.
-2) 고르기: LLM이 후보 id 중에서 투어·버디·자유 장소를 고르고 추천 이유를 쓴다.
+1) 후보 만들기 (코드): 숙소(개방 기간·잔여 객실·예산), 무료 코스(운영 요일·코스 장소 휴관일),
+   버디(승인·가능 날짜·언어, 숙박 기간 안), 자유 일정 장소(관심사·휴관일). 가격·날짜는 전부 DB 값.
+2) 고르기: LLM이 후보 id 중에서 숙소·버디·코스·자유 장소를 고르고 추천 이유를 쓴다.
    LLM이 없거나 실패하거나 후보에 없는 id를 내면 점수 순 규칙 기반 선택(폴백)으로 대신한다.
-3) 일정 조립 (코드): 날짜별 항목, 예산 초과 시 버디 → 투어 순으로 뺀다.
+3) 일정 조립 (코드): 숙소가 있으면 버디는 반드시 넣는다(BK-01 BUDDY_REQUIRED). 코스는 버디 항목의 course_id.
+   버디가 없으면 warnings NO_BUDDY, 예산을 넘으면 버디를 빼지 않고 OVER_BUDGET.
+4) v3.8 순서 (코드): 하루에 자유 장소가 여러 곳이면 걷는 거리가 가장 짧은 순서(courses.best_order, 실제 도보 경로 →
+   없으면 추정)로 놓는다. LLM이 준 순서는 '고르기'로만 쓰고 그날 순서는 늘 코드가 다시 정한다.
+   무료 코스 장소는 정해 둔 코스 순서 그대로 (무료 이용은 코스 순서가 고정).
 """
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -16,7 +20,6 @@ from app.models import (
     BuddyAvailability,
     BuddyProfile,
     DormRoom,
-    Guide,
     Place,
     Tour,
     TourPlace,
@@ -24,6 +27,7 @@ from app.models import (
     User,
 )
 from app.schemas.ai import PlanDay, PlanIn, PlanItem
+from app.services import courses
 from app.services.availability import occupied_rooms
 
 WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -45,12 +49,11 @@ class DormC:
 
 
 @dataclass
-class TourC:
+class CourseC:
     tour: Tour
     day: date
     score: float
     place_names: list[str]
-    guide_name: str
 
 
 @dataclass
@@ -73,9 +76,9 @@ class PlaceC:
 class Candidates:
     nights: int
     days: list[date]           # check_in ~ check_out (양 끝 포함)
-    activity_days: list[date]  # 투어·버디·자유 일정을 넣을 날
+    activity_days: list[date]  # 버디·코스·자유 일정을 넣을 날 (숙박 기간 안)
     dorms: list[DormC]         # 개방·잔여 객실·예산 통과, 싼 순
-    tours: list[TourC]
+    courses: list[CourseC]
     buddies: list[BuddyC]
     places: list[PlaceC]
 
@@ -83,8 +86,8 @@ class Candidates:
 @dataclass
 class Choice:
     dorm: DormC | None
-    tour: TourC | None
     buddy: BuddyC | None
+    course: CourseC | None
     free_place_ids: list[int]
     reason: str | None = None
 
@@ -123,32 +126,29 @@ def build_candidates(db: Session, req: PlanIn) -> Candidates:
 
     places = {p.id: p for p in db.scalars(select(Place)).all()}
 
-    # 투어: 운영 요일이고, 코스의 모든 장소가 그날 문을 여는 날짜만
-    tours: list[TourC] = []
+    # 코스(무료): 운영 요일(비어 있으면 매일)이고, 코스의 모든 장소가 그날 문을 여는 날짜만
+    courses: list[CourseC] = []
     for t in db.scalars(select(Tour).order_by(Tour.id)).all():
         stops = db.scalars(select(TourPlace).where(TourPlace.tour_id == t.id).order_by(TourPlace.seq)).all()
         stop_places = [places[s.place_id] for s in stops if s.place_id in places]
         tags = {tag for p in stop_places for tag in (p.tags or [])}
         score = (3 if t.theme in interests else 0) + len(tags & interests)
-        g = db.get(Guide, t.guide_id)
-        gu = db.get(User, g.user_id) if g else None
         for d in activity_days:
-            if _wd(d) in (t.operating_days or []) and all(_open_on(p, d) for p in stop_places):
-                tours.append(TourC(t, d, score, [p.name for p in stop_places], gu.name if gu else ""))
-    tours.sort(key=lambda c: (-c.score, c.day, c.tour.id))
+            if (not t.operating_days or _wd(d) in t.operating_days) and all(_open_on(p, d) for p in stop_places):
+                courses.append(CourseC(t, d, score, [p.name for p in stop_places]))
+    courses.sort(key=lambda c: (-c.score, c.day, c.tour.id))
 
-    # 버디: 승인, 가능 날짜, 요청 언어 구사
+    # 버디: 승인·휴면 아님, 가능 날짜(숙박 기간 안), 요청 언어 구사. 숙소가 있으면 버디는 필수라 with_buddy와 상관없이 만든다
     buddies: list[BuddyC] = []
-    if req.with_buddy:
-        for b in db.scalars(select(BuddyProfile).where(BuddyProfile.status == "approved").order_by(BuddyProfile.id)).all():
-            if req.language not in (b.languages or []) and req.language != "ko":
-                continue
-            free = set(db.scalars(select(BuddyAvailability.date).where(BuddyAvailability.buddy_id == b.id)).all())
-            u = db.get(User, b.user_id)
-            score = len(set(b.interests or []) & interests) + (0.5 if req.language in (b.languages or []) else 0)
-            for d in activity_days:
-                if d in free:
-                    buddies.append(BuddyC(b, u.name if u else "", d, score, b.hourly_fee * BUDDY_HOURS))
+    for b in db.scalars(select(BuddyProfile).where(BuddyProfile.status == "approved", BuddyProfile.needs_recheck.is_(False)).order_by(BuddyProfile.id)).all():
+        if req.language not in (b.languages or []) and req.language != "ko":
+            continue
+        free = set(db.scalars(select(BuddyAvailability.date).where(BuddyAvailability.buddy_id == b.id)).all())
+        u = db.get(User, b.user_id)
+        score = len(set(b.interests or []) & interests) + (0.5 if req.language in (b.languages or []) else 0)
+        for d in activity_days:
+            if d in free:
+                buddies.append(BuddyC(b, u.name if u else "", d, score, b.hourly_fee * BUDDY_HOURS))
     buddies.sort(key=lambda c: (-c.score, c.day, c.buddy.id))
 
     # 자유 일정 장소: 관심사와 겹치는 장소, 문 여는 날이 하루라도 있는 곳
@@ -159,111 +159,138 @@ def build_candidates(db: Session, req: PlanIn) -> Candidates:
             pcs.append(PlaceC(p, len(set(p.tags or []) & interests), open_days))
     pcs.sort(key=lambda c: (-c.score, c.place.id))
 
-    return Candidates(nights, days, activity_days, dorms, tours, buddies, pcs)
+    return Candidates(nights, days, activity_days, dorms, courses, buddies, pcs)
 
 
-def fallback_choice(c: Candidates) -> Choice:
-    """점수가 가장 높은 투어, 그 투어 날(없으면 가장 이른 날)의 버디, 관심사 장소 상위.
-    숙소는 버디와 같은 대학의 방을 우선하고, 없으면 가장 싼 방."""
-    tour = c.tours[0] if c.tours else None
-    buddy = None
-    if c.buddies:
-        same_day = [b for b in c.buddies if tour and b.day == tour.day and b.score == c.buddies[0].score]
-        buddy = same_day[0] if same_day else c.buddies[0]
-    dorm = None
-    if c.dorms:
-        same_uni = [d for d in c.dorms if buddy and d.room.university_id == buddy.buddy.university_id]
-        dorm = same_uni[0] if same_uni else c.dorms[0]
-    taken = {p.place.id for p in c.places if tour and p.place.name in tour.place_names}
-    free = [p.place.id for p in c.places if p.place.id not in taken][:6]
-    return Choice(dorm, tour, buddy, free)
+def _best_course(c: Candidates, day: date | None) -> CourseC | None:
+    pool = [x for x in c.courses if day is None or x.day == day]
+    return pool[0] if pool else None
 
 
-def validate_choice(c: Candidates, data: dict) -> Choice:
-    """LLM 응답을 후보와 대조한다. 후보에 없는 id·날짜는 버리고, 빈 자리는 폴백으로 채운다."""
-    fb = fallback_choice(c)
+def _free_places(c: Candidates, course: CourseC | None) -> list[int]:
+    taken = set(course.place_names) if course else set()
+    return [p.place.id for p in c.places if p.place.name not in taken][:6]
+
+
+def fallback_choice(c: Candidates, budget: int | None = None) -> Choice:
+    """숙소·버디를 함께 고른다: 예산 안 → 같은 대학 → 버디 점수 → 싼 숙소 순. 코스는 버디 날 점수가 가장 높은 것."""
+    def rank(p: tuple[DormC | None, BuddyC | None]):
+        d, b = p
+        price = (d.price if d else 0) + (b.price if b else 0)
+        same_uni = bool(d and b and d.room.university_id == b.buddy.university_id)
+        return (bool(budget) and price > budget, not same_uni, -(b.score if b else 0), d.price if d else 0,
+                b.day if b else date.min, b.buddy.id if b else 0)
+
+    pairs = [(d, b) for d in (c.dorms or [None]) for b in (c.buddies or [None])]
+    dorm, buddy = min(pairs, key=rank)
+    course = _best_course(c, buddy.day if buddy else None)
+    return Choice(dorm, buddy, course, _free_places(c, course))
+
+
+def validate_choice(c: Candidates, data: dict, budget: int | None = None) -> Choice:
+    """LLM 응답을 후보와 대조한다. 후보에 없는 id·날짜는 버리고, 빈 자리는 폴백으로 채운다. 버디는 후보가 있으면 필수."""
+    fb = fallback_choice(c, budget)
     dorm = next((d for d in c.dorms if d.room.id == data.get("dorm_id")), None) or fb.dorm
-    tour = next((t for t in c.tours if t.tour.id == data.get("tour_id") and str(t.day) == str(data.get("tour_date"))), None)
-    if data.get("tour_id") is None and "tour_id" in data:
-        tour = None
-    elif tour is None:
-        tour = fb.tour
-    buddy = next((b for b in c.buddies if b.buddy.id == data.get("buddy_id") and str(b.day) == str(data.get("buddy_date"))), None)
-    if data.get("buddy_id") is None and "buddy_id" in data:
-        buddy = None
-    elif buddy is None:
-        buddy = fb.buddy
+    buddy = next((b for b in c.buddies if b.buddy.id == data.get("buddy_id") and str(b.day) == str(data.get("buddy_date"))), None) or fb.buddy
+    day = buddy.day if buddy else None
+    course = next((x for x in c.courses if x.tour.id == data.get("course_id") and (day is None or x.day == day)), None)
+    if course is None and not ("course_id" in data and data.get("course_id") is None):
+        course = _best_course(c, day)
     valid_places = {p.place.id for p in c.places}
-    free = [i for i in data.get("free_place_ids", []) if isinstance(i, int) and i in valid_places] or fb.free_place_ids
+    free = [i for i in data.get("free_place_ids", []) if isinstance(i, int) and i in valid_places] or _free_places(c, course)
     reason = data.get("reason") if isinstance(data.get("reason"), str) and data.get("reason").strip() else None
-    return Choice(dorm, tour, buddy, free, reason)
+    return Choice(dorm, buddy, course, free, reason)
 
 
 def llm_prompt(c: Candidates, req: PlanIn) -> tuple[str, str]:
     lang = "English" if req.language == "en" else "Korean"
     system = (
         "You are a travel planner for Seongbuk-gu, Seoul. Pick items ONLY from the candidate lists by id. "
-        "Never invent places, prices, dates or opening hours. Prefer the traveler's interests, keep the budget, "
-        "and avoid putting the buddy on a day the buddy is not listed for. "
-        "Return ONLY a JSON object: {\"dorm_id\": int, \"tour_id\": int|null, \"tour_date\": \"YYYY-MM-DD\"|null, "
-        "\"buddy_id\": int|null, \"buddy_date\": \"YYYY-MM-DD\"|null, \"free_place_ids\": [int, ...], "
+        "Never invent places, prices, dates or opening hours. A student buddy is REQUIRED with a dorm stay: pick one buddy "
+        "on a listed date, preferring a buddy from the same university as the dorm. Courses are free walking routes; pick "
+        "one course for the buddy to walk with the traveler on the buddy date (or null). Keep the budget if possible. "
+        "Return ONLY a JSON object: {\"dorm_id\": int, \"buddy_id\": int, \"buddy_date\": \"YYYY-MM-DD\", "
+        "\"course_id\": int|null, \"free_place_ids\": [int, ...], "
         f"\"reason\": string}}. Write \"reason\" in {lang}, at most 2 short sentences, friendly, no prices."
     )
     lines = [
         f"Stay: {req.check_in} to {req.check_out} ({c.nights} nights). Budget: {req.budget or 'no limit'} KRW.",
-        f"Interests: {', '.join(req.interests) or 'none'}. Wants a buddy: {req.with_buddy}. Note: {req.note or '-'}",
-        "Dorm candidates (id, university, building, room type, total price for the stay):",
-        *[f"- {d.room.id}, {d.uni.name_en if d.uni else '-'}, {d.room.building}, {d.room.room_type}, {d.price}"
+        f"Interests: {', '.join(req.interests) or 'none'}. Note: {req.note or '-'}",
+        "Dorm candidates (id, university id, university, building, room type, total price for the stay):",
+        *[f"- {d.room.id}, {d.room.university_id}, {d.uni.name_en if d.uni else '-'}, {d.room.building}, {d.room.room_type}, {d.price}"
           for d in c.dorms],
-        "Tour candidates (id, date, title, theme, price, stops):",
-        *[f"- {t.tour.id}, {t.day}, {t.tour.title_en}, {t.tour.theme}, {t.tour.price}, {' > '.join(t.place_names)}"
-          for t in c.tours[:8]],
-        "Buddy candidates (id, date, name, interests, languages, price):",
-        *[f"- {b.buddy.id}, {b.day}, {b.name}, {'/'.join(b.buddy.interests or [])}, {'/'.join(b.buddy.languages or [])}, {b.price}"
-          for b in c.buddies[:8]],
+        "Buddy candidates (id, date, name, university id, interests, languages, price):",
+        *[f"- {b.buddy.id}, {b.day}, {b.name}, {b.buddy.university_id}, {'/'.join(b.buddy.interests or [])}, "
+          f"{'/'.join(b.buddy.languages or [])}, {b.price}" for b in c.buddies[:10]],
+        "Course candidates (id, date, title, theme, stops) — free:",
+        *[f"- {t.tour.id}, {t.day}, {t.tour.title_en}, {t.tour.theme}, {' > '.join(t.place_names)}" for t in c.courses[:10]],
         "Free-time place candidates (id, name, tags):",
         *[f"- {p.place.id}, {p.place.name_en}, {'/'.join(p.place.tags or [])}" for p in c.places[:12]],
     ]
     return system, "\n".join(lines)
 
 
-def _reason_template(c: Candidates, ch: Choice, req: PlanIn, over_budget: bool) -> str:
+def _reason_template(ch: Choice, req: PlanIn, warnings: list[str]) -> str:
     en = req.language == "en"
     names = (INTEREST_EN if en else INTEREST_KO)
     topic = ", ".join(names.get(i, i) for i in req.interests[:2]) or ("Seongbuk history" if en else "성북 역사")
-    parts = []
+    b, co = ch.buddy, ch.course
     if en:
-        parts.append(f"Built around your interest in {topic}.")
-        if ch.tour:
-            parts.append(f"The guided '{ch.tour.tour.title_en}' runs on {ch.tour.day:%b %d}" + (f", and {ch.buddy.name} can walk the neighborhood with you." if ch.buddy else "."))
-        elif ch.buddy:
-            parts.append(f"{ch.buddy.name} can walk the neighborhood with you.")
-        if over_budget:
-            parts.append("Some items were dropped to fit your budget.")
+        parts = [f"Built around your interest in {topic}."]
+        if b:
+            parts.append(f"On {b.day:%b %d} {b.name} walks " + (f"the free '{co.tour.title_en}' course with you." if co else "the neighborhood with you."))
+            parts.append("The AI tells the story of each place.")
+        elif co:
+            parts.append(f"The free '{co.tour.title_en}' course fits {co.day:%b %d}.")
     else:
-        parts.append(f"{topic} 관심에 맞춰 짰어요.")
-        if ch.tour:
-            parts.append(f"{ch.tour.day.month}/{ch.tour.day.day} '{ch.tour.tour.title}' 투어" + (f"와 버디 {ch.buddy.name}의 동네 산책을 넣었어요." if ch.buddy else "를 넣었어요."))
-        elif ch.buddy:
-            parts.append(f"버디 {ch.buddy.name}와 동네를 걸을 수 있어요.")
-        if over_budget:
-            parts.append("예산에 맞추느라 일부 항목을 뺐어요.")
-    return " ".join(parts)
+        parts = [f"{topic} 관심에 맞춰 짰어요."]
+        if b:
+            parts.append(f"{b.day.month}/{b.day.day} 버디 {b.name}와 " + (f"'{co.tour.title}' 코스를 걸어요." if co else "동네를 걸어요."))
+            parts.append("장소마다 AI가 이야기를 들려줘요.")
+        elif co:
+            parts.append(f"{co.day.month}/{co.day.day} 무료 '{co.tour.title}' 코스를 넣었어요.")
+    return " ".join(parts + _warning_text(warnings, en))
 
 
-def assemble(c: Candidates, ch: Choice, req: PlanIn) -> tuple[list[PlanDay], int, str]:
+def _warning_text(warnings: list[str], en: bool) -> list[str]:
+    out = []
+    if "NO_BUDDY" in warnings:
+        out.append("No buddy is free during this stay, so try other dates." if en else "이 기간에 함께할 버디가 없어요. 날짜를 바꿔 보세요.")
+    if "OVER_BUDGET" in warnings:
+        out.append("A buddy is required with a stay, so this is a little over budget." if en else "숙박에는 버디가 꼭 필요해서 예산을 조금 넘어요.")
+    return out
+
+
+def order_free(picks: list[PlaceC], routes: courses.Routes | None = None) -> tuple[list[PlaceC], int | None, int | None]:
+    """v3.8 그날 자유 장소를 걷는 거리가 가장 짧은 순서로. (순서, 걷는 m 10 m 단위, 걷는 분) — 한 곳이면 걷는 값은 None"""
+    by_id = {p.place.id: p for p in picks}
+    stops = [courses.Stop(p.place.id, p.place.lat, p.place.lng, p.place.stay_min or 0) for p in picks]
+    ordered = courses.best_order(stops, routes=routes)
+    if len(ordered) < 2:
+        return [by_id[s.place_id] for s in ordered], None, None
+    ct = courses.summarize(ordered, routes)
+    if not ct.walk_complete:
+        return [by_id[s.place_id] for s in ordered], None, None
+    return [by_id[s.place_id] for s in ordered], ct.walk_m_total, ct.walk_min_total
+
+
+def assemble(c: Candidates, ch: Choice, req: PlanIn,
+             routes: courses.Routes | None = None) -> tuple[list[PlanDay], int, str, list[str]]:
+    """일정 조립. routes = 자유 장소 사이 저장한 실제 도보 경로 (routers/ai.py가 한 번 읽어 넘긴다)"""
     en = req.language == "en"
     budget = req.budget or None
-    over = False
-    dorm_price = ch.dorm.price if ch.dorm else 0
-    # 예산 초과 시 버디 → 투어 순으로 뺀다
-    total = dorm_price + (ch.tour.tour.price if ch.tour else 0) + (ch.buddy.price if ch.buddy else 0)
-    if budget and total > budget and ch.buddy:
-        total -= ch.buddy.price
-        ch.buddy, over = None, True
-    if budget and total > budget and ch.tour:
-        total -= ch.tour.tour.price
-        ch.tour, over = None, True
+    warnings: list[str] = []
+    total = (ch.dorm.price if ch.dorm else 0) + (ch.buddy.price if ch.buddy else 0)
+    if budget and total > budget:
+        if ch.dorm and ch.buddy:  # 숙박이 있으면 버디는 빼지 않는다
+            warnings.append("OVER_BUDGET")
+        elif ch.buddy:
+            total -= ch.buddy.price
+            ch.buddy = None
+    if ch.dorm and not ch.buddy:
+        warnings.append("NO_BUDDY")
+    if ch.buddy and ch.course and ch.course.day != ch.buddy.day:
+        ch.course = None
 
     by_day: dict[date, list[PlanItem]] = {d: [] for d in c.days}
     if ch.dorm:
@@ -272,35 +299,43 @@ def assemble(c: Candidates, ch: Choice, req: PlanIn) -> tuple[list[PlanDay], int
         meta = (f"Stay · {ROOM_EN.get(r.room_type, r.room_type)} · ₩{r.price_per_night:,}/night · {c.nights} nights" if en
                 else f"숙박 · {ROOM_KO.get(r.room_type, r.room_type)} · ₩{r.price_per_night:,}/박 · {c.nights}박")
         by_day[c.days[0]].append(PlanItem(time="15:00", type="dorm", ref_id=r.id, title=title.strip(), price=ch.dorm.price, meta=meta))
-    if ch.tour:
-        t = ch.tour
-        hours = round(t.tour.duration_min / 60, 1)
-        by_day[t.day].append(PlanItem(
-            time="10:00", type="tour", ref_id=t.tour.id, title=t.tour.title_en if en else t.tour.title, price=t.tour.price,
-            meta=(f"Tour · guide {t.guide_name} · {hours:g}h" if en else f"투어 · 해설사 {t.guide_name} · {hours:g}시간")))
+    co = ch.course
     if ch.buddy:
         b = ch.buddy
         langs = "/".join(b.buddy.languages or [])
-        by_day[b.day].append(PlanItem(
-            time="14:00", type="buddy", ref_id=b.buddy.id,
-            title=(f"Walk the neighborhood with {b.name}" if en else f"버디 {b.name}와 캠퍼스·동네 걷기"), price=b.price,
-            meta=(f"Buddy {b.name} · {langs} · {BUDDY_HOURS}h" if en else f"버디 {b.name} · {langs} · {BUDDY_HOURS}시간")))
+        stops = " · ".join(co.place_names) if co else ""
+        if en:
+            title = f"Walk '{co.tour.title_en}' with buddy {b.name}" if co else f"Walk the neighborhood with {b.name}"
+            meta = f"Buddy {b.name} · {langs} · {BUDDY_HOURS}h" + (f" · {stops}" if co else "")
+        else:
+            title = f"버디 {b.name}와 {co.tour.title}" if co else f"버디 {b.name}와 캠퍼스·동네 걷기"
+            meta = f"버디 {b.name} · {langs} · {BUDDY_HOURS}시간" + (f" · {stops}" if co else "")
+        by_day[b.day].append(PlanItem(time="14:00", type="buddy", ref_id=b.buddy.id, title=title, price=b.price, meta=meta,
+                                      course_id=co.tour.id if co else None))
+    elif co:
+        n = len(co.place_names)
+        by_day[co.day].append(PlanItem(time="10:00", type="course", ref_id=co.tour.id, title=co.tour.title_en if en else co.tour.title,
+                                       price=0, meta=f"Free course · {n} places" if en else f"무료 코스 · 장소 {n}곳"))
 
-    # 자유 일정: 투어가 없는 활동일마다 그날 문 여는 장소 2곳
+    # 자유 일정: 코스가 없는 활동일마다 그날 문 여는 장소 2곳
     places = {p.place.id: p for p in c.places}
     queue = [places[i] for i in ch.free_place_ids if i in places]
     for d in c.activity_days:
-        if any(it.type == "tour" for it in by_day[d]):
+        if co and d == co.day:
             continue
-        picks = [p for p in queue if d in p.open_days][:2]
+        picks = [p for p in queue if d in p.open_days][:2]  # 어느 장소인지는 LLM(또는 점수)이 고른 것
         if not picks:
             continue
         for p in picks:
             queue.remove(p)
+        picks, walk_m, walk_min = order_free(picks, routes)  # 순서는 코드가 (걷는 거리 최소)
         names = " · ".join(p.place.name_en if en else p.place.name for p in picks)
+        meta = "Free time · AI pick" if en else "자유 일정 · AI 제안"
+        if walk_min is not None:
+            meta += f" · {walk_min} min walk between" if en else f" · 사이 도보 {walk_min}분"
         by_day[d].append(PlanItem(time=None, type="free", ref_id=None,
-                                  title=f"{names} " + ("(suggested)" if en else "추천"), price=0,
-                                  meta="Free time · AI pick" if en else "자유 일정 · AI 제안"))
+                                  title=f"{names} " + ("(suggested)" if en else "추천"), price=0, meta=meta,
+                                  place_ids=[p.place.id for p in picks], walk_m=walk_m, walk_min=walk_min))
     if len(c.days) > 1:
         by_day[c.days[-1]].append(PlanItem(time="11:00", type="free", ref_id=None, title="Check-out" if en else "체크아웃",
                                            price=0, meta="Stay" if en else "숙박"))
@@ -308,7 +343,7 @@ def assemble(c: Candidates, ch: Choice, req: PlanIn) -> tuple[list[PlanDay], int
     for items in by_day.values():
         items.sort(key=lambda it: it.time or "99:99")
     days = [PlanDay(date=d, items=by_day[d]) for d in c.days]
-    reason = ch.reason or _reason_template(c, ch, req, over)
-    if over and ch.reason:
-        reason += " " + ("Some items were dropped to fit your budget." if en else "예산에 맞추느라 일부 항목을 뺐어요.")
-    return days, total, reason
+    reason = ch.reason or _reason_template(ch, req, warnings)
+    if ch.reason and warnings:
+        reason = " ".join([reason, *_warning_text(warnings, en)])
+    return days, total, reason, warnings

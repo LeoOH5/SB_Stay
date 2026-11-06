@@ -19,7 +19,9 @@ from app.routers import (
     dorms,
     notifications,
     payments,
+    reports,
     tours,
+    uploads,
 )
 
 settings = get_settings()
@@ -56,7 +58,10 @@ app.include_router(ai.router, prefix=API)
 app.include_router(bookings.router, prefix=API)
 app.include_router(notifications.router, prefix=API)
 app.include_router(payments.router, prefix=API)
+app.include_router(reports.router, prefix=API)
 app.include_router(admin.router, prefix=API)
+app.include_router(uploads.router, prefix=API)
+app.include_router(uploads.media)  # /media/... 는 /api/v1 밖 (백엔드 주소 기준)
 
 
 @app.get("/health")

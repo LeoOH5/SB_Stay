@@ -1,6 +1,6 @@
 # API 상세 명세 목록 (성북스테이)
 
-총 52개 엔드포인트. 공통 규칙은 [../api-spec.md](../api-spec.md) 참고.
+총 54개 엔드포인트. 공통 규칙은 [../api-spec.md](../api-spec.md) 참고.
 
 ## 인증 (Auth)
 
@@ -12,6 +12,7 @@
 - [AU-06](AU-06.md) `PATCH /users/me/role` — 역할 선택, 첫 로그인 (필수 / 구현)
 - [AU-07](AU-07.md) `POST /auth/google/calendar` — 구글 캘린더 연동 (권장 / 구현)
 - [AU-08](AU-08.md) `DELETE /auth/google/calendar` — 구글 캘린더 연동 해제 (권장 / 구현)
+- [AU-09](AU-09.md) `GET /auth/me/plan` — 내 이용 방식 무료/버디, 오늘 남은 AI 질문 (v3.4, 필수 / 구현)
 
 ## 홈 (Home)
 
@@ -32,6 +33,7 @@
 - [TR-02](TR-02.md) `GET /tours/{id}` — 투어 코스 상세 조회 (필수 / 구현)
 - [TR-03](TR-03.md) `GET /places/{id}` — 장소 상세 조회 (필수 / 구현)
 - [TR-04](TR-04.md) `GET /tours/{id}/reviews` — 투어 리뷰 조회 (권장 / 목업)
+- [TR-05](TR-05.md) `POST /tours/{id}/survey` — 무료 코스 완료 설문 (v3.4, 권장 / 구현)
 
 ## 버디 (Buddies)
 
@@ -42,6 +44,8 @@
 - [BD-05](BD-05.md) `GET /buddy/requests` — 버디 요청함 조회 (필수 / 구현)
 - [BD-06](BD-06.md) `GET /buddy/schedule` — 버디 확정 일정 조회 (필수 / 구현)
 - [BD-07](BD-07.md) `GET /buddy/earnings` — 버디 활동 내역·정산 조회 (권장 / 목업)
+- [BD-08](BD-08.md) `GET /buddy/grade` — 내 등급·정산율, 매달 1일 지난달 동행으로 평가 (v3.7, 권장 / 구현)
+- [BD-09](BD-09.md) `/buddy/apply/*` — 버디 지원 6단계: 자격 두 경로 · 사전 교육 영상 · 퀴즈 (v3.7, 필수 / 구현)
 
 ## AI
 
@@ -68,8 +72,8 @@
 
 - [AD-01](AD-01.md) `GET /admin/dashboard` — 어드민 대시보드 (필수 / 구현)
 - [AD-02](AD-02.md) `GET /admin/bookings` — 어드민 예약 목록 조회 (필수 / 구현)
-- [AD-03](AD-03.md) `GET /admin/buddies` — 소속 버디 목록 조회 (필수 / 구현)
-- [AD-04](AD-04.md) `PATCH /admin/buddies/{id}` — 버디 승인·제재 (필수 / 부분 구현)
+- [AD-03](AD-03.md) `GET /admin/buddies` — 버디 목록 조회 · 등급 다시 계산 (필수 / 구현)
+- [AD-04](AD-04.md) `PATCH /admin/buddies/{id}` — 버디 승인·제재 (v3.7 자격 경로·교육 영상 조건, 필수 / 구현)
 - [AD-05](AD-05.md) `GET /admin/users` — 회원 목록 조회 (권장 / 목업)
 - [AD-06](AD-06.md) `GET /admin/settlements` — 정산 내역 조회 (권장 / 목업)
 - [AD-07](AD-07.md) `GET /admin/tours` — 투어 코스 관리 (권장 / 시드 대체)
@@ -80,3 +84,4 @@
 ## 공통 (Common)
 
 - [CM-01](CM-01.md) `GET /contents/{key}` — 약관·환불 규정·고객센터 조회 (권장 / 목업)
+- [UP-01](UP-01.md) `POST /uploads` — 사진 올리기 · `/media` 보기 (v3.6, 권장 / 구현)

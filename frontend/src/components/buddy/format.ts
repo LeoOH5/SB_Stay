@@ -1,8 +1,8 @@
 // 버디 화면 공용 포맷·라벨 헬퍼 (B1~B5)
-import type { BuddyEarning, Role } from "@/lib/types";
+import type { BuddyEarning, LatLng, LegSource, Role, RouteSource } from "@/lib/types";
 
 /** 데모 기준일 — 목 데이터가 2027년 1월(겨울방학)이라 "오늘"을 고정한다 */
-export const DEMO_TODAY = "2027-01-13";
+export const DEMO_TODAY = "2027-01-14";
 
 export const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -44,16 +44,58 @@ export const INTEREST_LABEL: Record<string, string> = {
 export const interestLabel = (k: string) => INTEREST_LABEL[k] ?? k;
 export const interestsLabel = (ks: string[]) => ks.map(interestLabel).join(", ");
 
-export const isProvider = (role?: Role | null) => role === "buddy" || role === "guide";
-export const roleLabel = (role?: Role | null) => (role === "guide" ? "해설사" : "버디");
+export const isProvider = (role?: Role | null) => role === "buddy";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- v3: 공급자는 버디뿐 (해설사 역할 삭제)
+export const roleLabel = (_role?: Role | null) => "버디";
 
 /** GET /buddy/earnings (BD-07) 응답 — 목 형태 기준 */
 export interface BuddyEarnings {
   month: string; activities: number; total_fee: number; paid: number; pending: number; items: BuddyEarning[];
 }
-/** POST /ai/buddy-brief (AI-04) 응답 */
-export interface BuddyBrief { brief: string }
+/** v3.8 AI-04 추천 동선 한 곳 (첫 곳은 walk_*_from_prev null) */
+export interface BriefRouteStop {
+  place_id: number; name: string; name_en: string; lat?: number | null; lng?: number | null;
+  /** true = 코스 장소, false = 여행자가 고른 '더 가 보고 싶은 곳' */
+  from_course?: boolean;
+  walk_m_from_prev: number | null; walk_min_from_prev: number | null;
+  source?: LegSource | null; path?: LatLng[] | null;
+}
+/** POST /ai/buddy-brief (AI-04) 응답. v3.8 route = 코스 + 더 갈 곳, 걷는 거리가 가장 짧은 순서 (코스 첫 장소 고정) */
+export interface BuddyBrief {
+  brief: string;
+  route?: BriefRouteStop[]; route_walk_m?: number; route_walk_min?: number; route_source?: RouteSource;
+}
 /** AU-07 응답 */
 export interface CalendarOut { calendar_connected: boolean }
 /** BD-04 응답 */
 export interface AvailabilityOut { dates: string[] }
+
+/** "2027-01-13" → "1월 13일" */
+export function krDate(s?: string | null): string {
+  if (!s) return "";
+  const d = parseDate(s);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
+/** "2027-01-13" → "1월 13일 수" */
+export function krDateDow(s: string): string {
+  const d = parseDate(s);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW[d.getDay()]}`;
+}
+/** 같은 달이면 "1월 12일 – 15일" */
+export function krRange(from: string, to: string): string {
+  if (!to || to === from) return krDate(from);
+  return from.slice(0, 7) === to.slice(0, 7) ? `${krDate(from)} – ${parseDate(to).getDate()}일` : `${krDate(from)} – ${krDate(to)}`;
+}
+/** "14:00" + 120 → "14:00 – 16:00" */
+export const timeSpan = (time: string, durationMin: number) => timeRange(time, durationMin).replace("–", " – ");
+/** "2027-01" → "2027년 1월" */
+export const monthLabel = (m: string) => `${m.slice(0, 4)}년 ${Number(m.slice(5, 7))}월`;
+export const prevMonth = (m: string) => { const [y, mo] = m.split("-").map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, "0")}`; };
+
+/** 언어 코드 → 한국어 이름 */
+export const LANG_NAME: Record<string, string> = { ko: "한국어", en: "영어", ja: "일본어", zh: "중국어" };
+export const langsName = (ls: string[]) => ls.map((l) => LANG_NAME[l] ?? l).join("·");
+
+const batchim = (name: string) => { const c = name.charCodeAt(name.length - 1); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0; };
+/** 받침 있으면 "과", 없으면 "와" */
+export const wa = (name: string) => (batchim(name) ? "과" : "와");

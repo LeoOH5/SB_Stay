@@ -1,10 +1,12 @@
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
+from datetime import date
+
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
 from app.models.base import TimestampMixin
 
-ROLES = ("tourist", "buddy", "guide", "univ_admin", "operator")
+ROLES = ("tourist", "buddy", "univ_admin", "operator")
 
 
 class User(Base, TimestampMixin):
@@ -17,6 +19,7 @@ class User(Base, TimestampMixin):
     role: Mapped[str] = mapped_column(String(20), default="tourist")  # ROLES
     university_id: Mapped[int | None] = mapped_column(ForeignKey("universities.id"))
     language: Mapped[str] = mapped_column(String(5), default="ko")
+    birth_date: Mapped[date | None] = mapped_column(Date)  # 버디 지원 만 나이 확인용
     # 구글 OAuth
     google_sub: Mapped[str | None] = mapped_column(String(64), unique=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500))

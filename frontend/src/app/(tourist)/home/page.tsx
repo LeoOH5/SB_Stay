@@ -1,35 +1,39 @@
 "use client";
-// T1 홈 — HM-01 GET /packages, 패키지 담기용 DM-03·TR-02·BD-02
-import { HeaderActions } from "@/components/tourist/header-actions";
-import Link from "next/link";
+// T01 홈 — HM-01 GET /packages (숙박 + 버디 + 추천 코스), 패키지 담기용 DM-03·TR-02·BD-02, TR-01 코스 수
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AiBlock, Button, Card, CategoryTiles, Hero, LinkButton, ListRow, SectionTitle, Spinner } from "@/components/ui";
-import { BottomSheet, ErrorBox, TypeBadge } from "@/components/tourist";
-import { addDays, DEFAULT_FROM, DEFAULT_TOUR_DATE, errMsg, md, nightsBetween, okv, ROOM_LABEL } from "@/components/tourist/format";
+import { Banner, Brand, Button, ImageBlock, LinkButton, ListRow, Spinner, TagChip } from "@/components/ui";
+import { BottomSheet, ErrorBox } from "@/components/tourist";
+import { DEFAULT_FROM, addDays, errMsg, nightsBetween, okv, ROOM_LABEL } from "@/components/tourist/format";
+import { HeaderActions } from "@/components/tourist/header-actions";
+import { koDay, koDuration, koRange, wa } from "@/components/tourist/v3/flow";
+import { SectionHead } from "@/components/tourist/v3";
 import { get, won } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
+import { buddyItemPrice } from "@/lib/codes";
 import { useLang } from "@/lib/i18n";
 import type { Buddy, CartItem, DormRoom, ListResponse, Package, Tour } from "@/lib/types";
 
-/** 패키지 구성(dorm/tour/buddy)을 상세 조회해 CartItem 으로 변환 */
+const SHOWN = 3;
+
+/** 패키지 구성(숙박 + 버디, 추천 코스는 버디 항목의 course_id)을 상세 조회해 CartItem 으로 바꾼다 */
 async function packageItems(p: Package): Promise<CartItem[]> {
   const items: CartItem[] = [];
   const from = DEFAULT_FROM;
   const to = addDays(from, p.nights);
   if (p.dorm_room_id) {
     const d = await okv(get<DormRoom>(`/dorms/${p.dorm_room_id}`));
-    items.push({ type: "dorm", ref_id: d.id, title: `${d.university.name} ${d.building} ${ROOM_LABEL[d.room_type]}`, meta: `${md(from)} – ${md(to)} · ${p.nights}박`, price: d.price_per_night * nightsBetween(from, to), date_from: from, date_to: to, guests: 1 });
+    items.push({ type: "dorm", ref_id: d.id, title: `${d.university.name} ${d.building} ${ROOM_LABEL[d.room_type]}`, meta: `${koRange(from, to)}, ${p.nights}박`, price: d.price_per_night * nightsBetween(from, to), date_from: from, date_to: to, guests: 1, request: null });
   }
-  if (p.tour_id) {
-    const t = await okv(get<Tour>(`/tours/${p.tour_id}`));
-    items.push({ type: "tour", ref_id: t.id, title: t.title, meta: `${md(DEFAULT_TOUR_DATE)} 10:00 · 해설사 ${t.guide.name} · ${t.meeting_point}`, price: t.price, date: DEFAULT_TOUR_DATE, time: "10:00", duration_min: t.duration_min });
-  }
+  const course = p.tour_id ? await okv(get<Tour>(`/tours/${p.tour_id}`)) : null;
   if (p.buddy_profile_id) {
     const b = await okv(get<Buddy>(`/buddies/${p.buddy_profile_id}`));
-    const date = b.available_dates[0] ?? DEFAULT_TOUR_DATE;
-    items.push({ type: "buddy", ref_id: b.id, title: `${b.name}와 동네 걷기`, meta: `${md(date)} 14:00 · 2시간`, price: (b.hourly_fee ?? 15000) * 2, date, time: "14:00", duration_min: 120 });
+    // 숙박 기간 안의 버디 가능 날짜 (BUDDY_OUT_OF_STAY 방지)
+    const inStay = b.available_dates.filter((d) => d >= from && d <= to);
+    const date = inStay.find((d) => d > from) ?? inStay[0] ?? addDays(from, 1);
+    const fee = b.hourly_fee ?? 15000;
+    items.push({ type: "buddy", ref_id: b.id, title: `${b.name}${wa(b.name)} 동네 걷기`, meta: `${koDay(date)} 14:00, 2시간${course ? ` · ${course.title}` : ""}`, price: buddyItemPrice(fee, 120), date, time: "14:00", duration_min: 120, course_id: course?.id ?? null, course_title: course?.title ?? null, meal_count: 0, album: false, hourly_fee: fee, university_id: b.university_id, request: null });
   }
   return items;
 }
@@ -40,6 +44,8 @@ export default function HomePage() {
   const { user } = useUser();
   const cart = useCart();
   const [pkgs, setPkgs] = useState<Package[] | null>(null);
+  const [courses, setCourses] = useState<Tour[] | null>(null);
+  const [all, setAll] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [sel, setSel] = useState<Package | null>(null);
   const [selItems, setSelItems] = useState<CartItem[] | null>(null);
@@ -48,6 +54,7 @@ export default function HomePage() {
   useEffect(() => {
     let alive = true;
     get<ListResponse<Package>>("/packages").then((r) => { if (alive) setPkgs(r.items); }).catch((e: unknown) => { if (alive) setErr(errMsg(e)); });
+    get<ListResponse<Tour>>("/tours").then((r) => { if (alive) setCourses(r.items); }).catch(() => { /* 코스 수는 보조 */ });
     return () => { alive = false; };
   }, []);
 
@@ -57,57 +64,83 @@ export default function HomePage() {
   };
   const addAll = () => {
     if (!selItems) return;
+    // 숙박은 한 곳, 버디는 한 명 — 기존 숙박·버디는 바꾼다
+    for (const old of cart.items) if (selItems.some((n) => n.type === old.type)) cart.remove(old.type, old.ref_id);
     selItems.forEach((i) => cart.add(i));
     setSel(null);
     router.push("/cart");
   };
 
+  const first = user?.name.trim().split(" ")[0];
+  const shown = pkgs ? (all ? pkgs : pkgs.slice(0, SHOWN)) : [];
+
   return (
     <>
-      <Hero title={user ? `${user.name.split(" ")[0]} 님, 반가워요` : "Seongbuk Stay"} sub="성북 대학 기숙사에 머물며 걷는 역사 여행" right={<HeaderActions />} />
-      <div className="px-5 pb-8 pt-4 space-y-3">
-        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-navy-bg to-green-bg p-5 ring-0">
-          <div className="text-[12px] font-semibold text-green-dark">AI 여행 설계</div>
-          <div className="mt-1 text-[18px] font-bold leading-snug text-ink">기간과 관심사만 고르면<br />숙박·투어·버디 일정을 짜 드려요</div>
-          <LinkButton href="/plan" className="mt-4">일정 만들기 →</LinkButton>
-        </Card>
+      <header className="flex h-16 items-center justify-between bg-white px-5 pt-2">
+        <Brand href="/home" />
+        <HeaderActions />
+      </header>
 
-        <SectionTitle>둘러보기</SectionTitle>
-        <CategoryTiles />
+      <div className="px-5 pb-10 pt-4">
+        <h1 className="text-[26px] font-bold leading-[1.35] tracking-[-0.01em] text-ink">{first ? <>{first} 님,<br /></> : null}이번 겨울은 성북동에서</h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted">성북구와 대학이 함께 여는 방학 스테이예요. 1월 5일부터 2월 20일까지 기숙사에 머물며 같은 학교 버디와 동네를 걸어요.</p>
 
-        <SectionTitle right={cart.items.length > 0 ? <Link href="/cart" className="text-[13px] text-navy font-semibold">장바구니 {cart.items.length}개 →</Link> : undefined}>추천 패키지</SectionTitle>
-        <ErrorBox message={err} />
+        <ImageBlock label="길상사의 겨울" h="h-[196px]" className="mt-6" />
+
+        <LinkButton href="/plan" className="mt-5">AI에게 일정 맡기기</LinkButton>
+        <p className="mt-2.5 text-center text-[13.5px] text-muted">날짜와 예산, 관심사만 고르면 숙소·버디·산책 코스를 묶어 드려요</p>
+
+        <SectionHead className="mt-9" title="묶어서 고르기"
+          right={pkgs && pkgs.length > SHOWN ? <button type="button" onClick={() => setAll((v) => !v)} className="font-semibold text-navy">{all ? "접기" : "전체 보기"}</button> : undefined} />
+        <ErrorBox message={err} className="mt-3" />
         {!pkgs && !err && <Spinner />}
-        {pkgs && (
-          <Card className="divide-y divide-line/60 py-0">
-            {pkgs.map((p) => (
-              <ListRow key={p.id} title={lang === "en" ? p.title_en : p.title} meta={p.description} onClick={() => openPackage(p)}
-                right={<div className="text-[14px] font-semibold text-navy">{won(p.total_price)}</div>} />
-            ))}
-          </Card>
-        )}
+        <div className="divide-y divide-line">
+          {shown.map((p) => (
+            <button key={p.id} type="button" onClick={() => openPackage(p)} className="flex w-full items-center gap-3 py-4 text-left">
+              <div className="min-w-0 flex-1">
+                <div className="text-[16px] font-semibold text-ink">{lang === "en" ? p.title_en : p.title}</div>
+                <div className="mt-1 text-[14px] text-muted">{p.description}</div>
+              </div>
+              <div className="shrink-0 text-[17px] font-bold text-ink">{won(p.total_price)}</div>
+            </button>
+          ))}
+        </div>
+        <Banner icon="users" className="mt-2">기숙사에 묵으면 같은 학교 버디가 꼭 한 번 함께해요</Banner>
 
+        <SectionHead className="mt-9" title="따로 고르기" />
+        <div className="mt-1 divide-y divide-line">
+          <ListRow href="/stay" icon="bed" title="기숙사 숙박" meta="버디 1명과 함께 신청해요" />
+          <ListRow href="/buddies" icon="users" title="대학생 버디만" meta="숙박 없이 동네 걷기만 해도 돼요" />
+          <ListRow href="/tours" icon="route" title="AI 산책 코스" meta={`${courses ? `코스 ${courses.length}개, ` : ""}무료 · 장소마다 AI 이야기`} />
+        </div>
+
+        <SectionHead className="mt-9" title="성북동은요" />
+        <p className="mt-2 text-[15px] leading-relaxed text-muted">서울 도성 바로 바깥, 문화재가 가장 많은 동네예요. 정릉, 심우장, 길상사, 수연산방, 선잠박물관이 모두 걸어서 닿는 거리에 있어요.</p>
       </div>
 
       <BottomSheet open={sel !== null} onClose={() => setSel(null)} title={sel ? (lang === "en" ? sel.title_en : sel.title) : ""}>
         {sel && (
-          <div className="space-y-3">
-            <p className="text-[13px] text-muted">{sel.description} · {sel.nights}박</p>
-            <AiBlock title="패키지 구성">숙박은 대학 승인, 버디는 버디 수락 후 확정돼요. 투어는 즉시 확정.</AiBlock>
-            <ErrorBox message={sheetErr} />
+          <div>
+            <p className="text-[14px] text-muted">숙박은 대학이 승인하고, 버디는 버디가 수락하면 확정돼요. 산책 코스는 무료예요.</p>
+            <ErrorBox message={sheetErr} className="mt-3" />
             {!selItems && !sheetErr && <Spinner />}
             {selItems && (
-              <div className="space-y-2">
-                {selItems.map((i) => (
-                  <Card key={`${i.type}-${i.ref_id}`} className="flex items-center gap-3 p-3">
-                    <TypeBadge type={i.type} />
-                    <div className="min-w-0 flex-1"><div className="text-[14px] font-semibold text-ink break-keep">{i.title}</div><div className="text-[12px] text-muted">{i.meta}</div></div>
-                    <div className="text-[14px] font-semibold text-ink">{won(i.price)}</div>
-                  </Card>
-                ))}
-                <div className="flex items-end justify-between pt-1"><span className="text-[13px] text-muted">합계</span><span className="text-[22px] font-bold text-navy">{won(selItems.reduce((s, i) => s + i.price, 0))}</span></div>
-                <Button onClick={addAll}>모두 장바구니에 담기</Button>
-              </div>
+              <>
+                <div className="mt-2 divide-y divide-line">
+                  {selItems.map((i) => (
+                    <div key={`${i.type}-${i.ref_id}`} className="flex items-start gap-3 py-3.5">
+                      <div className="min-w-0 flex-1">
+                        <TagChip variant="outline" className="h-6 px-2 text-[12px]">{i.type === "dorm" ? "숙박" : "버디"}</TagChip>
+                        <div className="mt-1.5 text-[15px] font-semibold text-ink">{i.title}</div>
+                        <div className="mt-0.5 text-[13.5px] text-muted">{i.type === "dorm" ? i.meta : `${koDay(i.date)} ${i.time}, ${koDuration(i.duration_min)}${i.course_title ? ` · ${i.course_title}` : ""}`}</div>
+                      </div>
+                      <div className="shrink-0 text-[15px] font-bold text-ink">{won(i.price)}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-1 flex items-center justify-between border-t border-line pt-3"><span className="text-[15px] text-muted">합계</span><span className="text-[20px] font-bold text-ink">{won(selItems.reduce((s, i) => s + i.price, 0))}</span></div>
+                <Button className="mt-4" onClick={addAll}>모두 장바구니에 담기</Button>
+              </>
             )}
           </div>
         )}

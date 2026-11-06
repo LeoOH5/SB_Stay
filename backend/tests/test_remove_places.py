@@ -1,0 +1,75 @@
+"""관광지 빼기 스크립트 (DB 안 씀, 임시 폴더에서)"""
+import json
+import shutil
+
+import pytest
+
+from scripts import remove_places as rp
+from scripts.export_seed_xlsx import DATA
+
+
+@pytest.fixture
+def seed_dir(tmp_path):
+    d = tmp_path / "data"
+    shutil.copytree(DATA, d)
+    return d
+
+
+def _ids(d, name, key="id"):
+    return [r[key] for r in json.loads((d / name).read_text(encoding="utf-8"))]
+
+
+def _ensure_hyehwamun(d):
+    """실제 데이터에서 혜화문(112)을 이미 뺐을 수 있으니, 임시 복사본에 다시 넣어 두고 시험한다"""
+    f = d / "places.json"
+    places = json.loads(f.read_text(encoding="utf-8"))
+    if 112 not in [p["id"] for p in places]:
+        places.append({"id": 112, "name": "혜화문"})
+        f.write_text(json.dumps(places, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return len(places)
+
+
+def test_remove_hyehwamun(seed_dir, capsys):
+    n = _ensure_hyehwamun(seed_dir)
+    before = {p.name: p.read_bytes() for p in seed_dir.glob("*.json")}
+    assert rp.main(["112", "--data", str(seed_dir)]) == 0
+    assert "112 혜화문" in capsys.readouterr().out
+    assert 112 not in _ids(seed_dir, "places.json") and len(_ids(seed_dir, "places.json")) == n - 1
+    raw = (seed_dir / "places.json").read_text(encoding="utf-8")
+    assert raw.startswith("[\n  {\n") and raw.endswith("}\n]\n")  # 원래 들여쓰기 2칸 유지
+    # v3.8 walk_routes.json 은 저장소에 없다(PC에서 받음). 받아 둔 파일에 112가 낀 쌍이 있을 때만 그 파일도 바뀐다
+    routes = json.loads(before["walk_routes.json"]) if "walk_routes.json" in before else []
+    touched = {"walk_routes.json"} if any(112 in (r["from_place_id"], r["to_place_id"]) for r in routes) else set()
+    assert {p.name for p in seed_dir.glob("*.json") if p.read_bytes() != before[p.name]} == {"places.json"} | touched
+    assert not (seed_dir / "walk_routes.json").exists() or "walk_routes.json" in before  # 없던 파일은 만들지 않는다
+    assert rp.main(["112", "--data", str(seed_dir)]) == 1  # 이미 없음
+
+
+def test_remove_drops_walk_routes(seed_dir, capsys):
+    """v3.8 도보 경로 파일이 있으면 그 장소가 낀 쌍만 지우고 같은 모양으로 다시 쓴다"""
+    from scripts.fetch_walk_routes import dump_routes
+    _ensure_hyehwamun(seed_dir)
+    rows = [{"from_place_id": 101, "to_place_id": 102, "distance_m": 500, "path": [[37.5, 127.0], [37.51, 127.01]]},
+            {"from_place_id": 101, "to_place_id": 112, "distance_m": 900, "path": [[37.5, 127.0], [37.52, 127.02]]},
+            {"from_place_id": 112, "to_place_id": 120, "distance_m": 700, "path": [[37.52, 127.02], [37.53, 127.03]]}]
+    (seed_dir / "walk_routes.json").write_text(dump_routes(rows), encoding="utf-8")
+    before = {p.name: p.read_bytes() for p in seed_dir.glob("*.json")}
+    assert rp.main(["112", "--data", str(seed_dir)]) == 0
+    assert "경로 101–112" in capsys.readouterr().out
+    assert {p.name for p in seed_dir.glob("*.json") if p.read_bytes() != before[p.name]} == {"places.json", "walk_routes.json"}
+    raw = (seed_dir / "walk_routes.json").read_text(encoding="utf-8")
+    assert raw == dump_routes(rows[:1]) and json.loads(raw) == rows[:1]
+
+
+def test_refuses_when_referenced_and_reorders_course(seed_dir, capsys):
+    before = {p.name: p.read_bytes() for p in seed_dir.glob("*.json")}
+    assert rp.main(["104", "--data", str(seed_dir)]) == 1  # 패키지 1 코스 3 · Emma 요청 장소
+    err = capsys.readouterr().err
+    assert "패키지 1" in err and "예약 항목 3" in err
+    assert {p.name: p.read_bytes() for p in seed_dir.glob("*.json")} == before  # 아무것도 안 씀
+    assert rp.main(["114", "--data", str(seed_dir), "--check"]) == 0 and (seed_dir / "tour_places.json").read_bytes() == before["tour_places.json"]
+    assert rp.main(["105", "--data", str(seed_dir)]) == 1  # 코스 5는 패키지에 있음
+    assert rp.main(["114", "--data", str(seed_dir)]) == 0  # 코스 7(패키지 아님)에서 빠지고 순서 다시 매김
+    stops = json.loads((seed_dir / "tour_places.json").read_text(encoding="utf-8"))
+    assert [(s["place_id"], s["seq"]) for s in stops if s["tour_id"] == 7] == [(105, 1)]
+    assert (seed_dir / "tour_places.json").read_text(encoding="utf-8").startswith('[\n  {\n    "tour_id"')

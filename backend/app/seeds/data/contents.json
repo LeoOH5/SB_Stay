@@ -15,25 +15,25 @@
   "key": "terms",
   "language": "ko",
   "title": "이용약관",
-  "body": "본 서비스는 숙박(대학)·투어(해설사)·교류(버디)를 연결하는 중개 플랫폼입니다. 숙박 판매 주체는 각 대학이며, 플랫폼은 예약·결제·연결을 담당합니다."
+  "body": "본 서비스는 숙박(대학)과 교류(대학생 버디)를 연결하는 중개 플랫폼입니다. 산책 코스와 장소 이야기는 무료로 제공합니다. 숙박 판매 주체는 각 대학이며, 플랫폼은 예약·결제·연결을 담당합니다. 버디 식사 보증금은 수수료 없이 승인된 영수증 금액만 정산하고 남은 금액은 돌려드립니다."
  },
  {
   "key": "terms",
   "language": "en",
   "title": "Terms of Service",
-  "body": "SB Stay is a marketplace connecting dorm stays (universities), history tours (licensed guides) and buddy meetups (students). Universities are the sellers of accommodation; the platform handles booking, payment and matching."
+  "body": "SB Stay is a marketplace connecting dorm stays (universities) and meetups with student buddies. Walking courses and place stories are free. Universities are the sellers of accommodation; the platform handles booking, payment and matching. Buddy meal deposits carry no fee: only approved receipts are paid out and the rest is refunded."
  },
  {
   "key": "refund",
   "language": "ko",
   "title": "환불 규정",
-  "body": "체크인 7일 전 100% · 3일 전 50% · 이후 0%. 투어·버디는 각 일정 48시간 전까지 100%."
+  "body": "체크인 7일 전 100% · 3일 전 50% · 이후 0%. 버디 동행은 일정 48시간 전까지 100%. 쓰지 않은 식사 보증금은 여행이 끝나면 돌려드립니다."
  },
  {
   "key": "refund",
   "language": "en",
   "title": "Refund Policy",
-  "body": "100% up to 7 days before check-in, 50% up to 3 days before, 0% after. Tours and buddy meetups: 100% up to 48 hours before."
+  "body": "100% up to 7 days before check-in, 50% up to 3 days before, 0% after. Buddy meetups: 100% up to 48 hours before. Unused meal deposits are refunded after the trip."
  },
  {
   "key": "support",

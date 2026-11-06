@@ -17,8 +17,8 @@ from dataclasses import dataclass, field
 from app.models import Place
 
 NOT_FOUND = {
-    "ko": "자료에 없는 내용이에요. 해설사에게 물어봐 주세요.",
-    "en": "That isn't in our materials. Please ask your guide.",
+    "ko": "자료에 없는 내용이에요. 버디나 운영팀에 물어봐 주세요.",
+    "en": "That isn't in our materials. Please ask your buddy or our support team.",
 }
 NO_STORY = {
     "ko": "아직 이 장소의 이야기 자료가 없어요.",

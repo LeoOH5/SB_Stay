@@ -1,0 +1,41 @@
+# 백엔드 테스트: develop·main에 push 하거나 PR을 열면 pytest를 돌린다.
+# 저장소 Settings → Branches → develop 보호 규칙에서 "backend-tests" 통과를 필수로 켜면,
+# 테스트가 실패한 코드는 머지할 수 없다.
+name: backend-tests
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sbstay
+          POSTGRES_PASSWORD: sbstay
+          POSTGRES_DB: sbstay_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sbstay"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv python install 3.12
+      - run: uv sync --extra dev --group dev
+      - name: 돈 규칙 테스트 (환불·수수료)
+        run: uv run pytest -q tests/test_money_rules.py
+      - name: 전체 테스트
+        run: uv run pytest -q
+      - name: ruff
+        run: uv run ruff check app tests scripts

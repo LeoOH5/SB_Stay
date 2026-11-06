@@ -6,6 +6,7 @@ from decimal import ROUND_DOWN, Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import rules
 from app.models.booking import Booking, BookingItem, Notification
 from app.models.payment import Payment
 from app.services import paypal, toss
@@ -36,7 +37,7 @@ def summary(p: Payment | None) -> dict | None:
 
 def order_name(db: Session, b: Booking) -> str:
     items = db.scalars(select(BookingItem).where(BookingItem.booking_id == b.id).order_by(BookingItem.id)).all()
-    label = {"dorm": "숙박", "tour": "투어", "buddy": "버디"}
+    label = {"dorm": "숙박", "buddy": "버디"}
     kinds = [label.get(i.type, i.type) for i in items]
     return f"성북스테이 {'·'.join(dict.fromkeys(kinds))} ({b.code})"[:100]
 
@@ -164,29 +165,24 @@ def paypal_capture(db: Session, b: Booking, p: Payment) -> Payment:
     return p
 
 
-def refund_rate(b: Booking, items: list[BookingItem], today: date | None = None) -> float:
-    """환불 규정: 첫 일정 7일 전까지 100%, 3일 전까지 50%, 이후 0%"""
+def refund_percent(b: Booking, items: list[BookingItem], today: date | None = None) -> int:
+    """환불 규정(퍼센트 정수): 첫 일정 7일 전까지 100, 3일 전까지 50, 이후 0. 규칙은 rules.REFUND_RULES"""
     today = today or date.today()
-    first = min((i.date_from for i in items), default=today)
-    days = (first - today).days
-    if days >= 7:
-        return 1.0
-    if days >= 3:
-        return 0.5
-    return 0.0
+    first = min((i.date_from for i in items if i.date_from), default=today)
+    return rules.refund_percent((first - today).days)
 
 
 def refund_on_cancel(db: Session, b: Booking, reason: str | None) -> dict:
     """예약 취소 직전에 호출. 토스 결제면 규정 금액만큼 실제 환불. 실패하면 예외(예약은 취소하지 않음)."""
     p = paid(db, b.id)
     if not p:
-        return {"refund_amount": 0, "refund_rate": 0.0}
+        return {"refund_amount": 0, "refund_percent": 0}
     items = db.scalars(select(BookingItem).where(BookingItem.booking_id == b.id)).all()
-    rate = refund_rate(b, list(items))
+    percent = refund_percent(b, list(items))
     remaining = p.amount - p.canceled_amount
-    refund = min(remaining, round(p.amount * rate))
+    refund = min(remaining, rules.pct(p.amount, percent))
     if refund <= 0:
-        return {"refund_amount": 0, "refund_rate": rate}
+        return {"refund_amount": 0, "refund_percent": percent}
     full = refund == remaining
     if p.provider == "toss" and p.payment_key:  # 실제 토스 결제
         try:
@@ -205,7 +201,7 @@ def refund_on_cancel(db: Session, b: Booking, reason: str | None) -> dict:
         p.status = "CANCELED" if refund == remaining else "PARTIAL_CANCELED"
     p.canceled_amount += refund
     db.commit()
-    return {"refund_amount": refund, "refund_rate": rate}
+    return {"refund_amount": refund, "refund_percent": percent}
 
 
 # ---------- 테스트 결제 자동 환불

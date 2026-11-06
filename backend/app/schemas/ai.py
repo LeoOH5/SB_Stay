@@ -18,11 +18,16 @@ class PlanIn(BaseModel):
 
 class PlanItem(BaseModel):
     time: str | None = None
-    type: str  # dorm | tour | buddy | free
+    type: str  # dorm | buddy | course | free  (course는 무료, 예약 항목 아님)
     ref_id: int | None = None
     title: str
     price: int = 0
     meta: str | None = None  # 화면 보조 문구 (프론트 PlanItem.meta)
+    course_id: int | None = None  # buddy 항목: 같이 걸을 코스 (BK-01 버디 항목의 course_id로 그대로 보냄)
+    # v3.8 free 항목: 장소 id를 걷는 순서대로 (걷는 거리가 가장 짧은 순서, 코드가 정함) · 그 사이 걷는 거리(10 m 단위)·분
+    place_ids: list[int] | None = None
+    walk_m: int | None = None
+    walk_min: int | None = None
 
 
 class PlanDay(BaseModel):
@@ -36,6 +41,7 @@ class PlanOut(BaseModel):
     total_price: int
     days: list[PlanDay]
     ai: bool = False  # LLM이 고른 결과면 true, 규칙 기반 폴백이면 false
+    warnings: list[str] = []  # NO_BUDDY (숙박 기간에 가능한 버디 없음) · OVER_BUDGET (버디를 넣으니 예산 초과)
 
 
 # ---------- AI-02 역사 스토리 ----------
@@ -55,18 +61,26 @@ class StoryOut(BaseModel):
     sources: list[Source]
     grounded: bool  # false면 화면은 "자료에 없다" 안내
     ai: bool = False  # LLM이 쓴 답이면 true, 규칙 기반 검색이면 false
+    questions_left: int | None = None  # v3.4 무료 이용자가 질문했을 때 오늘 남은 질문 수. 소개·버디 이용자는 null
 
 
 # ---------- AI-03 버디 매칭 ----------
+Code = Annotated[str, StringConstraints(pattern=r"^[a-z_]{2,20}$")]
+
+
 class MatchIn(BaseModel):
     language: Literal["ko", "en", "ja", "zh"] | None = None  # 버디가 쓸 줄 알아야 하는 언어
     date: dt.date | None = None  # 이름이 타입과 같아 dt.date로 적는다
-    interests: list[Annotated[str, StringConstraints(pattern=r"^[a-z_]{2,20}$")]] = Field(default=[], max_length=10)
+    interests: list[Code] = Field(default=[], max_length=10)
+    personality: list[Code] = Field(default=[], max_length=4)  # 원하는 버디 성향 (calm·lively·listener·humor)
+    style: list[Code] = Field(default=[], max_length=4)  # 원하는 걷기 스타일
+    needs: list[Code] = Field(default=[], max_length=5)  # 필요한 도움 (can_help 코드)
+    university_id: int | None = None  # 숙소 대학 → 같은 대학 버디 가산점
 
 
 class MatchItem(BaseModel):
     buddy_id: int
-    score: float  # 0~1, 코드가 계산 (관심사 겹침·언어)
+    score: float  # 0~1, 코드가 계산 (관심사·언어·성향·도움·같은 대학)
     reason: str
 
 
@@ -89,12 +103,31 @@ class BriefPlace(BaseModel):
     tips: str
 
 
+class BriefRouteStop(BaseModel):
+    """v3.8 추천 동선 한 곳. 첫 곳은 walk_*_from_prev가 null"""
+    place_id: int
+    name: str
+    name_en: str
+    lat: float | None = None
+    lng: float | None = None
+    from_course: bool = False  # true = 코스 장소, false = 여행자가 '더 가 보고 싶은 곳'으로 고른 곳
+    walk_m_from_prev: int | None = None  # 앞 장소에서 걷는 거리 (10 m 단위). 좌표가 없으면 null
+    walk_min_from_prev: int | None = None
+    source: Literal["route", "estimate"] | None = None  # route = OpenStreetMap 실제 경로 · estimate = 직선 × 1.3
+    path: list[list[float]] | None = None  # route일 때 앞 장소 → 이 장소 [[위도, 경도], ...]
+
+
 class BriefOut(BaseModel):
     booking_item_id: int
     places: list[BriefPlace]
     phrases: list[str]  # 관광객에게 쓸 영어 문장
     brief: str  # 버디 요청 카드에 보이는 2~3문장 안내 (프론트 BuddyBrief.brief)
     ai: bool = False
+    # v3.8 추천 동선 = 코스 장소 + 더 가 보고 싶은 곳(최대 3), 걷는 거리가 가장 짧은 순서 (코스 첫 장소는 그대로 처음)
+    route: list[BriefRouteStop] = []
+    route_walk_m: int = 0  # 동선 걷는 거리 합 (좌표 없는 구간 제외)
+    route_walk_min: int = 0
+    route_source: Literal["route", "estimate", "mixed"] = "estimate"
 
 
 # ---------- AI-05 다국어 안내문 초안 ----------

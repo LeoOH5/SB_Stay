@@ -10,9 +10,9 @@ from app.services import toss
 TRAVELER = {"name": "Emma Clark", "nationality": "US", "email": "emma@example.com", "guests": 1}
 ITEMS = [
     {"type": "dorm", "ref_id": 10, "date_from": "2027-01-12", "date_to": "2027-01-15", "guests": 1},
-    {"type": "tour", "ref_id": 3, "date": "2027-01-16", "time": "10:00"},
+    {"type": "buddy", "ref_id": 31, "date": "2027-01-13", "time": "14:00", "duration_min": 60, "album": True},
 ]
-TOTAL = 105000 + 20000
+TOTAL = 105000 + 15000 + 5000  # 숙박 + 버디 1시간 + 앨범
 
 
 @pytest.fixture
@@ -105,8 +105,8 @@ def test_other_user_cannot_pay(client, booking, buddy):
     assert client.post("/api/v1/payments/prepare", json={"booking_id": booking["id"]}, headers=buddy).status_code == 403
 
 
-def test_refund_rate_policy():
-    class B:  # refund_rate는 날짜만 본다
+def test_refund_percent_policy():
+    class B:  # refund_percent는 날짜만 본다
         pass
 
     class I:
@@ -114,9 +114,9 @@ def test_refund_rate_policy():
             self.date_from = d
 
     items = [I(date(2027, 1, 12))]
-    assert ps.refund_rate(B(), items, today=date(2027, 1, 5)) == 1.0
-    assert ps.refund_rate(B(), items, today=date(2027, 1, 9)) == 0.5
-    assert ps.refund_rate(B(), items, today=date(2027, 1, 10)) == 0.0
+    assert ps.refund_percent(B(), items, today=date(2027, 1, 5)) == 100
+    assert ps.refund_percent(B(), items, today=date(2027, 1, 9)) == 50
+    assert ps.refund_percent(B(), items, today=date(2027, 1, 10)) == 0
 
 
 # ---------- PayPal (외국인 결제, USD)
@@ -196,7 +196,7 @@ def test_paypal_partial_refund(db, client, tourist, booking, paypal_on, monkeypa
     """첫 일정 3~6일 전 취소 → 달러로 50% 환불"""
     o = client.post("/api/v1/payments/paypal/orders", json={"booking_id": booking["id"]}, headers=tourist).json()
     client.post("/api/v1/payments/paypal/capture", json={"paypal_order_id": o["paypal_order_id"]}, headers=tourist)
-    monkeypatch.setattr(ps, "refund_rate", lambda b, items, today=None: 0.5)
+    monkeypatch.setattr(ps, "refund_percent", lambda b, items, today=None: 50)
     r = client.post(f"/api/v1/bookings/{booking['id']}/cancel", json={}, headers=tourist)
     assert r.status_code == 200 and r.json()["payment"]["status"] == "PARTIAL_CANCELED"
     assert r.json()["payment"]["canceled_amount"] == TOTAL // 2

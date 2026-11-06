@@ -22,8 +22,12 @@ backend/.venv/
 .ruff_cache/
 # data
 postgres-data/
+backend/SBStay_seed_data.xlsx
+# v3.6 올린 사진 (settings.upload_dir)
+backend/uploads/
 *.log
 # 로컬 전용 자산 (깃허브 제외)
 design/
 img/
 
+backend/tourapi_review.xlsx

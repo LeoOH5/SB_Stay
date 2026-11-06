@@ -1,34 +1,106 @@
 "use client";
-// T8 마이페이지 · 고객센터 — AU-03 (세션), CM-01 GET /contents/{key}. 언어·알림은 상단 바
-import { HeaderActions } from "@/components/tourist/header-actions";
-import Link from "next/link";
+// T17 마이페이지 — AU-03 세션, AU-04 PATCH /auth/me(이름·언어), AU-07 구글 캘린더, BK-10 알림, CM-01 GET /contents/{key}
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Button, Card, Hero, SectionTitle, Spinner } from "@/components/ui";
+import { useEffect, useState, type ReactNode } from "react";
 import { BottomSheet, ErrorBox, LoginRequired } from "@/components/tourist";
-import { errMsg, okv, ROLE_LABEL } from "@/components/tourist/format";
-import { get } from "@/lib/api";
+import { dateTime, errMsg, okv, ROLE_LABEL } from "@/components/tourist/format";
+import { Avatar } from "@/components/tourist/trips/util";
+import { Button, Hero, Icon, Spinner, cn, inputCls } from "@/components/ui";
+import { del, get, patch, post } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
+import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import { useLang } from "@/lib/i18n";
-import type { ContentDoc } from "@/lib/types";
+import { useLS, writeLS } from "@/lib/store";
+import type { ContentDoc, Lang, ListResponse, Notification, User } from "@/lib/types";
 
 const DOCS: { key: string; label: string }[] = [
-  { key: "support", label: "고객센터 · 긴급연락처 (112 · 119 · 운영자)" },
+  { key: "support", label: "고객센터와 긴급 연락처" },
   { key: "terms", label: "이용약관" },
-  { key: "refund", label: "환불 규정 (7일 전 100% · 3일 전 50% · 이후 0%)" },
-  { key: "privacy", label: "개인정보 처리방침 (여권번호는 예약 시점에만)" },
+  { key: "refund", label: "환불 규정" },
+  { key: "privacy", label: "개인정보 처리방침" },
 ];
-const PRIVACY_FALLBACK: ContentDoc = { key: "privacy", language: "ko", title: "개인정보 처리방침", body: "여권번호는 숙박 항목이 있을 때 예약 시점에만 입력받고, 승인 후 대학 담당자에게만 전달합니다 (최소 수집 원칙). 버디 연락처는 노출하지 않으며 채팅은 플랫폼 안에서만 이뤄집니다." };
+const PRIVACY_FALLBACK: ContentDoc = { key: "privacy", language: "ko", title: "개인정보 처리방침", body: "여권번호는 숙박 항목이 있을 때 예약 시점에만 입력받고, 승인 후 대학 담당자에게만 전달해요. 버디에게는 이름과 국적만 보여요. 채팅은 앱 안에서만 이뤄져요." };
+const CURRENCY_KEY = "sbstay.currency";
+
+/** 두 칸 고르기 (선택 = 쪽빛 채움) */
+function Segmented<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
+  return (
+    <div className="flex shrink-0 gap-2">
+      {options.map(([v, label]) => (
+        <button key={v} type="button" onClick={() => onChange(v)} aria-pressed={value === v}
+          className={cn("h-10 rounded-full border px-4 text-[15px] transition", value === v ? "border-navy bg-navy font-bold text-white" : "border-line bg-white text-ink hover:border-navy/50")}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Toggle({ on, onClick, disabled, label }: { on: boolean; onClick: () => void; disabled?: boolean; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onClick} disabled={disabled}
+      className={cn("relative h-8 w-[52px] shrink-0 rounded-full transition disabled:opacity-40", on ? "bg-navy" : "bg-[#C9CED3]")}>
+      <span className={cn("absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-all", on ? "left-[24px]" : "left-1")} />
+    </button>
+  );
+}
+
+function SettingRow({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
+  return (
+    <div className="flex min-h-[68px] items-center justify-between gap-4 py-3">
+      <div className="min-w-0">
+        <div className="text-[16px] text-ink">{title}</div>
+        {sub && <div className="mt-0.5 text-[13px] text-muted">{sub}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export default function MePage() {
   const router = useRouter();
   const { user } = useUser();
-  const { lang } = useLang();
+  const { lang, set: setLang } = useLang();
+  const currency = useLS<"KRW" | "USD">(CURRENCY_KEY, "KRW");
+  const [notis, setNotis] = useState<Notification[] | null>(null);
+  const [calBusy, setCalBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
   const [doc, setDoc] = useState<ContentDoc | null>(null);
   const [docKey, setDocKey] = useState<string | null>(null);
   const [docErr, setDocErr] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
 
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    get<ListResponse<Notification>>("/notifications").then((r) => { if (alive) setNotis(r.items); }).catch(() => { if (alive) setNotis([]); });
+    return () => { alive = false; };
+  }, [user]);
 
+  const changeLang = async (l: Lang) => {
+    setLang(l);
+    try { const u = await patch<User | null>("/auth/me", { language: l }); session.update({ language: u?.language ?? l }); } catch { /* 화면 언어는 이미 바뀜 */ }
+  };
+  const toggleCalendar = async () => {
+    if (!user) return;
+    setCalBusy(true); setMsg(null);
+    try {
+      if (user.calendar_connected) { await del("/auth/google/calendar"); session.update({ calendar_connected: false }); }
+      else {
+        let body: { code: string; redirect_uri?: string } = { code: "mock" };
+        if (googleConfigured()) { const code = await requestGoogleCode("calendar", user.email); if (!code) return; body = googleBody(code); }
+        await post("/auth/google/calendar", body); session.update({ calendar_connected: true });
+      }
+    } catch (e) { setMsg(errMsg(e)); }
+    finally { setCalBusy(false); }
+  };
+  const saveName = async () => {
+    const n = name.trim();
+    if (!n) return;
+    try { const u = await patch<User | null>("/auth/me", { name: n }); session.update({ name: u?.name ?? n }); setEditing(false); }
+    catch (e) { setMsg(errMsg(e)); }
+  };
   const openDoc = (key: string) => {
     setDocKey(key); setDoc(null); setDocErr(null);
     okv(get<ContentDoc>(`/contents/${key}`, { lang })).then(setDoc).catch((e: unknown) => { if (key === "privacy") setDoc(PRIVACY_FALLBACK); else setDocErr(errMsg(e)); });
@@ -36,37 +108,65 @@ export default function MePage() {
   const logout = () => { session.clear(); router.push("/login"); };
 
   if (!user) {
-    return (<><Hero title="My page" right={<HeaderActions />} /><div className="px-5 pb-6 pt-4"><LoginRequired what="마이페이지" /></div></>);
+    return (<><Hero title="마이페이지" /><div className="px-5 pb-6 pt-2"><LoginRequired what="마이페이지" /></div></>);
   }
 
+  const unread = (notis ?? []).filter((n) => !n.read_at);
   return (
     <>
-      <Hero title="My page" right={<HeaderActions />} />
-      <div className="px-5 pb-6 pt-4 space-y-3">
-        <Card className="flex items-center gap-3">
-          <div className="h-12 w-12 shrink-0 rounded-full bg-navy-bg flex items-center justify-center text-[16px] font-semibold text-navy">{user.name[0]}</div>
+      <Hero title="마이페이지" />
+      <div className="px-5 pb-8">
+        <div className="flex items-center gap-4 pt-1">
+          <Avatar name={user.name} size="lg" />
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold text-ink break-keep">{user.name}</div>
-            <div className="text-[12px] text-muted break-keep">{user.email} · {ROLE_LABEL[user.role]}</div>
+            <div className="text-[18px] font-bold text-ink">{user.name}</div>
+            <div className="mt-0.5 truncate text-[14px] text-muted">{user.email}, {ROLE_LABEL[user.role]}</div>
           </div>
-          <Link href="/checkout" className="text-[13px] text-navy font-semibold">수정</Link>
-        </Card>
+          <button type="button" className="shrink-0 text-[15px] font-semibold text-ink" onClick={() => { setName(user.name); setEditing(true); }}>수정</button>
+        </div>
 
+        <h2 className="mb-1 mt-9 text-[18px] font-bold text-ink">설정</h2>
+        <div className="divide-y divide-line">
+          <SettingRow title="언어"><Segmented value={lang} options={[["en", "English"], ["ko", "한국어"]]} onChange={(v) => void changeLang(v)} /></SettingRow>
+          <SettingRow title="통화 표시" sub="결제는 항상 원화로 돼요"><Segmented value={currency} options={[["KRW", "KRW"], ["USD", "USD"]]} onChange={(v) => writeLS(CURRENCY_KEY, v)} /></SettingRow>
+          <SettingRow title="구글 캘린더에 일정 넣기"><Toggle on={!!user.calendar_connected} onClick={toggleCalendar} disabled={calBusy} label="구글 캘린더에 일정 넣기" /></SettingRow>
+        </div>
+        <ErrorBox message={msg} className="mt-2" />
 
-        <SectionTitle>고객센터 · 약관</SectionTitle>
-        {DOCS.map((d) => (
-          <Card key={d.key} className="flex items-center justify-between py-3" onClick={() => openDoc(d.key)}>
-            <span className="text-[13px] text-ink">{d.label}</span><span className="text-muted">›</span>
-          </Card>
-        ))}
+        <h2 className="mt-9 text-[18px] font-bold text-ink">알림</h2>
+        {notis === null ? <Spinner /> : unread.length === 0 ? (
+          <p className="mt-2 text-[14px] text-muted">새 알림이 없어요. 예약이 승인되면 여기에 보여요.</p>
+        ) : (
+          <div className="mt-1 divide-y divide-line">
+            {unread.slice(0, 3).map((n) => (
+              <div key={n.id} className="flex items-start gap-3 py-3.5">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-orange" />
+                <div className="min-w-0"><div className="text-[15px] text-ink">{n.title}</div><div className="mt-0.5 text-[13px] text-muted">{dateTime(n.created_at)}</div></div>
+              </div>
+            ))}
+          </div>
+        )}
 
-        <Button variant="ghost" onClick={logout}>로그아웃</Button>
+        <h2 className="mb-1 mt-9 text-[18px] font-bold text-ink">도움말</h2>
+        <div className="divide-y divide-line">
+          {DOCS.map((d) => (
+            <button key={d.key} type="button" onClick={() => openDoc(d.key)} className="flex w-full items-center justify-between py-4 text-left text-[16px] text-ink">
+              {d.label}<Icon name="chevron-right" className="h-5 w-5" />
+            </button>
+          ))}
+        </div>
+        <button type="button" onClick={logout} className="mt-2 py-3 text-[15px] text-muted">로그아웃</button>
       </div>
 
       <BottomSheet open={docKey !== null} onClose={() => setDocKey(null)} title={doc?.title ?? DOCS.find((d) => d.key === docKey)?.label ?? ""}>
         <ErrorBox message={docErr} />
         {!doc && !docErr && <Spinner />}
-        {doc && <div className="whitespace-pre-line text-[14px] text-ink leading-relaxed">{doc.body}</div>}
+        {doc && <div className="whitespace-pre-line text-[15px] leading-relaxed text-ink">{doc.body}</div>}
+      </BottomSheet>
+
+      <BottomSheet open={editing} onClose={() => setEditing(false)} title="이름 바꾸기">
+        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} aria-label="이름" />
+        <Button className="mt-4" onClick={saveName} disabled={!name.trim()}>저장</Button>
       </BottomSheet>
     </>
   );
