@@ -108,7 +108,22 @@ def test_seed_walk_rows_filter_and_normalize():
 
 
 # ---------- TR-02 · AD-07 (DB에 경로를 넣어 보고 시드로 되돌린다)
-def test_tour_api_uses_stored_route(client, db, operator, reset_db):
+@pytest.fixture
+def no_routes(db, reset_db):
+    """시드의 실제 경로(walk_routes.json)를 비워 '저장한 경로 없음 = 추정'에서 시작. 끝나면 reset_db가 시드를 다시 넣는다"""
+    db.query(WalkRoute).delete()
+    db.commit()
+    yield
+
+
+def test_seed_routes_used_by_tour(client):
+    """시드 상태: 코스 3의 모든 구간이 저장한 실제 경로를 쓴다"""
+    t = client.get("/api/v1/tours/3").json()
+    assert t["route_source"] == "route" and all(x["source"] == "route" and x["path"] for x in t["legs"])
+    assert t["walk_m_total"] == sum(x["walk_m"] for x in t["legs"])
+
+
+def test_tour_api_uses_stored_route(client, db, operator, no_routes):
     before = client.get("/api/v1/tours/3").json()
     assert before["route_source"] == "estimate" and all(x["source"] == "estimate" and x["path"] is None for x in before["legs"])
     db.add(WalkRoute(from_place_id=102, to_place_id=111, distance_m=523, path=PATH_102_111))
@@ -128,7 +143,7 @@ def test_tour_api_uses_stored_route(client, db, operator, reset_db):
     assert client.get("/api/v1/tours/3").json()["route_source"] == "route"
 
 
-def test_load_routes_one_query(db, reset_db):
+def test_load_routes_one_query(db, no_routes):
     db.add(WalkRoute(from_place_id=102, to_place_id=111, distance_m=523, path=PATH_102_111))
     db.commit()
     assert courses.load_routes(db, [111, 102, 103]) == {(102, 111): Route(523, PATH_102_111)}
@@ -182,7 +197,7 @@ def _optimal_keep_first(ids: list[int], db) -> int:
     return min(courses.path_m([st[0], *perm]) for perm in permutations(st[1:]))
 
 
-def test_brief_route_course_only(client, buddy, db, monkeypatch):
+def test_brief_route_course_only(client, buddy, db, monkeypatch, no_routes):
     b = _brief(client, buddy, monkeypatch)
     route = b["route"]
     ids = [x["place_id"] for x in route]
@@ -196,7 +211,7 @@ def test_brief_route_course_only(client, buddy, db, monkeypatch):
     assert " → ".join(x["name"] for x in route) in b["brief"]  # 템플릿 안내도 같은 순서
 
 
-def test_brief_route_adds_wanted_places(client, buddy, db, monkeypatch, reset_db):
+def test_brief_route_adds_wanted_places(client, buddy, db, monkeypatch, no_routes):
     it = db.get(BookingItem, 3)
     it.request = {**(it.request or {}), "places": [120, 101, 123, 117, 104]}  # 101은 늘 휴관 → 빠짐, 최대 3곳
     db.commit()
