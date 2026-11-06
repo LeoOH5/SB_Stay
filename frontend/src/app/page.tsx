@@ -21,6 +21,12 @@ export default function Splash() {
         <div className="mt-6 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink">성북스테이</div>
         <div className="mt-3 text-[14px] font-bold tracking-[0.3em] text-navy">SB STAY</div>
         <p className="mt-6 text-[15px] leading-relaxed text-muted">성북구와 대학이 함께 여는<br />방학 기숙사 스테이</p>
+        <p className="mt-5 max-w-[300px] text-[13px] leading-relaxed text-muted">
+          방학 동안 비는 성북구 대학 기숙사에 묵고, 지역 코스와 대학생 버디 가이드를 한 번에 예약하는 여행 서비스입니다.
+        </p>
+        <p className="mt-2 max-w-[300px] text-[12.5px] leading-relaxed text-muted">
+          Stay in Seongbuk university dorms during school breaks, and book local tours with student buddies.
+        </p>
       </div>
       <div className="space-y-3">
         <Button onClick={() => start("ko")}>시작하기</Button>
@@ -29,6 +35,11 @@ export default function Splash() {
       <p className="mt-5 text-center text-[13.5px] text-muted">
         성북구 대학생이라면 <Link href="/buddy/login" className="font-semibold text-navy underline-offset-2 hover:underline">버디로 활동하기</Link>
       </p>
+      <nav className="mt-4 flex justify-center gap-3 text-[12px] text-muted">
+        <Link href="/privacy" className="hover:underline">개인정보처리방침 Privacy</Link>
+        <span aria-hidden>·</span>
+        <Link href="/terms" className="hover:underline">이용약관 Terms</Link>
+      </nav>
     </main>
   );
 }
