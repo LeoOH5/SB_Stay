@@ -71,7 +71,14 @@ def booking_out(db: Session, b: Booking) -> BookingOut:
     return BookingOut(
         id=b.id, code=b.code, status=b.status, total_price=b.total_price, platform_fee=b.platform_fee, traveler=b.traveler,
         items=[item_out(db, i) for i in items], created_at=b.created_at, paid_at=b.paid_at, cancelled_at=b.cancelled_at,
+        payment=_payment_summary(db, b.id),
     )
+
+
+def _payment_summary(db: Session, booking_id: int) -> dict | None:
+    from app.services import payments  # 순환 import 방지
+
+    return payments.summary(payments.paid(db, booking_id) or payments.latest(db, booking_id))
 
 
 # ---------- 생성

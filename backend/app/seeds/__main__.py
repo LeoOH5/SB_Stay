@@ -21,6 +21,7 @@ from app.models import (
     Message,
     Notification,
     Package,
+    Payment,
     Place,
     Review,
     Tour,
@@ -45,7 +46,7 @@ ORDER = [
     ("bookings.json", Booking),
     ("booking_items.json", BookingItem),
 ]
-DELETE_ORDER = [Notification, Message, Review, AiPlan, BookingItem, Booking, Content, Package,
+DELETE_ORDER = [Notification, Message, Review, AiPlan, Payment, BookingItem, Booking, Content, Package,
                 BuddyAvailability, BuddyProfile, TourPlace, Tour, Place, Guide, DormRoom, User, University]
 
 

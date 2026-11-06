@@ -2,7 +2,7 @@
 // T4 투어 상세 + AI 역사 스토리 — TR-02 GET /tours/{id}, AI-02 POST /ai/story, TR-04 GET /tours/{id}/reviews
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AiBlock, Button, Card, Chip, Hero, ImageBlock, inputCls, SectionTitle, Spinner, TopBar } from "@/components/ui";
+import { AiBlock, Button, Card, Chip, Hero, MapEmbed, SectionTitle, Spinner, inputCls } from "@/components/ui";
 import { ErrorBox, Notice, Stars } from "@/components/tourist";
 import { daysLabel, DEFAULT_TOUR_DATE, dowKey, errMsg, langsCode, md, okv } from "@/components/tourist/format";
 import { get, post, won } from "@/lib/api";
@@ -36,7 +36,7 @@ export default function TourDetailPage() {
     return () => { alive = false; };
   }, [id]);
 
-  // 장소 칩 선택 시 그 장소의 이야기 자동 호출 (AI-02, question 없음)
+  // 장소 칩 선택 시 그 장소의 이야기 자동 호출 (question 없음)
   useEffect(() => {
     if (placeId === null) return;
     let alive = true;
@@ -70,14 +70,13 @@ export default function TourDetailPage() {
 
   return (
     <>
-      <TopBar back="/tours" title="투어 상세" />
-      <Hero title={title || "투어 상세"} sub={tour ? `해설사 ${tour.guide.name} · ${tour.guide.license} · ${tour.duration_min / 60}h · ${won(tour.price)} · ${daysLabel(tour.operating_days)} · ${langsCode(tour.languages)}` : undefined} />
+      <Hero back="/tours" title={title || "투어 상세"} sub={tour ? `해설사 ${tour.guide.name} · ${tour.guide.license} · ${tour.duration_min / 60}h · ${won(tour.price)} · ${daysLabel(tour.operating_days)} · ${langsCode(tour.languages)}` : undefined} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <ErrorBox message={err} />
         {!tour && !err && <Spinner />}
         {tour && (
           <>
-            <ImageBlock h="h-[100px]" label={`지도 · 코스 경로 ${tour.places.map((_, i) => CIRCLED[i]).join("→")} · 집결 ${tour.meeting_point}`} />
+            <MapEmbed points={tour.places.map((pl) => ({ lat: pl.lat, lng: pl.lng }))} />
             {tour.description && <p className="text-[13px] text-muted">{tour.description}</p>}
             <div className="flex flex-wrap gap-2">
               {tour.places.map((p, i) => <Chip key={p.id} selected={placeId === p.id} onClick={() => selectPlace(p.id)}>{CIRCLED[i]} {lang === "en" ? p.name_en : p.name}</Chip>)}
@@ -111,7 +110,7 @@ export default function TourDetailPage() {
               <Button type="submit" full={false} className="h-12 min-h-[48px] px-4" disabled={askBusy || !question.trim()}>↑</Button>
             </form>
 
-            <SectionTitle>리뷰 (샘플)</SectionTitle>
+            <SectionTitle>리뷰</SectionTitle>
             {reviews.length === 0 && <Card tint className="text-[13px] text-muted">아직 리뷰가 없어요.</Card>}
             {reviews.map((r) => (
               <Card key={r.id} className="py-3">
@@ -126,7 +125,7 @@ export default function TourDetailPage() {
             {added && <Card tint className="text-[13px] text-navy">장바구니에 담았어요.</Card>}
             <div className="grid grid-cols-2 gap-3">
               <Button variant="secondary" className="text-[14px]" onClick={() => add(false)} disabled={!operates}>장바구니 담기</Button>
-              <Button className="text-[14px]" onClick={() => add(true)} disabled={!operates}>바로 예약 (즉시 확정)</Button>
+              <Button className="text-[14px]" onClick={() => add(true)} disabled={!operates}>바로 예약</Button>
             </div>
           </>
         )}

@@ -23,7 +23,22 @@ class Settings(BaseSettings):
     # LLM / RAG
     llm_api_key: str = ""
     llm_model: str = ""  # 멘토 지원 LLM API의 모델명 (.env에서 지정)
+    llm_base_url: str = ""  # OpenAI 호환 API 주소. 비우면 OpenAI. 모델명이 claude- 로 시작하면 Anthropic
     llm_timeout_seconds: int = 20
+
+    # 토스페이먼츠 결제위젯 시크릿 키 (test_gsk_... / live_gsk_...). 비우면 결제는 목업(즉시 완료)
+    toss_secret_key: str = ""
+    toss_api_base: str = "https://api.tosspayments.com"
+
+    # PayPal (외국인 결제, USD). 비우면 PayPal 버튼 숨김. 운영은 https://api-m.paypal.com
+    paypal_client_id: str = ""
+    paypal_client_secret: str = ""
+    paypal_api_base: str = "https://api-m.sandbox.paypal.com"
+    usd_krw_rate: float = 1400.0  # 원화 → 달러 고정 환율 (해커톤용)
+
+    # 테스트 결제 자동 환불: 결제 후 N시간이 지나면 전액 환불 (0 = 끔). 테스트 키(test_gsk · sandbox)일 때만 동작
+    auto_refund_after_hours: int = 0
+    auto_refund_check_minutes: int = 10
 
     # 수수료율 (해커톤은 상수)
     platform_fee_rate: float = 0.10

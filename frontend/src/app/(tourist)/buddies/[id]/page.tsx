@@ -2,7 +2,7 @@
 // T4c 버디 상세 — BD-02 GET /buddies/{id}, 리뷰 GET /buddies/{id}/reviews, 동행 요청(장바구니)
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Card, Chip, Hero, SectionTitle, Spinner, TopBar } from "@/components/ui";
+import { Button, Card, Chip, Hero, SectionTitle, Spinner } from "@/components/ui";
 import { ErrorBox, Notice, Stars } from "@/components/tourist";
 import { errMsg, interestsLabel, langsShort, md, okv } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -38,8 +38,7 @@ export default function BuddyDetailPage() {
 
   return (
     <>
-      <TopBar back="/buddies" title="버디 상세" />
-      <Hero title={buddy ? `${buddy.name} · ${buddy.university.replace("학교", "")} ${buddy.major} ${buddy.year}학년` : "버디 상세"} sub={buddy ? `${langsShort(buddy.languages)} · ★ ${buddy.rating} (${buddy.review_count})` : undefined} />
+      <Hero back="/buddies" title={buddy ? `${buddy.name} · ${buddy.university.replace("학교", "")} ${buddy.major} ${buddy.year}학년` : "버디 상세"} sub={buddy ? `${langsShort(buddy.languages)} · ★ ${buddy.rating} (${buddy.review_count})` : undefined} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <ErrorBox message={err} />
         {!buddy && !err && <Spinner />}
@@ -54,7 +53,7 @@ export default function BuddyDetailPage() {
               <div className="mt-1 text-[12px] text-muted">가능 날짜  {buddy.available_dates.map(md).join(", ")}</div>
               <div className="mt-2 flex items-center gap-2 text-[12px] text-muted"><Stars value={Math.round(buddy.rating)} size="text-[12px]" /> {buddy.rating} ({buddy.review_count})</div>
               {reviews.map((r) => <div key={r.id} className="mt-1 text-[12px] text-muted">&quot;{r.text}&quot; – {r.author}</div>)}
-              <Notice className="mt-3">동행 프로그램 · {HOURS}시간 · {won(fee)} (활동비, 팀 결정)</Notice>
+              <Notice className="mt-3">동행 프로그램 · {HOURS}시간 · {won(fee)} (활동비)</Notice>
               <Notice className="mt-1">버디 수락 후 확정됩니다.</Notice>
             </Card>
 
@@ -67,7 +66,7 @@ export default function BuddyDetailPage() {
               {TIMES.map((t) => <Chip key={t} selected={time === t} onClick={() => setTime(t)}>{t}</Chip>)}
             </div>
             <p className="text-[12px] text-muted">버디는 &apos;가이드&apos;가 아니라 문화교류 동행이에요. 역사 해설은 해설사·AI가 해요.</p>
-            <Button onClick={request} disabled={!date}>동행 요청 (장바구니)</Button>
+            <Button onClick={request} disabled={!date}>동행 요청하기</Button>
           </>
         )}
       </div>

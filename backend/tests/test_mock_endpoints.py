@@ -8,7 +8,7 @@ def test_pay_checkin_chat_notifications(client, tourist, univ_admin, reset_db):
     r = client.post("/api/v1/bookings/502/pay", headers=yuki)
     assert r.status_code == 200 and r.json()["status"] == "paid" and r.json()["payment"]["amount"] == 80000
     g = client.get("/api/v1/bookings/501/checkin-guide", headers=tourist).json()
-    assert g["building"] == "A대학교 국제관" and g["checkin"] == "15:00" and g["wifi"] == "AUNIV-GUEST" and len(g["emergency"]) == 3
+    assert g["building"] == "고려대학교 프런티어관" and g["checkin"] == "15:00" and g["wifi"] == "KU-GUEST" and len(g["emergency"]) == 3
     c = client.get("/api/v1/bookings/501/chat", headers=tourist).json()
     assert len(c["items"]) == 2 and c["items"][0]["sender"] == "buddy"
     # 승인 → 관광객 알림 생성

@@ -54,4 +54,10 @@ body {
   background: #fff;
   position: relative;
   box-shadow: 0 0 0 1px var(--sb-line);
+  flex: none; /* body가 flex 컬럼이라 화면 높이로 눌려 배경이 끊기던 문제 */
 }
+
+/* 좁은 폰(320px)에서 날짜 입력이 줄어들 수 있게 */
+input[type="date"] { min-width: 0; }
+/* 한글 줄바꿈은 어절 단위 */
+body { word-break: keep-all; overflow-wrap: break-word; }

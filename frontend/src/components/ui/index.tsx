@@ -2,22 +2,31 @@
 // 공용 UI — 와이어프레임 v3 컴포넌트 언어(히어로·카드·칩·상태 알약·KPI·탭바·AI 블록)와 1:1
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 export const cn = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
-export function Hero({ title, sub, right, children, className }: { title: string; sub?: string; right?: ReactNode; children?: ReactNode; className?: string }) {
+export function Hero({ title, sub, right, children, className, back }: { title: string; sub?: string; right?: ReactNode; children?: ReactNode; className?: string; back?: string }) {
   return (
-    <header className={cn("bg-navy text-white px-5 pt-5 pb-5", className)}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-bold leading-tight">{title}</h1>
-          {sub && <p className="mt-1 text-[13px] text-white/75">{sub}</p>}
+    <>
+      <header className={cn("bg-navy text-white px-5 pt-5 pb-5", className)}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[22px] font-bold leading-tight">{title}</h1>
+            {sub && <p className="mt-1 text-[13px] text-white/75">{sub}</p>}
+          </div>
+          {right}
         </div>
-        {right}
-      </div>
-      {children}
-    </header>
+        {children}
+      </header>
+      {back && (
+        <div className="-mb-2 px-3 pt-1">
+          <Link href={back} aria-label="뒤로" className="flex h-11 w-11 items-center justify-center rounded-full text-navy hover:bg-gray-bg">
+            <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>
+          </Link>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -35,7 +44,7 @@ export function ListRow({ icon, title, meta, right, onClick, className }: { icon
     <div onClick={onClick} className={cn("flex items-center gap-3 py-3", onClick && "cursor-pointer", className)}>
       {icon && <div className="h-11 w-11 shrink-0 rounded-xl bg-navy-bg flex items-center justify-center text-navy font-semibold">{icon}</div>}
       <div className="min-w-0 flex-1">
-        <div className="text-[14px] font-semibold text-ink truncate">{title}</div>
+        <div className="text-[14px] font-semibold text-ink break-keep">{title}</div>
         {meta && <div className="text-[12px] text-muted mt-0.5">{meta}</div>}
       </div>
       {right && <div className="shrink-0 text-right">{right}</div>}
@@ -44,7 +53,7 @@ export function ListRow({ icon, title, meta, right, onClick, className }: { icon
 }
 
 export function Button({ children, variant = "primary", className, full = true, ...rest }: { children: ReactNode; variant?: "primary" | "secondary" | "ghost" | "danger"; className?: string; full?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const v = { primary: "bg-navy text-white hover:bg-navy-700", secondary: "bg-white text-green-dark border-2 border-green hover:bg-green-bg", ghost: "bg-white text-navy border border-line hover:bg-gray-bg", danger: "bg-white text-orange border border-orange hover:bg-orange-bg" }[variant];
+  const v = BTN_VARIANT[variant];
   return (
     <button {...rest} className={cn("h-13 min-h-[52px] rounded-xl px-5 text-[15px] font-semibold transition disabled:opacity-40", v, full && "w-full", className)}>
       {children}
@@ -52,9 +61,43 @@ export function Button({ children, variant = "primary", className, full = true, 
   );
 }
 
+const BTN_VARIANT = { primary: "bg-navy text-white hover:bg-navy-700", secondary: "bg-white text-green-dark border-2 border-green hover:bg-green-bg", ghost: "bg-white text-navy border border-line hover:bg-gray-bg", danger: "bg-white text-orange border border-orange hover:bg-orange-bg" } as const;
+
+/** 버튼처럼 보이는 링크 (a 안에 button을 넣지 않기 위해) */
+export function LinkButton({ href, children, variant = "primary", className, full = true }: { href: string; children: ReactNode; variant?: keyof typeof BTN_VARIANT; className?: string; full?: boolean }) {
+  return (
+    <Link href={href} className={cn("inline-flex min-h-[52px] items-center justify-center rounded-xl px-5 text-[15px] font-semibold transition", BTN_VARIANT[variant], full && "w-full", className)}>
+      {children}
+    </Link>
+  );
+}
+
+/** 숙박·투어·버디 바로가기 타일 */
+export function CategoryTiles() {
+  const items = [
+    { href: "/stay", title: "숙박", desc: "방학 중 대학 기숙사", icon: (
+      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 20V9l9-5 9 5v11" /><path d="M9 20v-6h6v6" /></svg>) },
+    { href: "/tours", title: "역사 투어", desc: "해설사와 걷는 성북", icon: (
+      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" /><path d="M9 4v14M15 6v14" /></svg>) },
+    { href: "/buddies", title: "대학생 버디", desc: "동네를 같이 걸어요", icon: (
+      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><circle cx="17" cy="9" r="2.6" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3.3 0 6 2.2 6 5.5" /></svg>) },
+  ];
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {items.map((i) => (
+        <Link key={i.href} href={i.href} className="flex flex-col items-center gap-1.5 rounded-[14px] bg-white px-2 py-3.5 text-center ring-1 ring-line/60 shadow-[0_1px_3px_rgba(31,42,68,0.08)] active:scale-[0.98] transition">
+          <span className="mb-0.5 flex h-9 items-center justify-center text-navy">{i.icon}</span>
+          <span className="text-[14px] font-bold text-ink leading-tight">{i.title}</span>
+          <span className="text-[11.5px] leading-snug text-muted">{i.desc}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export function Chip({ children, selected, onClick, className }: { children: ReactNode; selected?: boolean; onClick?: () => void; className?: string }) {
   return (
-    <button type="button" onClick={onClick} className={cn("h-9 rounded-full px-3.5 text-[13px] font-medium border transition", selected ? "bg-navy text-white border-navy" : "bg-white text-ink border-line hover:border-navy", className)}>
+    <button type="button" onClick={onClick} className={cn("h-9 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13px] font-medium border transition", selected ? "bg-navy text-white border-navy" : "bg-white text-ink border-line hover:border-navy", className)}>
       {children}
     </button>
   );
@@ -63,14 +106,14 @@ export function Chip({ children, selected, onClick, className }: { children: Rea
 const PILL: Record<string, string> = { approved: "bg-green-dark text-white", confirmed: "bg-green-dark text-white", requested: "bg-orange text-white", pending: "bg-orange text-white", rejected: "bg-gray-400 text-white", cancelled: "bg-gray-400 text-white", suspended: "bg-gray-400 text-white", info: "bg-navy text-white", partially_approved: "bg-orange text-white", paid: "bg-green-dark text-white" };
 export const STATUS_LABEL: Record<string, string> = { requested: "신청", approved: "승인됨", rejected: "거절됨", confirmed: "확정", cancelled: "취소됨", partially_approved: "일부 승인", pending: "대기", suspended: "제재", paid: "정산 완료" };
 export function StatusPill({ status, label, className }: { status: string; label?: string; className?: string }) {
-  return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold", PILL[status] ?? "bg-navy text-white", className)}>{label ?? STATUS_LABEL[status] ?? status}</span>;
+  return <span className={cn("inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold", PILL[status] ?? "bg-navy text-white", className)}>{label ?? STATUS_LABEL[status] ?? status}</span>;
 }
 
 export function KpiTile({ label, value, sub, accent }: { label: string; value: ReactNode; sub?: string; accent?: boolean }) {
   return (
     <Card className="p-4">
       <div className="text-[12px] text-muted">{label}</div>
-      <div className={cn("mt-1 text-[26px] font-bold leading-none", accent ? "text-navy" : "text-ink")}>{value}</div>
+      <div className={cn("mt-1 whitespace-nowrap text-[clamp(20px,6.5vw,26px)] font-bold leading-none", accent ? "text-navy" : "text-ink")}>{value}</div>
       {sub && <div className="mt-1.5 text-[12px] text-muted">{sub}</div>}
     </Card>
   );
@@ -111,7 +154,9 @@ export function TabBar({ tabs, hideOn = [] }: { tabs: { href: string; label: str
     <nav className="sticky bottom-0 z-20 mt-auto border-t border-line bg-white/95 backdrop-blur px-3 pb-[max(env(safe-area-inset-bottom),8px)] pt-2">
       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
         {tabs.map((t) => {
-          const active = path === t.href || (t.href !== "/" && path.startsWith(t.href));
+          // 가장 긴 prefix가 일치하는 탭 하나만 활성 (예: /buddy 와 /buddy/requests 중 후자)
+          const best = tabs.filter((x) => path === x.href || path.startsWith(x.href + "/")).sort((a, b) => b.href.length - a.href.length)[0];
+          const active = best?.href === t.href;
           return (
             <Link key={t.href} href={t.href} className={cn("h-10 rounded-full flex items-center justify-center text-[13px] font-semibold", active ? "bg-navy text-white" : "text-muted")}>{t.label}</Link>
           );
@@ -133,3 +178,77 @@ export function TopBar({ title, back, right }: { title?: string; back?: string; 
 
 export function Spinner() { return <div className="py-10 text-center text-[13px] text-muted">불러오는 중…</div>; }
 export function Empty({ children }: { children: ReactNode }) { return <div className="py-10 text-center text-[13px] text-muted">{children}</div>; }
+
+/** OpenStreetMap 임베드 (키 불필요). points의 범위를 자동으로 잡는다. */
+export function MapEmbed({ points, className, h = "h-44" }: { points: { lat: number; lng: number }[]; className?: string; h?: string }) {
+  if (points.length === 0) return null;
+  const lats = points.map((p) => p.lat), lngs = points.map((p) => p.lng);
+  const pad = 0.004;
+  const bbox = [Math.min(...lngs) - pad, Math.min(...lats) - pad, Math.max(...lngs) + pad, Math.max(...lats) + pad].join(",");
+  const m = points[0];
+  return (
+    <div className={cn("overflow-hidden rounded-[14px] ring-1 ring-line/60", h, className)}>
+      <iframe title="지도" className="h-full w-full border-0" loading="lazy" src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${m.lat},${m.lng}`} />
+    </div>
+  );
+}
+
+/** 대학 사진 출처 (Wikimedia Commons) */
+export const PHOTO_CREDITS: Record<string, string> = {
+  "/dorms/korea.jpg": "안암학사 프런티어관 · Mimacds · Wikimedia Commons · CC BY-SA 3.0",
+  "/dorms/kookmin.jpg": "국민대학교 정문 · hyolee2 · Wikimedia Commons · CC BY-SA 3.0",
+  "/dorms/sungshin.jpg": "성신여대 수정캠퍼스 · Sungshinpr · Wikimedia Commons · CC BY-SA 4.0",
+  "/dorms/hansung.jpg": "한성대 삼군부 총무당 · 오모군 · Wikimedia Commons · CC BY 4.0",
+  "/dorms/seokyeong.jpg": "서경대학교 · hyolee2 · Wikimedia Commons · CC BY-SA 3.0",
+  "/dorms/korea-campus.jpg": "고려대 안암캠퍼스 본관 · Mannaa mohamed · Wikimedia Commons · CC BY-SA 4.0",
+  "/dorms/sungshin-campus.jpg": "성신여대 캠퍼스 · Sungshin · Wikimedia Commons · CC BY-SA 3.0",
+  "/dorms/official/korea-cj.jpg": "CJ인터내셔널하우스 · © 고려대학교 안암학사",
+  "/dorms/official/korea-aih.jpg": "안암인터내셔널하우스 · © 고려대학교 안암학사",
+  "/dorms/official/kookmin-jeongneung.jpg": "정릉생활관 · © 국민대학교 생활관",
+  "/dorms/official/sungshin-seongmigwan.jpg": "성미관 · © 성신여자대학교 기숙사",
+  "/dorms/official/sungshin-seongmiryo.jpg": "성미료 · © 성신여자대학교 기숙사",
+  "/dorms/official/hansung-sangsang.jpg": "상상빌리지 조감도 · © 한성대학교 생활관",
+  "/dorms/official/dongduk-campus.jpg": "동덕여대 본관 · © 동덕여자대학교",
+  "/dorms/official/dongduk-2.jpg": "제2생활관 · © 동덕여대학보",
+  "/dorms/official/kookmin-gireum.jpg": "길음생활관 · © 국민대학교",
+  "/dorms/official/seokyeong-dorm.jpg": "생활관 3동 · © 서경대학교",
+  "/dorms/official/karts-dorm.jpg": "천장관 · 네이버 블로그 baba101203",
+  "/dorms/official/dongduk-1.jpg": "제1생활관(목화관) · © 동덕여자대학교 생활관",
+  "/dorms/karts.jpg": "한국예술종합학교 석관동 캠퍼스 · Younghopark7 · Wikimedia Commons · CC BY-SA 3.0",
+};
+
+/** 숙박 첫 화면에 쓰는 학교(캠퍼스) 사진. university_id 기준 */
+export const UNIV_PHOTOS: Record<number, string> = {
+  1: "/dorms/korea-campus.jpg",
+  2: "/dorms/kookmin.jpg",
+  3: "/dorms/sungshin.jpg",
+  4: "/dorms/hansung.jpg",
+  5: "/dorms/seokyeong.jpg",
+  6: "/dorms/official/dongduk-campus.jpg",
+  7: "/dorms/karts.jpg",
+};
+
+/** 대학 사진. 없거나 못 불러오면 아이콘 타일 */
+export function DormPhoto({ src, className, label, credit = false }: { src?: string; className?: string; label?: string; credit?: boolean }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!src || failed === src) return <PhotoTile className={className} label={label} />;
+  return (
+    <figure className={cn("relative overflow-hidden rounded-[14px] bg-gray-bg", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={label ?? ""} className="h-full w-full object-cover" loading="lazy" onError={() => setFailed(src)} />
+      {credit && PHOTO_CREDITS[src] && <figcaption className="absolute inset-x-0 bottom-0 truncate bg-black/45 px-2 py-0.5 text-[10px] text-white/90">사진: {PHOTO_CREDITS[src]}</figcaption>}
+    </figure>
+  );
+}
+
+/** 사진이 없을 때 쓰는 타일 */
+export function PhotoTile({ className, label }: { className?: string; label?: string }) {
+  return (
+    <div className={cn("flex items-center justify-center rounded-[14px] bg-gradient-to-br from-navy to-navy-700 text-white/80", className)}>
+      <div className="flex flex-col items-center gap-1">
+        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M3 20V9l9-5 9 5v11" /><path d="M9 20v-6h6v6" /></svg>
+        {label && <span className="text-[12px] font-semibold">{label}</span>}
+      </div>
+    </div>
+  );
+}

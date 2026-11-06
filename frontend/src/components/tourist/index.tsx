@@ -1,8 +1,7 @@
 "use client";
 // 관광객 화면 공용 컴포넌트 — 바텀시트·오류·로그인 안내·유형 뱃지·별점
-import Link from "next/link";
 import type { ReactNode } from "react";
-import { Button, Card, cn, StatusPill } from "@/components/ui";
+import { Card, LinkButton, StatusPill, cn } from "@/components/ui";
 import type { ItemType } from "@/lib/types";
 import { TYPE_LABEL } from "./format";
 
@@ -37,7 +36,7 @@ export function LoginRequired({ what }: { what: string }) {
     <Card tint className="text-center py-8">
       <div className="text-[15px] font-semibold text-ink">{what}은 로그인 후 볼 수 있어요</div>
       <p className="mt-1 text-[12px] text-muted">데모 계정으로 바로 로그인할 수 있어요.</p>
-      <Link href="/login" className="block mt-4"><Button>로그인하러 가기</Button></Link>
+      <LinkButton href="/login" className="mt-4">로그인하러 가기</LinkButton>
     </Card>
   );
 }

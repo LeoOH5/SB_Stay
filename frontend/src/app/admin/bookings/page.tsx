@@ -1,5 +1,5 @@
 "use client";
-// A3 예약 관리 (전체 목록) + 정산 관리 — GET /admin/bookings?type&status (AD-02), POST /bookings/{id}/cancel (BK-05), GET /admin/settlements (AD-06 목업)
+// 예약 관리 (전체 목록) + 정산 관리
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get, post, won } from "@/lib/api";
@@ -97,7 +97,7 @@ function BookingsBody() {
           ))}
         </Table>
       )}
-      <Note className="mt-3">대학 담당자는 자기 학교 숙박 항목만, 취소는 운영자만(BK-05). 투어 항목은 즉시 확정, 버디 항목은 버디가 별도 수락.</Note>
+      <Note className="mt-3">투어 항목은 즉시 확정되고, 버디 항목은 버디가 수락하면 확정돼요.</Note>
     </>
   );
 }

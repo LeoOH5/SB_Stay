@@ -143,11 +143,17 @@ AI-03 Request / Response
 | BK-02 | GET | /bookings/me | tourist | 내 예약 목록 (예정·지난) + 항목별 상태 | T6 | 필수 | 구현 |
 | BK-03 | GET | /bookings/{id} | tourist(본인), 공급자(해당 항목), admin | 예약 상세 | T6, A1 | 필수 | 구현 |
 | BK-04 | PATCH | /bookings/{id}/items/{itemId} | univ_admin(dorm), buddy(buddy), guide(tour), operator | 공급자 승인·거절 `{ "action": "approve" \| "reject", "reason"?: "" }` | A1, B1 | 필수 | 구현 |
-| BK-05 | POST | /bookings/{id}/cancel | tourist, operator | 예약 취소 | T6, A1 | 필수 | 구현 |
-| BK-06 | POST | /bookings/{id}/pay | tourist | 결제 (목업: 즉시 `paid`) | T5 | 필수 | 목업 |
+| BK-05 | POST | /bookings/{id}/cancel | tourist, operator | 예약 취소 + 환불 규정(7일 전 100% · 3일 전 50% · 이후 0%)대로 토스 결제 환불 | T6, A1 | 필수 | 구현 |
+| BK-06 | POST | /bookings/{id}/pay | tourist | 결제 (목업: 즉시 `paid`). 토스 키가 있으면 409 `USE_PAYMENT_WIDGET` → PM-01·02 사용 | T5 | 필수 | 구현 |
 | BK-07 | GET | /bookings/{id}/checkin-guide | tourist | 체크인 안내 (기숙사 위치, 입실 절차, 비상연락처) | T6 | 필수 | 목업 |
 | BK-08 | POST | /bookings/{id}/reviews | tourist | 숙박·버디·투어 리뷰 작성 | T6 | 권장 | 목업 |
 | BK-09 | GET | /bookings/{id}/chat | tourist, buddy | 버디 채팅 메시지 (자동 번역 포함 예정) | T6, B1 | 필수 | 목업 |
+| PM-01 | POST | /payments/prepare | tourist | 결제 주문 생성 `{ booking_id }` → orderId·금액(서버 예약 금액)·주문명·customerKey | T5 | 필수 | 구현 |
+| PM-02 | POST | /payments/confirm | tourist | 결제창 성공 후 승인 `{ payment_key, order_id, amount }`. 금액 불일치면 승인 요청 안 함 | T5 | 필수 | 구현 |
+| PM-03 | GET | /payments/bookings/{id} | tourist | 예약의 결제 상태·수단·영수증 URL·환불액 | T6 | 권장 | 구현 |
+| PM-04 | POST | /payments/paypal/orders | tourist | PayPal 주문 생성 `{ booking_id }`. 예약 원화 금액을 고정 환율로 USD 환산 (외국인·해외카드) | T5 | 필수 | 구현 |
+| PM-05 | POST | /payments/paypal/capture | tourist | 구매자 승인 후 캡처 `{ paypal_order_id }`. 캡처 금액·통화가 주문과 같아야 완료 | T5 | 필수 | 구현 |
+| PM-06 | GET | /payments/methods | 공개 | 서버에 켜진 결제수단 `{ toss, paypal, usd_krw_rate }` | T5 | 권장 | 구현 |
 | BK-10 | GET | /notifications | tourist, buddy | 승인·확정·취소 알림 목록. 발송은 MVP 제외, 상태값만 | T6 | 권장 | 목업 |
 
 BK-01 Request
@@ -210,7 +216,7 @@ AD-01 Response 200
 | F-04 버디 조회 | BD-01, BD-02, AI-03 |
 | F-05 투어 조회 | TR-01, TR-02, TR-03, AI-02 |
 | F-06 통합 예약 | BK-01 |
-| F-07 결제 | BK-06 |
+| F-07 결제 | BK-06, PM-01~06 |
 | F-08 예약 상태 확인 | BK-02, BK-03, BK-10 |
 | F-09 채팅 | BK-09 |
 | F-10 체크인 안내 | BK-07 |

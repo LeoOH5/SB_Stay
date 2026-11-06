@@ -2,7 +2,7 @@
 // T4b 객실 상세 — DM-03 GET /dorms/{id}, 장바구니 담기
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Card, Hero, ImageBlock, inputCls, Spinner, TopBar } from "@/components/ui";
+import { Button, Card, Hero, DormPhoto, Spinner, inputCls } from "@/components/ui";
 import { ErrorBox, Notice } from "@/components/tourist";
 import { DEFAULT_FROM, DEFAULT_TO, errMsg, md, nightsBetween, okv, ROOM_LABEL, ymd } from "@/components/tourist/format";
 import { get, won } from "@/lib/api";
@@ -41,14 +41,13 @@ export default function StayDetailPage() {
 
   return (
     <>
-      <TopBar back="/stay" title="객실 상세" />
-      <Hero title={dorm ? `${univ} ${dorm.building}` : "객실 상세"} sub={dorm ? `${ROOM_LABEL[dorm.room_type]} · 1박 ${won(dorm.price_per_night)}` : undefined} />
+      <Hero back={dorm ? `/stay/univ/${dorm.university.id}` : "/stay"} title={dorm ? `${univ} ${dorm.building}` : "객실 상세"} sub={dorm ? `${ROOM_LABEL[dorm.room_type]} · 1박 ${won(dorm.price_per_night)}` : undefined} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <ErrorBox message={err} />
         {!dorm && !err && <Spinner />}
         {dorm && (
           <>
-            <ImageBlock h="h-24" label="객실 사진 (스와이프)" />
+            <DormPhoto src={dorm.photos[0]} label={dorm.building} className="h-48" credit />
             <div className="text-[17px] font-semibold text-ink">{ROOM_LABEL[dorm.room_type]} · 1박 {won(dorm.price_per_night)}</div>
             <p className="text-[12px] text-muted">개방 기간 {md(dorm.open_from)} – {md(dorm.open_to)} · 남은 객실 {dorm.available_rooms} · 침구·청소 포함</p>
             <Card accent="navy">
@@ -57,7 +56,7 @@ export default function StayDetailPage() {
             </Card>
             <div>
               <span className="block text-[12px] text-muted mb-1.5">날짜 선택</span>
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <input type="date" className={inputCls} value={from} min={dorm.open_from} max={dorm.open_to} onChange={(e) => { setFrom(e.target.value); setAdded(false); }} />
                 <span className="text-muted">–</span>
                 <input type="date" className={inputCls} value={to} min={dorm.open_from} max={dorm.open_to} onChange={(e) => { setTo(e.target.value); setAdded(false); }} />

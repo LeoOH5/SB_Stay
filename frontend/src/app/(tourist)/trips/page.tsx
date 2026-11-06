@@ -1,10 +1,12 @@
 "use client";
 // T6 내 여행 · 예약 상태 + T11 지난 예약·취소 — BK-02 GET /bookings/me, BK-07 체크인 안내, BK-09 채팅, BK-05 취소, BK-08 리뷰
+import { HeaderActions } from "@/components/tourist/header-actions";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button, Card, Chip, Hero, SectionTitle, Spinner, StatusPill } from "@/components/ui";
+import { Button, Card, Chip, Hero, LinkButton, Spinner, StatusPill } from "@/components/ui";
 import { BottomSheet, ErrorBox, LoginRequired, Notice, Row, selectCls, Stars, textareaCls, TypeBadge } from "@/components/tourist";
 import { DEMO_TODAY, errMsg, itemStatusLabel, md, okv, ymd } from "@/components/tourist/format";
+import { paymentsEnabled } from "@/lib/toss";
 import type { ChatMessage, CheckinGuide } from "@/components/tourist/types";
 import { get, post, won } from "@/lib/api";
 import { useUser } from "@/lib/auth";
@@ -82,12 +84,12 @@ export default function TripsPage() {
   const shown = tab === "upcoming" ? upcoming : past;
 
   if (!user) {
-    return (<><Hero title="My trips" /><div className="px-5 pb-6 pt-4"><LoginRequired what="내 여행" /></div></>);
+    return (<><Hero title="My trips" right={<HeaderActions />} /><div className="px-5 pb-6 pt-4"><LoginRequired what="내 여행" /></div></>);
   }
 
   return (
     <>
-      <Hero title="My trips" sub={user.name} right={<Link href="/me" className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">마이페이지</Link>} />
+      <Hero title="My trips" sub={user.name} right={<HeaderActions />} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         <div className="flex gap-2">
           <Chip selected={tab === "upcoming"} onClick={() => setTab("upcoming")}>예정 ({upcoming.length})</Chip>
@@ -96,7 +98,7 @@ export default function TripsPage() {
         <ErrorBox message={err} />
         {!bookings && !err && <Spinner />}
         {bookings && shown.length === 0 && (
-          <Card tint className="text-center py-8"><div className="text-[14px] text-ink">{tab === "upcoming" ? "예정된 여행이 없어요." : "지난 예약이 없어요."}</div>{tab === "upcoming" && <Link href="/plan" className="block mt-4"><Button>AI로 여행 설계하기</Button></Link>}</Card>
+          <Card tint className="text-center py-8"><div className="text-[14px] text-ink">{tab === "upcoming" ? "예정된 여행이 없어요." : "지난 예약이 없어요."}</div>{tab === "upcoming" && <LinkButton href="/plan" className="mt-4">AI로 여행 설계하기</LinkButton>}</Card>
         )}
 
         {tab === "upcoming" && shown.map((b) => {
@@ -112,19 +114,20 @@ export default function TripsPage() {
                 <div key={it.id} className={`rounded-[12px] border-l-4 ${okItem(it.status) ? "border-l-green-dark" : it.status === "requested" ? "border-l-orange" : "border-l-line"} bg-white ring-1 ring-line/60 p-3`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2"><TypeBadge type={it.type} className="px-2 py-0.5 text-[10px]" /><span className="text-[14px] font-semibold text-ink truncate">{it.title}</span></div>
+                      <div className="flex items-center gap-2"><TypeBadge type={it.type} className="px-2 py-0.5 text-[10px]" /><span className="text-[14px] font-semibold text-ink break-keep">{it.title}</span></div>
                       <div className="mt-1 text-[12px] text-muted">{it.meta}{it.type === "buddy" && it.status === "requested" ? " · 수락되면 채팅이 열립니다" : ""}{it.status === "rejected" && it.reject_reason ? ` · 사유: ${it.reject_reason}` : ""}</div>
                     </div>
                     <StatusPill status={it.status} label={itemStatusLabel(it)} />
                   </div>
                   <div className="mt-2 flex justify-end gap-3 text-[12px]">
                     {it.type === "dorm" && <button type="button" onClick={() => openGuide(b)} className="text-navy font-semibold">체크인 안내 보기 →</button>}
-                    {it.type === "buddy" && <button type="button" onClick={() => openChat(b)} className="text-navy font-semibold">버디 채팅 {it.status === "requested" ? "(목업)" : ""} →</button>}
+                    {it.type === "buddy" && <button type="button" onClick={() => openChat(b)} className="text-navy font-semibold">버디 채팅 →</button>}
                   </div>
                 </div>
               ))}
               <div className="flex items-center justify-between text-[13px]"><span className="text-muted">합계 · {b.paid_at ? "결제 완료" : "미결제"}</span><span className="font-semibold text-ink">{won(b.total_price)}</span></div>
-              <Button variant="danger" className="text-[14px]" onClick={() => cancel(b)} disabled={busy}>예약 취소하기 (확인 팝업)</Button>
+              {!b.paid_at && paymentsEnabled() && <LinkButton href={`/pay?booking=${b.id}`}>{won(b.total_price)} 결제하기</LinkButton>}
+              <Button variant="danger" className="text-[14px]" onClick={() => cancel(b)} disabled={busy}>예약 취소하기</Button>
               <p className="text-[12px] text-orange">취소 시 숙박·투어·버디 모두 취소 · 환불: 체크인 7일 전 100% · 3일 전 50% · 이후 0%</p>
             </Card>
           );
@@ -149,13 +152,9 @@ export default function TripsPage() {
           );
         })}
 
-        <p className="text-[12px] text-muted">상태값: 신청 → 승인/거절 → 확정 → 취소</p>
-        <SectionTitle>체크인 안내 (목업 · 정적 페이지)</SectionTitle>
-        <Card accent="navy"><div className="text-[13px] text-ink leading-relaxed">국제관 위치 지도 · 입실 절차 · 와이파이<br />긴급 연락처: 대학 담당자 / 운영자 / 112·119</div></Card>
-        <p className="text-[13px]"><Link href="/me" className="text-navy font-semibold">마이페이지 (알림 · 고객센터) →</Link></p>
       </div>
 
-      {/* 체크인 안내 (BK-07) */}
+      {/* 체크인 안내 */}
       <BottomSheet open={guideFor !== null} onClose={() => setGuideFor(null)} title={`체크인 안내 · ${guideFor?.code ?? ""}`}>
         <ErrorBox message={sheetErr} />
         {!guide && !sheetErr && <Spinner />}
@@ -171,9 +170,9 @@ export default function TripsPage() {
         )}
       </BottomSheet>
 
-      {/* 버디 채팅 (BK-09 목업) */}
-      <BottomSheet open={chatFor !== null} onClose={() => setChatFor(null)} title="버디 채팅 (목업 · 자동 번역)">
-        <div className="flex items-center justify-between mb-2"><span className="text-[12px] text-muted">메시지는 저장되지 않아요 (목업)</span><Chip selected={translate} onClick={() => setTranslate((v) => !v)} className="h-8 text-[12px]">자동 번역 {translate ? "ON" : "OFF"}</Chip></div>
+      {/* 버디 채팅 */}
+      <BottomSheet open={chatFor !== null} onClose={() => setChatFor(null)} title="버디 채팅 · 자동 번역">
+        <div className="flex justify-end mb-2"><Chip selected={translate} onClick={() => setTranslate((v) => !v)} className="h-8 text-[12px]">자동 번역 {translate ? "ON" : "OFF"}</Chip></div>
         <ErrorBox message={sheetErr} />
         {!chat && !sheetErr && <Spinner />}
         {chat && (
@@ -193,8 +192,8 @@ export default function TripsPage() {
         )}
       </BottomSheet>
 
-      {/* 리뷰 작성 (BK-08 목업 · 항목별 1회) */}
-      <BottomSheet open={reviewFor !== null} onClose={() => setReviewFor(null)} title="리뷰 작성 (항목별 1회)">
+      {/* 리뷰 작성 */}
+      <BottomSheet open={reviewFor !== null} onClose={() => setReviewFor(null)} title="리뷰 작성">
         {reviewFor && (
           <div className="space-y-3">
             <select className={selectCls} value={reviewItem} onChange={(e) => setReviewItem(Number(e.target.value))}>
@@ -204,7 +203,6 @@ export default function TripsPage() {
             <textarea className={textareaCls} placeholder="해설이 쉽고 코스가 걷기 좋아요…" value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
             <ErrorBox message={sheetErr} />
             {reviewDone ? <Card className="bg-green-bg ring-0 text-[13px] text-green-dark">{reviewDone}</Card> : <Button onClick={submitReview} disabled={busy || !reviewText.trim()}>{busy ? "등록 중…" : "리뷰 등록"}</Button>}
-            <p className="text-[12px] text-muted">숙박·투어·버디 리뷰 모두 같은 폼이에요. 샘플 리뷰(TR-04)와 섞어 보여줘요.</p>
           </div>
         )}
       </BottomSheet>
@@ -216,9 +214,11 @@ export default function TripsPage() {
             {receiptFor.items.map((it) => <Row key={it.id} label={it.title}>{won(it.price)}</Row>)}
             <Row label="플랫폼 수수료 (10%, 합계에 포함)">{won(receiptFor.platform_fee)}</Row>
             <div className="flex items-end justify-between pt-2 border-t border-line"><span className="text-[13px] text-muted">합계</span><span className="text-[22px] font-bold text-navy">{won(receiptFor.total_price)}</span></div>
-            <Row label="결제">{receiptFor.paid_at ? `${ymd(receiptFor.paid_at.slice(0, 10))} · 목업` : "-"}</Row>
+            <Row label="결제">{receiptFor.paid_at ? ymd(receiptFor.paid_at.slice(0, 10)) : "-"}</Row>
             <Row label="상태"><StatusPill status={receiptFor.status} /></Row>
-            {receiptFor.status === "cancelled" && <Notice>환불 100% (7일 전 취소) · 실제 환불은 해커톤에서 처리하지 않아요.</Notice>}
+            {receiptFor.payment?.method && <Row label="결제 수단">{receiptFor.payment.method === "mock" ? "테스트 결제" : receiptFor.payment.method}{receiptFor.payment.foreign_amount ? ` · $${receiptFor.payment.foreign_amount}` : ""}</Row>}
+            {receiptFor.status === "cancelled" && <Notice>{receiptFor.payment ? `환불 ${won(receiptFor.payment.canceled_amount)}` : "결제 전 취소 · 환불 없음"}</Notice>}
+            {receiptFor.payment?.receipt_url && <a href={receiptFor.payment.receipt_url} target="_blank" rel="noreferrer" className="block pt-2 text-center text-[13px] font-semibold text-navy">카드 영수증 보기 →</a>}
           </div>
         )}
       </BottomSheet>

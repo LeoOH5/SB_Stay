@@ -24,7 +24,7 @@ def test_create_booking_prices_and_status(booking):
     by_type = {i["type"]: i for i in booking["items"]}
     assert by_type["dorm"]["status"] == "requested" and by_type["tour"]["status"] == "confirmed" and by_type["buddy"]["status"] == "requested"
     assert booking["status"] == "partially_approved"  # 투어가 즉시 확정
-    assert by_type["dorm"]["title"] == "A대학교 국제관 2인실" and "3박" in by_type["dorm"]["meta"]
+    assert by_type["dorm"]["title"] == "고려대학교 프런티어관 2인실" and "3박" in by_type["dorm"]["meta"]
     assert by_type["buddy"]["title"] == "지우와 동네 걷기"
 
 

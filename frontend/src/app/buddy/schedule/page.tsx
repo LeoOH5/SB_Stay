@@ -1,7 +1,6 @@
 "use client";
 // B3 일정 관리 · 가능한 날짜 캘린더 + 구글 캘린더 연동
-// API: GET/PUT /buddy/availability (BD-04), GET /buddy/schedule (BD-06), GET /buddy/requests?status=requested (BD-05),
-//      POST/DELETE /auth/google/calendar (AU-07)
+import { HeaderActions } from "@/components/tourist/header-actions";
 import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Empty, Hero, SectionTitle, Spinner, StatusPill } from "@/components/ui";
@@ -72,13 +71,13 @@ export default function Page() {
   };
 
   const dayItems = [
-    ...pending.filter((r) => r.date === selected).map((r) => ({ key: `p${r.item_id}`, text: `${timeRange(r.time, r.duration_min)}  ${r.tourist.name} 동행 (수락 대기)`, status: "requested", label: "수락 대기" })),
+    ...pending.filter((r) => r.date === selected).map((r) => ({ key: `p${r.item_id}`, text: `${timeRange(r.time, r.duration_min)}  ${r.tourist.name} 동행`, status: "requested", label: "수락 대기" })),
     ...(schedule ?? []).filter((r) => r.date === selected).map((r) => ({ key: `c${r.item_id}`, text: `${r.time}  ${r.interests.join("·")} · ${r.tourist.name}`, status: "confirmed", label: "확정" })),
   ].sort((a, b) => a.text.localeCompare(b.text));
 
   return (
     <div className="pb-6">
-      <Hero title="일정 관리" sub={`${ym.year}년 ${ym.month}월 · 날짜를 눌러 가능/불가를 바꿔요`} />
+      <Hero title="일정 관리" sub={`${ym.year}년 ${ym.month}월 · 날짜를 눌러 가능/불가를 바꿔요`} right={<HeaderActions />} />
       <LoginGate />
 
       <div className="px-5">
@@ -86,14 +85,13 @@ export default function Page() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-[14px] font-semibold text-ink">구글 캘린더 연동</div>
-              <div className="mt-0.5 text-[12px] text-muted">확정된 동행 일정이 내 구글 캘린더에 자동으로 들어갑니다(단방향).</div>
             </div>
             <button type="button" role="switch" aria-checked={connected} aria-label="구글 캘린더 연동" onClick={toggleCalendar} disabled={calBusy}
               className={`relative h-7 w-12 shrink-0 rounded-full transition disabled:opacity-40 ${connected ? "bg-green-dark" : "bg-line"}`}>
               <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${connected ? "left-[22px]" : "left-0.5"}`} />
             </button>
           </div>
-          <div className={`mt-2 text-[12px] font-semibold ${connected ? "text-green-dark" : "text-muted"}`}>{connected ? "연동됨 ✓ · 수락 시 이벤트가 생성돼요" : "연동 안 됨"}</div>
+          <div className={`mt-2 text-[12px] font-semibold ${connected ? "text-green-dark" : "text-muted"}`}>{connected ? "연동됨" : "연동 안 됨"}</div>
         </Card>
 
         <div className="mt-4">

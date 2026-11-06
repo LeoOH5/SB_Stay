@@ -2,7 +2,7 @@
 // T3 AI 추천 일정 — AI-01 응답(sessionStorage), 장바구니 담기
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AiBlock, Button, Card, Hero, ImageBlock } from "@/components/ui";
+import { AiBlock, Button, Card, Hero, LinkButton } from "@/components/ui";
 import { TypeBadge } from "@/components/tourist";
 import { dayLabel, nightsBetween, SS_PLAN } from "@/components/tourist/format";
 import { useSS } from "@/components/tourist/session";
@@ -38,7 +38,7 @@ export default function PlanResultPage() {
       <>
         <Hero title="Your plan" />
         <div className="px-5 pb-6 pt-4 space-y-3">
-          <Card tint className="text-center py-8"><div className="text-[14px] text-ink">아직 만든 일정이 없어요.</div><Link href="/plan" className="block mt-4"><Button>AI로 여행 설계하기</Button></Link></Card>
+          <Card tint className="text-center py-8"><div className="text-[14px] text-ink">아직 만든 일정이 없어요.</div><LinkButton href="/plan" className="mt-4">AI로 여행 설계하기</LinkButton></Card>
         </div>
       </>
     );
@@ -72,9 +72,8 @@ export default function PlanResultPage() {
             </div>
           ))}
         </div>
-        <ImageBlock h="h-[70px]" label="지도 · 숙소→투어 동선" />
         <div className="flex items-end justify-between pt-1"><span className="text-[13px] text-muted">예상 합계</span><span className="text-[22px] font-bold text-navy">{won(plan.total_price)}</span></div>
-        <p className="text-[12px] text-muted">추천일 뿐 예약은 장바구니에서 신청해요. 자유 일정(AI 제안)은 담기지 않아요.</p>
+        <p className="text-[12px] text-muted">자유 일정은 장바구니에 담기지 않아요.</p>
         <Button onClick={addAll}>모두 장바구니에 담기</Button>
       </div>
     </>

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, Card, Hero, SectionTitle } from "@/components/ui";
-import { ErrorBox, Notice, selectCls, TypeBadge } from "@/components/tourist";
+import { Button, Card, CategoryTiles, Hero, LinkButton, SectionTitle } from "@/components/ui";
+import { ErrorBox, Notice, TypeBadge } from "@/components/tourist";
 import { submitBooking } from "@/components/tourist/booking";
 import { cartMeta, errMsg, SS_TRAVELER } from "@/components/tourist/format";
 import { useSS } from "@/components/tourist/session";
@@ -13,14 +13,12 @@ import { useUser } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import type { Traveler } from "@/lib/types";
 
-const PAYMENTS = ["VISA •••• 4242 (해외 카드)", "Mastercard •••• 1881", "Apple Pay", "카카오페이"];
 
 export default function CartPage() {
   const router = useRouter();
   const cart = useCart();
   const { user } = useUser();
   const traveler = useSS<Traveler | null>(SS_TRAVELER, null);
-  const [payment, setPayment] = useState(PAYMENTS[0]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -30,8 +28,8 @@ export default function CartPage() {
     if (!traveler) { router.push("/checkout"); return; }
     setBusy(true); setErr(null);
     try {
-      const b = await submitBooking(traveler, cart.items);
-      router.push(`/cart/done?id=${b.id}`);
+      const { booking, needsPayment } = await submitBooking(traveler, cart.items);
+      router.push(needsPayment ? `/pay?booking=${booking.id}` : `/cart/done?id=${booking.id}`);
     } catch (e) { setErr(errMsg(e)); setBusy(false); }
   };
 
@@ -40,21 +38,20 @@ export default function CartPage() {
       <Hero title="Cart" sub="숙박·투어·버디를 한 번에 신청해요" right={<span className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">{cart.items.length}개</span>} />
       <div className="px-5 pb-6 pt-4 space-y-3">
         {cart.items.length === 0 && (
-          <Card tint className="text-center py-8">
-            <div className="text-[14px] text-ink">장바구니가 비어 있어요.</div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <Link href="/stay"><Button variant="ghost" className="px-2 text-[13px]">숙박</Button></Link>
-              <Link href="/tours"><Button variant="ghost" className="px-2 text-[13px]">투어</Button></Link>
-              <Link href="/buddies"><Button variant="ghost" className="px-2 text-[13px]">버디</Button></Link>
-            </div>
-            <Link href="/plan" className="block mt-2"><Button>AI로 여행 설계하기 →</Button></Link>
-          </Card>
+          <>
+            <Card tint className="py-6 text-center">
+              <div className="text-[15px] font-semibold text-ink">장바구니가 비어 있어요</div>
+              <div className="mt-1 text-[13px] text-muted">AI에게 일정을 맡기거나 직접 골라 보세요</div>
+              <LinkButton href="/plan" className="mt-4">AI로 일정 만들기 →</LinkButton>
+            </Card>
+            <CategoryTiles />
+          </>
         )}
         {cart.items.map((i) => (
           <Card key={`${i.type}-${i.ref_id}`} className="flex items-start gap-3 p-3">
             <TypeBadge type={i.type} />
             <div className="min-w-0 flex-1">
-              <div className="text-[14px] font-semibold text-ink truncate">{i.title}</div>
+              <div className="text-[14px] font-semibold text-ink break-keep">{i.title}</div>
               <div className="text-[12px] text-muted">{cartMeta(i)}</div>
             </div>
             <div className="shrink-0 text-right">
@@ -78,13 +75,9 @@ export default function CartPage() {
               )}
             </Card>
 
-            <SectionTitle>결제 수단 (목업)</SectionTitle>
-            <select className={selectCls} value={payment} onChange={(e) => setPayment(e.target.value)}>
-              {PAYMENTS.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <p className="text-[12px] text-muted">환불 규정: 체크인 7일 전 100% · 3일 전 50% · 이후 0% <Link href="/me" className="text-navy">(보기)</Link></p>
+            <p className="text-[12px] text-muted">결제는 다음 단계에서 국내 카드·간편결제(토스) 또는 해외 카드·PayPal 중에 골라요. 환불: 첫 일정 7일 전 100% · 3일 전 50% · 이후 0%</p>
             <div className="flex items-end justify-between"><span className="text-[13px] text-muted">합계</span><span className="text-[22px] font-bold text-navy">{won(cart.total)}</span></div>
-            <Notice>세 곳이 모두 승인하면 결제가 확정됩니다.</Notice>
+            <Notice>숙박은 대학, 버디는 버디가 승인해야 확정돼요. 거절되면 그 금액은 환불돼요.</Notice>
             <ErrorBox message={err} />
             <Button onClick={submit} disabled={busy}>{busy ? "신청 중…" : traveler ? "예약 신청하기" : "예약 신청하기 (여행자 정보 입력)"}</Button>
             {!user && <p className="text-[12px] text-muted text-center">예약 신청에는 로그인이 필요해요. <Link href="/login" className="text-navy font-semibold">로그인</Link></p>}

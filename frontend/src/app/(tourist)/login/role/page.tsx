@@ -35,7 +35,7 @@ export default function RolePage() {
   return (
     <>
       <Hero title="Welcome" sub={user ? `${user.name} 님, 어떤 역할로 이용하시나요?` : "어떤 역할로 이용하시나요?"} />
-      <div className="px-5 pb-6 space-y-3">
+      <div className="px-5 pb-6 pt-4 space-y-3">
         {ROLES.map((r) => (
           <Card key={r.role} accent={sel === r.role ? "green" : undefined} tint={sel !== r.role} onClick={() => setSel(r.role)}>
             <div className="text-[15px] font-semibold text-ink">{r.title}</div>
