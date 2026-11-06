@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Chip, Icon, TopBar } from "@/components/ui";
 import { ErrorBox, textareaCls } from "@/components/tourist";
-import { DEFAULT_FROM, DEFAULT_TO, errMsg, INTERESTS, nightsBetween, SS_PLAN } from "@/components/tourist/format";
+import { DEFAULT_FROM, DEFAULT_TO, errMsg, INTERESTS, nightsBetween, SS_PLAN, SS_PLAN_BUDDY, SS_PLAN_INPUT } from "@/components/tourist/format";
 import { writeSS } from "@/components/tourist/session";
 import { BottomBar, DateBox, FieldLabel, Headline, Segmented } from "@/components/tourist/v3";
 import { post } from "@/lib/api";
@@ -43,6 +43,8 @@ export default function PlanPage() {
     try {
       const plan = await post<AiPlan>("/ai/plan", { check_in: checkIn, check_out: checkOut, budget: budget || undefined, interests, with_buddy: withBuddy === "yes", language, note: note.trim() || undefined });
       writeSS(SS_PLAN, plan);
+      writeSS(SS_PLAN_INPUT, { check_in: checkIn, check_out: checkOut, interests, language });
+      writeSS(SS_PLAN_BUDDY, null);
       router.push("/plan/result");
     } catch (e) { setErr(errMsg(e)); setBusy(false); }
   };

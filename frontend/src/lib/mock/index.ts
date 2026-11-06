@@ -406,13 +406,16 @@ function buddyProfile(id: number): BuddyProfile {
 }
 
 // ------------------------------------------------------------------ AI
+const PLAN_LANG: Record<string, string> = { ko: "한국어", en: "영어", ja: "일본어", zh: "중국어" };
+/** AI-01 (목업): 백엔드 planner 와 같은 규칙 — 버디 14:00(체크인 날이면 16:00), 버디가 있으면 코스는 버디 항목(course_id)에만,
+ *  버디가 없을 때 코스만 10:00(체크인 날이면 16:00). meta 의 언어는 이름("한국어·영어·일본어") */
 function makePlan(b: Record<string, unknown>): AiPlan {
   const ci = isStr(b.check_in) ? b.check_in : "2027-01-12";
   const co = isStr(b.check_out) && b.check_out > ci ? b.check_out : addDays(ci, 3);
   const n = nights(ci, co);
   const room = dormOf(10)!;
   const dates = Array.from({ length: n + 1 }, (_, i) => addDays(ci, i));
-  const walkDay = dates[Math.min(1, dates.length - 1)];
+  const walkDay = dates.slice(1, -1)[0] ?? ci;  // 백엔드 activity_days 와 같이: 1박이면 도착일
   const course = courseOf(3)!;
   // 숙소와 같은 대학 버디 우선, 그날 가능한 사람
   const cand = state.buddies.filter((x) => listed(x.id) && x.university_id === room.university.id).sort((a, c) => (a.id === 31 ? -1 : c.id === 31 ? 1 : 0));
@@ -422,12 +425,18 @@ function makePlan(b: Record<string, unknown>): AiPlan {
   days[0].items.push({ time: "15:00", type: "dorm", ref_id: room.id, title: `${room.building} 체크인`, price: room.price_per_night * n, meta: `${room.university.name} ${ROOM[room.room_type]}, ${n}박` });
   const walk = days.find((d) => d.date === walkDay)!;
   let total = room.price_per_night * n;
+  const onCheckIn = walkDay === ci;  // 1박이면 도착일 오후 — 체크인(15:00) 뒤로
   if (bd) {
     const price = buddyItemPrice(bd.hourly_fee ?? 15000, 120);
     total += price;
-    walk.items.push({ time: "14:00", type: "buddy", ref_id: bd.id, title: `버디 ${bd.name}${wa(bd.name)} ${course.title.replace("의 성북동 산책", " 산책")} 코스`, price, meta: `2시간 · ${course.places.map((p) => p.name).join(", ")}`, course_id: course.id, duration_min: 120 });
-  } else warnings.push("NO_BUDDY");
-  walk.items.push({ time: "14:00", type: "course", ref_id: course.id, title: course.title, price: 0, meta: `무료 코스 · 장소 ${course.places.length}곳` });
+    const langs = bd.languages.map((l) => PLAN_LANG[l] ?? l).join("·");
+    walk.items.push({ time: onCheckIn ? "16:00" : "14:00", type: "buddy", ref_id: bd.id, title: `버디 ${bd.name}${wa(bd.name)} ${course.title}`, price,
+      meta: `버디 ${bd.name} · ${langs} · 2시간 · ${course.places.map((p) => p.name).join(" · ")}`, course_id: course.id, duration_min: 120 });
+  } else {
+    warnings.push("NO_BUDDY");
+    walk.items.push({ time: onCheckIn ? "16:00" : "10:00", type: "course", ref_id: course.id, title: course.title, price: 0, meta: `무료 코스 · 장소 ${course.places.length}곳` });
+  }
+  walk.items.sort((x, y) => (x.time ?? "99:99").localeCompare(y.time ?? "99:99"));
   if (days.length > 3) days[2].items.push({ time: null, type: "free", ref_id: null, title: "정릉과 성북선잠박물관", price: 0, meta: "자유 일정 · AI 제안" });
   days[days.length - 1].items.push({ time: "11:00", type: "free", ref_id: null, title: "체크아웃", price: 0, meta: "11:00" });
   const budget = Number(b.budget ?? 0);

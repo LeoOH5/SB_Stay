@@ -9,6 +9,8 @@
 4) v3.8 순서 (코드): 하루에 자유 장소가 여러 곳이면 걷는 거리가 가장 짧은 순서(courses.best_order, 실제 도보 경로 →
    없으면 추정)로 놓는다. LLM이 준 순서는 '고르기'로만 쓰고 그날 순서는 늘 코드가 다시 정한다.
    무료 코스 장소는 정해 둔 코스 순서 그대로 (무료 이용은 코스 순서가 고정).
+5) 시간 (코드): 숙소 체크인 15:00. 버디는 14:00, 단 체크인 날이면 도착 뒤 16:00. 코스만 있는 날은 10:00,
+   단 숙소가 있고 체크인 날이면 16:00 (버디가 있으면 코스는 버디 항목에 붙어 따로 시간을 잡지 않는다).
 """
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -29,9 +31,14 @@ from app.models import (
 from app.schemas.ai import PlanDay, PlanIn, PlanItem
 from app.services import courses
 from app.services.availability import occupied_rooms
+from app.services.matcher import LANGUAGE
 
 WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 BUDDY_HOURS = 2
+CHECK_IN_TIME = "15:00"  # 숙소 체크인
+BUDDY_TIME = "14:00"  # 버디 동행 기본 시간
+COURSE_TIME = "10:00"  # 버디 없이 코스만 걷는 날
+AFTER_CHECK_IN = "16:00"  # 체크인 날에는 도착(15:00) 뒤로
 ROOM_KO = {"single": "1인실", "double": "2인실", "twin": "트윈룸"}
 ROOM_EN = {"single": "single", "double": "double", "twin": "twin"}
 INTEREST_KO = {"literature": "문학", "independence": "독립운동", "royal": "왕실·왕릉", "hanok": "한옥",
@@ -298,11 +305,13 @@ def assemble(c: Candidates, ch: Choice, req: PlanIn,
         title = f"{u.name_en if en and u else (u.name if u else '')} {r.building} " + ("check-in" if en else "체크인")
         meta = (f"Stay · {ROOM_EN.get(r.room_type, r.room_type)} · ₩{r.price_per_night:,}/night · {c.nights} nights" if en
                 else f"숙박 · {ROOM_KO.get(r.room_type, r.room_type)} · ₩{r.price_per_night:,}/박 · {c.nights}박")
-        by_day[c.days[0]].append(PlanItem(time="15:00", type="dorm", ref_id=r.id, title=title.strip(), price=ch.dorm.price, meta=meta))
+        by_day[c.days[0]].append(PlanItem(time=CHECK_IN_TIME, type="dorm", ref_id=r.id, title=title.strip(), price=ch.dorm.price, meta=meta))
     co = ch.course
+    check_in_day = c.days[0] if ch.dorm else None  # 숙소가 있을 때만 '도착 전' 문제가 생긴다
     if ch.buddy:
         b = ch.buddy
-        langs = "/".join(b.buddy.languages or [])
+        lang_names = LANGUAGE["en" if en else "ko"]
+        langs = "·".join(lang_names.get(code, code) for code in b.buddy.languages or [])
         stops = " · ".join(co.place_names) if co else ""
         if en:
             title = f"Walk '{co.tour.title_en}' with buddy {b.name}" if co else f"Walk the neighborhood with {b.name}"
@@ -310,11 +319,13 @@ def assemble(c: Candidates, ch: Choice, req: PlanIn,
         else:
             title = f"버디 {b.name}와 {co.tour.title}" if co else f"버디 {b.name}와 캠퍼스·동네 걷기"
             meta = f"버디 {b.name} · {langs} · {BUDDY_HOURS}시간" + (f" · {stops}" if co else "")
-        by_day[b.day].append(PlanItem(time="14:00", type="buddy", ref_id=b.buddy.id, title=title, price=b.price, meta=meta,
+        when = AFTER_CHECK_IN if b.day == check_in_day else BUDDY_TIME
+        by_day[b.day].append(PlanItem(time=when, type="buddy", ref_id=b.buddy.id, title=title, price=b.price, meta=meta,
                                       course_id=co.tour.id if co else None))
     elif co:
         n = len(co.place_names)
-        by_day[co.day].append(PlanItem(time="10:00", type="course", ref_id=co.tour.id, title=co.tour.title_en if en else co.tour.title,
+        when = AFTER_CHECK_IN if co.day == check_in_day else COURSE_TIME
+        by_day[co.day].append(PlanItem(time=when, type="course", ref_id=co.tour.id, title=co.tour.title_en if en else co.tour.title,
                                        price=0, meta=f"Free course · {n} places" if en else f"무료 코스 · 장소 {n}곳"))
 
     # 자유 일정: 코스가 없는 활동일마다 그날 문 여는 장소 2곳

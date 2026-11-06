@@ -1,6 +1,6 @@
 "use client";
 // T09 버디 고르기 — BD-01 GET /buddies (언어·날짜·성향 거르기), AI-03 POST /ai/buddy-match (요청 needs · 같은 대학)
-// ?stay=객실&from=&to= (숙박 상세에서) · ?course=코스 (코스 상세에서). 장바구니 숙박이 있으면 그 기간·대학을 쓴다.
+// ?stay=객실&from=&to= (숙박 상세에서) · ?course=코스 (코스 상세에서) · ?date= (T12 일정의 버디 날짜). 장바구니 숙박이 있으면 그 기간·대학을 쓴다.
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -64,7 +64,10 @@ function Buddies() {
 
   const [univId, setUnivId] = useState<number | null>(null);
   const [language, setLanguage] = useState("en");
-  const [date, setDate] = useState<string | null>(() => defaultBuddyDate(from, to));
+  const [date, setDate] = useState<string | null>(() => {
+    const wanted = params.get("date");  // 숙박 기간 안이면 그 날짜 (T12 '버디 목록에서 더 보기')
+    return wanted && (!from || !to || (from <= wanted && wanted <= to)) ? wanted : defaultBuddyDate(from, to);
+  });
   const [traits, setTraits] = useState<string[]>([]);
   const [dateSheet, setDateSheet] = useState(false);
   const [buddies, setBuddies] = useState<Buddy[] | null>(null);
