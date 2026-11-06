@@ -43,15 +43,15 @@
   },
   {
     "tour_id": 5,
-    "place_id": 106,
+    "place_id": 107,
     "seq": 2,
-    "stay_min": 40
+    "stay_min": 60
   },
   {
     "tour_id": 5,
-    "place_id": 107,
+    "place_id": 106,
     "seq": 3,
-    "stay_min": 60
+    "stay_min": 40
   },
   {
     "tour_id": 6,
