@@ -4,15 +4,15 @@ LLM은 services/llm.py로만 부른다. 키가 없거나 실패하면 규칙 기
 """
 import secrets
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import get_current_user, require_role
 from app.core.errors import api_error
 from app.models import AiPlan, Place, User
-from app.schemas.ai import PlanIn, PlanOut, Source, StoryIn, StoryOut
-from app.services import llm, planner, story
+from app.schemas.ai import MatchIn, MatchItem, MatchOut, PlanIn, PlanOut, Source, StoryIn, StoryOut
+from app.services import llm, matcher, planner, story
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -72,3 +72,38 @@ async def place_story(body: StoryIn, _: User = Depends(get_current_user), db: Se
     except (llm.LLMUnavailable, ValueError):
         answer, grounded = story.fallback_answer(doc, question, body.language)
         return StoryOut(answer=answer, sources=sources, grounded=grounded)
+
+
+def ui_lang(accept_language: str | None) -> str:
+    """응답 문장 언어: Accept-Language가 en으로 시작하면 영어, 그 밖에는 한국어"""
+    return "en" if (accept_language or "").lower().startswith("en") else "ko"
+
+
+@router.post("/buddy-match", response_model=MatchOut)
+async def buddy_match(
+    body: MatchIn, _: User = Depends(require_role("tourist")), db: Session = Depends(get_db),
+    accept_language: str | None = Header(default=None),
+) -> MatchOut:
+    """AI-03 버디 매칭. DB가 승인·가능 날짜·언어로 거르고 점수를 매긴 뒤, LLM은 3명을 고르고 이유만 쓴다."""
+    ui = ui_lang(accept_language)
+    cands = matcher.candidates(db, body.language, body.date, body.interests)
+    if not cands:
+        return MatchOut(reason=matcher.overall_reason([], body.language, body.interests, ui), matches=[])
+    try:
+        system, prompt = matcher.llm_prompt(cands, body.language, body.date, body.interests, ui)
+        picked, overall = matcher.validate(await llm.complete_json(system, prompt), cands)
+        used_ai = True
+    except (llm.LLMUnavailable, ValueError):
+        picked, overall, used_ai = [], "", False
+    # LLM이 3명보다 적게 골랐거나 실패했으면 점수 순으로 채운다
+    for c in cands:
+        if len(picked) >= matcher.TOP_N:
+            break
+        if c not in [p for p, _ in picked]:
+            picked.append((c, matcher.buddy_reason(c, body.language, ui)))
+    if not overall:
+        overall = matcher.overall_reason([p for p, _ in picked], body.language, body.interests, ui)
+    return MatchOut(
+        reason=overall, ai=used_ai,
+        matches=[MatchItem(buddy_id=c.profile.id, score=c.score, reason=r) for c, r in picked],
+    )

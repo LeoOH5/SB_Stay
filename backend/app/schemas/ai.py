@@ -1,7 +1,8 @@
+import datetime as dt
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 
 class PlanIn(BaseModel):
@@ -54,3 +55,22 @@ class StoryOut(BaseModel):
     sources: list[Source]
     grounded: bool  # false면 화면은 "자료에 없다" 안내
     ai: bool = False  # LLM이 쓴 답이면 true, 규칙 기반 검색이면 false
+
+
+# ---------- AI-03 버디 매칭 ----------
+class MatchIn(BaseModel):
+    language: Literal["ko", "en", "ja", "zh"] | None = None  # 버디가 쓸 줄 알아야 하는 언어
+    date: dt.date | None = None  # 이름이 타입과 같아 dt.date로 적는다
+    interests: list[Annotated[str, StringConstraints(pattern=r"^[a-z_]{2,20}$")]] = Field(default=[], max_length=10)
+
+
+class MatchItem(BaseModel):
+    buddy_id: int
+    score: float  # 0~1, 코드가 계산 (관심사 겹침·언어)
+    reason: str
+
+
+class MatchOut(BaseModel):
+    reason: str
+    matches: list[MatchItem]  # 최대 3명, 후보가 적으면 있는 만큼
+    ai: bool = False
