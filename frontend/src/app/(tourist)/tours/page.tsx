@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { KakaoMap } from "@/components/kakao-map";
 import { Chip, Hero, Icon, Spinner } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
+import { CartButton } from "@/components/tourist/header-actions";
 import { errMsg, THEMES } from "@/components/tourist/format";
 import { CourseSection } from "@/components/tourist/v3/course";
 import { hasXY, walkNote } from "@/components/tourist/v3/flow";
@@ -36,9 +37,12 @@ export default function ToursPage() {
       <Hero title="코스" className="pb-2"
         sub={tours ? `${free ? "무료 " : ""}AI 산책 코스 ${tours.length}개 · 장소에 닿으면 AI가 이야기를 들려줘요` : "장소에 닿으면 AI가 이야기를 들려줘요"}
         right={
-          <button type="button" onClick={() => setShowMap((v) => !v)} aria-pressed={showMap} className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-semibold ${showMap ? "border-navy bg-navy text-white" : "border-line text-ink"}`}>
-            <Icon name="pin" className="h-[18px] w-[18px]" />지도
-          </button>
+          <div className="-mr-1 flex shrink-0 items-center gap-1.5">
+            <button type="button" onClick={() => setShowMap((v) => !v)} aria-pressed={showMap} className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-semibold ${showMap ? "border-navy bg-navy text-white" : "border-line text-ink"}`}>
+              <Icon name="pin" className="h-[18px] w-[18px]" />지도
+            </button>
+            <CartButton />
+          </div>
         } />
 
       <div className="px-5 pb-8 pt-3">

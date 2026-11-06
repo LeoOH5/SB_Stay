@@ -1,5 +1,6 @@
 "use client";
-// T00 첫 화면 — 로고(세로) + 시작하기(한국어) / English
+// T00 첫 화면 — 로고(세로) + 시작하기(한국어) / English · v3.9 버디로 활동하기(→ /buddy/login)
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, LogoMark } from "@/components/ui";
 import { homeFor } from "@/components/tourist/format";
@@ -25,6 +26,9 @@ export default function Splash() {
         <Button onClick={() => start("ko")}>시작하기</Button>
         <Button variant="ghost" onClick={() => start("en")}>English</Button>
       </div>
+      <p className="mt-5 text-center text-[13.5px] text-muted">
+        성북구 대학생이라면 <Link href="/buddy/login" className="font-semibold text-navy underline-offset-2 hover:underline">버디로 활동하기</Link>
+      </p>
     </main>
   );
 }

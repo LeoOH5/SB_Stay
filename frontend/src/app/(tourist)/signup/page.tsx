@@ -1,19 +1,20 @@
 "use client";
-// T04 회원가입 (이메일) — AU-02 POST /auth/signup
+// T04 회원가입 (이메일) — AU-02 POST /auth/signup. v3.9 ?next= 를 로그인·역할 선택으로 넘기고, 가입 뒤 그 화면으로
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Button, Chip, TopBar, inputCls } from "@/components/ui";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { Button, Chip, Spinner, TopBar, inputCls } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
-import { errMsg } from "@/components/tourist/format";
+import { afterLogin, errMsg, loginHref } from "@/components/tourist/format";
 import { BottomBar, CheckRow, FieldLabel, Headline } from "@/components/tourist/v3";
 import { post } from "@/lib/api";
 import { session } from "@/lib/auth";
 import { useLang } from "@/lib/i18n";
 import type { Lang, TokenOut } from "@/lib/types";
 
-export default function SignupPage() {
+function SignupPage() {
   const router = useRouter();
+  const next = useSearchParams().get("next");
   const { lang, set: setLang } = useLang();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -36,13 +37,13 @@ export default function SignupPage() {
       const r = await post<TokenOut>("/auth/signup", { name: name.trim(), email: email.trim(), password: pw, language });
       session.set(r.user, r.access_token);
       setLang(language);
-      router.push(r.needs_role_setup ? "/login/role" : "/home");
+      router.push(r.needs_role_setup ? loginHref(next, "/login/role") : afterLogin(r.user.role, next, "/home"));
     } catch (e) { setErr(errMsg(e)); setBusy(false); }
   };
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-      <TopBar back="/login" />
+      <TopBar back={loginHref(next)} />
       <Headline className="pt-2" title="계정 만들기" sub="여권 정보는 예약할 때만 받아요." />
       <div className="space-y-5 px-5 pb-4 pt-6">
         <label className="block"><FieldLabel>이름</FieldLabel><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Emma Clark" autoComplete="name" /></label>
@@ -64,8 +65,12 @@ export default function SignupPage() {
       </div>
       <BottomBar>
         <Button type="submit" disabled={busy}>{busy ? "가입 중…" : "가입하기"}</Button>
-        <p className="mt-3 text-center text-[14px] text-muted">이미 계정이 있어요 <Link href="/login" className="font-semibold text-ink">로그인</Link></p>
+        <p className="mt-3 text-center text-[14px] text-muted">이미 계정이 있어요 <Link href={loginHref(next)} className="font-semibold text-ink">로그인</Link></p>
       </BottomBar>
     </form>
   );
+}
+
+export default function Page() {
+  return <Suspense fallback={<Spinner />}><SignupPage /></Suspense>;
 }

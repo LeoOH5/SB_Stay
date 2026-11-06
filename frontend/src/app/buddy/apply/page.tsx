@@ -505,7 +505,7 @@ function ReviewStep({ status: s }: { status: BuddyApplyStatus | null }) {
         <Check done={approved} wait={!approved} last title="운영팀 승인" sub={approved ? "승인됐어요" : suspended ? "활동 멈춤" : "기다리는 중"} />
       </div>
       <BottomBar>
-        {approved ? <LinkButton href="/buddy">버디 홈으로</LinkButton> : <LinkButton href="/" variant="ghost" className="border-[#C9CED3]">홈으로</LinkButton>}
+        {approved ? <LinkButton href="/buddy">버디 홈으로</LinkButton> : <LinkButton href="/buddy/login" variant="ghost" className="border-[#C9CED3]">버디 로그인으로</LinkButton>}
       </BottomBar>
     </>
   );
