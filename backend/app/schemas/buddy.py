@@ -2,6 +2,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.buddies import BuddyVerified
+
 
 class BuddyProfileOut(BaseModel):
     id: int
@@ -29,6 +31,8 @@ class BuddyProfileOut(BaseModel):
     can_help: list[str] = []
     bank_account: str | None = None  # 본인에게만 (정산 화면은 마스킹)
     can_drive: bool = False  # 운전 가능 표시만. 차량 동행·유상 운송은 하지 않는다
+    walk_count: int = 0  # 끝난 동행 수 (공개 프로필과 같은 값)
+    verified: BuddyVerified | None = None
 
 
 class BuddyProfileIn(BaseModel):
