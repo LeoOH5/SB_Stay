@@ -18,6 +18,7 @@ from app.core.errors import api_error
 from app.models.booking import Booking, BookingItem, MealClaim
 from app.models.supply import BuddyActivity, BuddyAvailability, BuddyProfile, Tour, University
 from app.models.user import User
+from app.routers.buddies import verified, walk_count
 from app.schemas.buddy import (
     ActivityIn,
     ActivityOut,
@@ -114,7 +115,7 @@ def _profile_out(db: Session, user: User, prof: BuddyProfile) -> BuddyProfileOut
         code_agreed=prof.code_agreed_at is not None, quiz_score=prof.quiz_score,
         rating=average(reviews) or 0, review_count=len(reviews),
         personality=prof.personality or [], style=prof.style or [], can_help=prof.can_help or [], bank_account=prof.bank_account,
-        can_drive=bool(prof.can_drive),
+        can_drive=bool(prof.can_drive), walk_count=walk_count(db, prof.id), verified=verified(prof),
     )
 
 

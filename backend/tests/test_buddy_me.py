@@ -188,3 +188,8 @@ def test_apply_debug_code(client, monkeypatch, reset_db):
     h = _new_buddy(client, "dbg@b-univ.ac.kr")
     r = client.post(f"{B}/apply/email", json={"email": "dbg@b-univ.ac.kr"}, headers=h).json()
     assert r["dev_code"] == "123456" and r["university"] == "국민대학교"
+
+
+def test_profile_has_walk_count_and_verified(client, buddy):
+    j = client.get("/api/v1/buddy/profile", headers=buddy).json()
+    assert j["walk_count"] >= 1 and j["verified"]["school_email"] is True
