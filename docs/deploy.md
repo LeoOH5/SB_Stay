@@ -3,12 +3,12 @@
 | 대상 | 플랫폼 | 주소 |
 |---|---|---|
 | 프론트 (Next.js) | Vercel 프로젝트 `sbstay` (root: `frontend`) | https://sbstay.vercel.app |
-| 백엔드 (FastAPI) | Railway 서비스 (root: `backend`, `Dockerfile`) | Railway가 준 `*.up.railway.app` |
-| DB | Railway PostgreSQL | 백엔드 `DATABASE_URL`에 연결 |
+| 백엔드 (FastAPI) | Railway 프로젝트 `sbstay` · 서비스 `backend` (root: `backend`, `Dockerfile`) | https://backend-production-c315.up.railway.app |
+| DB | Railway PostgreSQL (같은 프로젝트) | 백엔드 `DATABASE_URL=${{Postgres.DATABASE_URL}}` |
 
 ## 백엔드 (Railway)
 - `backend/Dockerfile`로 빌드, 시작은 `scripts/start.sh`: `alembic upgrade head` → DB가 비어 있으면 데모 데이터(`scripts/seed_if_empty.py`) → uvicorn (`$PORT`)
-- 헬스체크 `/health` (`backend/railway.json`)
+- 헬스체크 `/health` (`backend/railway.json`), 배포는 `cd backend && railway up` (`.railwayignore`로 `.env` 제외)
 - 사진 업로드는 볼륨을 `/data`에 붙이고 `UPLOAD_DIR=/data/uploads`
 - `DATABASE_URL`은 Railway가 주는 `postgresql://...` 그대로 넣으면 된다 (앱이 `postgresql+psycopg://`로 바꿈)
 - 하루 뒤 테스트 결제 자동 환불은 서버가 켜져 있는 동안 돈다 (`AUTO_REFUND_AFTER_HOURS`)
