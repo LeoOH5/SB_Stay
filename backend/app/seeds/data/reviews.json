@@ -33,5 +33,68 @@
    "fun_talk"
   ],
   "created_at": "2027-01-08T10:00:00Z"
+ },
+ {
+  "id": 3,
+  "booking_item_id": 102,
+  "rating": 4,
+  "text": "Jiwoo showed me a quiet tea house near Gilsangsa.",
+  "created_at": "2026-07-16T10:00:00Z"
+ },
+ {
+  "id": 4,
+  "booking_item_id": 104,
+  "rating": 5,
+  "text": "천천히 걸으면서 성북동 이야기를 많이 나눴어요.",
+  "created_at": "2026-07-30T10:00:00Z"
+ },
+ {
+  "id": 5,
+  "booking_item_id": 106,
+  "rating": 4,
+  "text": "Great café picks, a bit rushed at the end.",
+  "created_at": "2026-08-12T10:00:00Z"
+ },
+ {
+  "id": 6,
+  "booking_item_id": 111,
+  "rating": 5,
+  "text": "Sua took the best photos of my trip!",
+  "created_at": "2026-06-25T10:00:00Z"
+ },
+ {
+  "id": 7,
+  "booking_item_id": 113,
+  "rating": 5,
+  "text": "카페 골목을 정말 잘 알아요.",
+  "created_at": "2026-07-02T10:00:00Z"
+ },
+ {
+  "id": 8,
+  "booking_item_id": 115,
+  "rating": 4,
+  "text": "Friendly and fun, we laughed a lot.",
+  "created_at": "2026-07-10T10:00:00Z"
+ },
+ {
+  "id": 9,
+  "booking_item_id": 117,
+  "rating": 5,
+  "text": "Sua took the best photos of my trip!",
+  "created_at": "2026-07-19T10:00:00Z"
+ },
+ {
+  "id": 10,
+  "booking_item_id": 120,
+  "rating": 5,
+  "text": "카페 골목을 정말 잘 알아요.",
+  "created_at": "2026-08-02T10:00:00Z"
+ },
+ {
+  "id": 11,
+  "booking_item_id": 123,
+  "rating": 4,
+  "text": "Friendly and fun, we laughed a lot.",
+  "created_at": "2026-08-15T10:00:00Z"
  }
 ]

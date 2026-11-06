@@ -33,6 +33,7 @@ class BuddyOut(BaseModel):
     sub_scores: dict[str, float] | None = None  # {kind, talk, punctual, local} 평균, 없으면 null
     tags_top: list[str] = []  # 리뷰 태그 코드 최대 3
     walk_count: int = 0  # 끝난 동행 수
+    grade: str = "basic"  # 공개 배지: basic | growth | top (화면은 성장·우수만 표시)
     verified: BuddyVerified = BuddyVerified()
 
 

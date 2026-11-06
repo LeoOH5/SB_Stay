@@ -1,5 +1,6 @@
 """공급 측: 대학·객실·코스(tours)·장소·버디. guides 표는 v3에서 쓰지 않는다(빈 표)."""
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
@@ -125,6 +126,14 @@ class BuddyProfile(Base):
     quiz_score: Mapped[int | None] = mapped_column(SmallInteger)
     bank_account: Mapped[str | None] = mapped_column(String(100))
     can_drive: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")  # 표시만 (유상 운송 금지)
+    korean_national_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # 한국 국적 확인
+    # v3.2 등급·정산율 (매월 services/grades.recompute_all), 휴면
+    grade: Mapped[str] = mapped_column(String(10), default="basic", server_default="basic")  # basic | growth | top
+    payout_rate: Mapped[Decimal] = mapped_column(Numeric(4, 3), default=Decimal("0.700"), server_default="0.700")
+    grade_updated_at: Mapped[date | None] = mapped_column(Date)
+    needs_recheck: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")  # 휴면: 목록·AI 추천에서 빠짐
+    dormant_since: Mapped[date | None] = mapped_column(Date)  # 휴면 시작일 (복귀 후 첫 동행까지 남김)
+    active_on: Mapped[date | None] = mapped_column(Date)  # 마지막 요청 수락·가능 날짜 수정·활동 확인
 
 
 class BuddyAvailability(Base):

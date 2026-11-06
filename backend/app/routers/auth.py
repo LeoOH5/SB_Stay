@@ -1,4 +1,4 @@
-"""인증 — AU-01 구글 로그인 · AU-02 회원가입 · AU-03 내 정보 · AU-04 설정 · AU-05 데모 로그인 · AU-06 역할 · AU-07/08 캘린더"""
+"""인증 — AU-01 구글 로그인 · AU-02 회원가입 · AU-03 내 정보 · AU-04 설정 · AU-05 데모 로그인 · AU-06 역할 · AU-07/08 캘린더 · AU-09 이용 방식"""
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,12 +14,13 @@ from app.schemas.auth import (
     DemoLoginIn,
     GoogleLoginIn,
     MeUpdateIn,
+    PlanOut,
     RoleIn,
     SignupIn,
     TokenOut,
     UserOut,
 )
-from app.services import google_oauth
+from app.services import free_tier, google_oauth
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -88,6 +89,12 @@ def demo_login(body: DemoLoginIn, db: Session = Depends(get_db)) -> TokenOut:
 def me(user: User = Depends(get_current_user)) -> User:
     """AU-03"""
     return user
+
+
+@router.get("/me/plan", response_model=PlanOut)
+def my_plan(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """AU-09 (v3.4): 무료(free) / 버디와 함께(buddy), 오늘 남은 AI 질문 수"""
+    return free_tier.status(db, user)
 
 
 @router.patch("/me", response_model=UserOut)

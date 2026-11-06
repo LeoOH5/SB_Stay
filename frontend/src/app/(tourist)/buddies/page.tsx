@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Banner, Button, Chip, Hero, Icon, Spinner, TagChip } from "@/components/ui";
+import { Banner, Button, Chip, GradeBadge, Hero, Icon, Spinner, TagChip } from "@/components/ui";
 import { BottomSheet, ErrorBox } from "@/components/tourist";
 import { addDays, errMsg, INTEREST_LABEL, okv } from "@/components/tourist/format";
 import { Avatar, Headline } from "@/components/tourist/v3";
@@ -35,7 +35,7 @@ function BuddyRow({ b, reason, href, needs }: { b: Buddy; reason?: string; href:
       <Avatar name={b.name} />
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1 text-[15px] text-muted"><span className="text-[17px] font-bold text-ink">{b.name}</span> {univShort(b.university)} {b.major} {b.year}학년</div>
+          <div className="min-w-0 flex-1 text-[15px] text-muted"><span className="text-[17px] font-bold text-ink">{b.name}</span> {univShort(b.university)} {b.major} {b.year}학년<GradeBadge grade={b.grade} className="ml-1.5 align-[2px]" /></div>
           <Icon name="chevron-right" className="h-5 w-5 text-ink" />
         </div>
         <div className="mt-1 flex items-center gap-1.5 text-[14.5px] text-muted">
@@ -129,6 +129,11 @@ function Buddies() {
           {TRAITS.map((t) => <Chip key={t.key} selected={traits.includes(t.key)} onClick={() => reset(() => setTraits((s) => (s.includes(t.key) ? s.filter((x) => x !== t.key) : [...s, t.key])))}>{t.label}</Chip>)}
         </div>
 
+        {!(from && to) && (
+          <p className="mt-4 text-[14.5px] leading-relaxed text-muted">
+            숙소가 이미 있어도 괜찮아요. 숙박 없이 버디만 신청할 수 있어요. <Link href="/stay" className="font-semibold text-navy">숙박도 같이 보기</Link>
+          </p>
+        )}
         {(reqChips.length > 0 || (from && to)) && (
           <Banner variant="soft" icon={reqChips.length ? "fork" : "bed"} className="mt-5">
             <span className="font-normal text-muted">{reqChips.length > 0 ? <>내 요청: {reqChips.join(", ")} · 이걸 도와줄 수 있는 버디가 위에 와요</> : <>숙박 {koRange(from, to)} 안에 만날 수 있는 버디예요. 같은 학교 버디가 위에 와요</>}</span>

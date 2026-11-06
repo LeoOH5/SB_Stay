@@ -1,13 +1,13 @@
 "use client";
 // B06–B10 버디 지원 5단계 — GET /buddy/apply 로 지금 단계를 정하고 (?step=1~5 로 바로 가기)
-// 1 학교 메일·인증번호·생년월일: POST /buddy/apply/email · /buddy/apply/verify   2 버디 약속: POST /buddy/apply/agree
+// 1 학교 메일·인증번호·생년월일·대한민국 국적: POST /buddy/apply/email · /buddy/apply/verify   2 버디 약속: POST /buddy/apply/agree
 // 3 교육 퀴즈 10문제: GET/POST /buddy/apply/quiz (8개 이상 통과)   4 성향·소개: PUT /buddy/profile   5 운영팀 확인 중
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import { ProfileFields, draftOf, type ProfileDraft } from "@/components/buddy/profile-fields";
 import { BottomBar } from "@/components/buddy/ui";
 import { Button, Icon, LinkButton, Spinner, StepDots, TopBar, cn, inputCls } from "@/components/ui";
-import { BUDDY_MIN_AGE, BUDDY_PROMISES as PROMISES, QUIZ_PASS, QUIZ_TOTAL } from "@/lib/codes";
+import { BUDDY_MIN_AGE, BUDDY_PROMISES as PROMISES, KOREAN_NATIONAL_NOTE, QUIZ_PASS, QUIZ_TOTAL } from "@/lib/codes";
 import { ApiError, get, post, put } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import type { BuddyApplyEmailOut, BuddyApplyStatus, BuddyProfile, QuizQuestion, QuizResult } from "@/lib/types";
@@ -17,7 +17,7 @@ const fieldCls = cn(inputCls, "h-[52px] text-[16px]");
 const errText = (e: unknown) => (e instanceof Error ? e.message : "다시 시도해 주세요");
 
 function stepOf(s: BuddyApplyStatus): number {
-  if (!s.email_verified || !s.age_ok) return 1;
+  if (!s.email_verified || !s.age_ok || !s.korean_national) return 1;
   if (!s.code_agreed) return 2;
   if (!s.quiz_passed) return 3;
   if (!s.profile_done) return 4;
@@ -77,10 +77,11 @@ function EmailStep({ status, userEmail, onDone }: { status: BuddyApplyStatus | n
   const [devCode, setDevCode] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [birth, setBirth] = useState("");
+  const [korean, setKorean] = useState(!!status?.korean_national);
   const [expires, setExpires] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<{ field: "email" | "code" | "birth" | "all"; msg: string } | null>(null);
+  const [err, setErr] = useState<{ field: "email" | "code" | "birth" | "national" | "all"; msg: string } | null>(null);
 
   useEffect(() => {
     if (!expires) return;
@@ -99,10 +100,10 @@ function EmailStep({ status, userEmail, onDone }: { status: BuddyApplyStatus | n
   };
   const verify = async () => {
     setBusy(true); setErr(null);
-    try { await post<BuddyApplyStatus>("/buddy/apply/verify", { email: email.trim(), code, birth_date: birth }); onDone(); }
+    try { await post<BuddyApplyStatus>("/buddy/apply/verify", { email: email.trim(), code, birth_date: birth, korean_national: korean }); onDone(); }
     catch (e) {
       const c = e instanceof ApiError ? e.code : "";
-      setErr({ field: c === "BAD_CODE" ? "code" : c === "TOO_YOUNG" || c === "VALIDATION" ? "birth" : c === "NOT_SEONGBUK_SCHOOL" ? "email" : "all", msg: errText(e) });
+      setErr({ field: c === "BAD_CODE" ? "code" : c === "TOO_YOUNG" || c === "VALIDATION" ? "birth" : c === "NOT_SEONGBUK_SCHOOL" ? "email" : c === "NOT_KOREAN_NATIONAL" ? "national" : "all", msg: errText(e) });
     } finally { setBusy(false); }
   };
 
@@ -136,10 +137,18 @@ function EmailStep({ status, userEmail, onDone }: { status: BuddyApplyStatus | n
           <input className={fieldCls} type="date" value={birth} max="2015-12-31" min="1950-01-01" onChange={(e) => setBirth(e.target.value)} />
         </label>
         <p className={cn("mt-2 text-[14px]", err?.field === "birth" ? "font-semibold text-red" : "text-muted")}>{err?.field === "birth" ? err.msg : `만 ${BUDDY_MIN_AGE}세 이상만 버디로 활동할 수 있어요`}</p>
+
+        <button type="button" role="checkbox" aria-checked={korean} onClick={() => setKorean((v) => !v)} className="mt-6 flex w-full items-start gap-3 text-left">
+          <span className={cn("mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] border-[1.5px] transition", korean ? "border-navy bg-navy text-white" : "border-[#C9CED3] bg-white")}>
+            {korean && <Icon name="check" className="h-4 w-4" strokeWidth={2.8} />}
+          </span>
+          <span className="text-[16px] font-semibold text-ink">대한민국 국적이에요 <span className="text-[14px] font-normal text-muted">(필수)</span></span>
+        </button>
+        <p className={cn("mt-1.5 pl-[34px] text-[14px]", err?.field === "national" ? "font-semibold text-red" : "text-muted")}>{err?.field === "national" ? err.msg : KOREAN_NATIONAL_NOTE}</p>
         {err?.field === "all" && <p className="mt-3 text-[14px] font-semibold text-red">{err.msg}</p>}
       </div>
       <BottomBar>
-        <Button onClick={verify} disabled={busy || !sent || code.length !== 6 || !birth || left === 0}>{busy ? "확인하는 중…" : "인증하고 다음"}</Button>
+        <Button onClick={verify} disabled={busy || !sent || code.length !== 6 || !birth || !korean || left === 0}>{busy ? "확인하는 중…" : "인증하고 다음"}</Button>
       </BottomBar>
     </>
   );
@@ -310,6 +319,7 @@ function ReviewStep({ status: s }: { status: BuddyApplyStatus | null }) {
       </Title>
       <div className="px-5 pb-6 pt-7">
         <Check done={s.email_verified && s.age_ok} title="학교 메일 인증" sub={s.email_verified ? `${s.university ?? "학교"} · 만 ${BUDDY_MIN_AGE}세 이상` : "아직 안 했어요"} />
+        <Check done={s.korean_national} title="대한민국 국적 확인" sub={s.korean_national ? "확인했어요" : "아직 안 했어요"} />
         <Check done={s.code_agreed} title="버디 약속 동의" sub={s.code_agreed ? `${PROMISES.length}개 모두 확인` : "아직 안 했어요"} />
         <Check done={s.quiz_passed} title="교육 퀴즈 통과" sub={s.quiz_score != null ? `${s.quiz_score} / ${QUIZ_TOTAL}` : "아직 안 풀었어요"} />
         <Check done={approved} wait={!approved} last title="운영팀 승인" sub={approved ? "승인됐어요" : suspended ? "활동 멈춤" : "기다리는 중"} />

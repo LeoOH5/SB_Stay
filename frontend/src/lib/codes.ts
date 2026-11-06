@@ -1,10 +1,11 @@
 // v3 코드값 라벨 + 숫자 규칙 — docs/v3/CONTRACT.md §1·§3
 // 화면은 ko/en 라벨을 고르고, API 에는 key 만 보낸다.
 import type {
-  Allergy, CanHelp, Diet, DormRequestKey, Pace, Personality, ReportCategory, ReviewTag, SubScoreKey, WalkStyle,
+  Allergy, BuddyGrade, CanHelp, Diet, DormRequestKey, Pace, Personality, ReportCategory, ReviewTag, SubScoreKey, SurveyPain, WalkStyle,
 } from "./types";
 
 // ---- 숫자 규칙 (§1)
+/** 숙박 수수료율 (대학 90% · 플랫폼 10%). 버디 활동비는 등급 정산율(GRADE_RULES)을 쓴다 */
 export const PLATFORM_FEE_RATE = 0.1;
 /** 식사 1회 한도 (2인). 보증금 = 횟수 × MEAL_LIMIT */
 export const MEAL_LIMIT = 20000;
@@ -17,6 +18,9 @@ export const REPORT_SUSPEND_AT = 2;
 export const QUIZ_PASS = 8;
 export const QUIZ_TOTAL = 10;
 export const BUDDY_MIN_AGE = 19;
+/** 버디 지원 자격 (B01 로그인 · B06 지원 1단계) — 외국인 유학생은 시간제 취업 허가 문제로 지원 불가 */
+export const BUDDY_ELIGIBILITY = "성북구 대학 재학생, 대한민국 국적, 만 19세 이상";
+export const KOREAN_NATIONAL_NOTE = "외국인 유학생은 시간제 취업 허가 문제로 지원할 수 없어요";
 /** 버디 약속 (B07 지원 2단계). 동의는 한 번에 받고(POST /buddy/apply/agree), 개수는 화면 표시용(A03 n/n) */
 export const BUDDY_PROMISES = [
   "역사 해설은 하지 않아요. 이야기는 앱의 AI가 들려주고, 나는 친구로 같이 걸어요",
@@ -35,15 +39,46 @@ export const REQUEST_NOTE_MAX = 300;
 export function buddyItemPrice(hourlyFee: number, durationMin: number, mealCount = 0, album = false): number {
   return Math.round(hourlyFee * (durationMin / 60)) + (album ? ALBUM_FEE : 0) + mealCount * MEAL_LIMIT;
 }
-/** 플랫폼 수수료 = round((총액 − 식비 보증금 합) × 0.10) */
-/** 수수료 = (숙박 + 버디 활동비) × 10% + 앨범 요금 전액(플랫폼 수입). 식사 보증금에는 수수료 없음 */
-export function platformFee(total: number, mealDeposit: number, albumFees = 0): number {
-  return Math.round((total - mealDeposit - albumFees) * PLATFORM_FEE_RATE) + albumFees;
+/** 수수료 = 숙박 × 10% + Σ 활동비 × (1 − 버디 정산율) + 앨범 요금 전액. 식사 보증금에는 수수료 없음 */
+export function platformFee(dormTotal: number, buddyItems: { activity: number; rate: number }[], albumFees = 0): number {
+  return Math.round(dormTotal * PLATFORM_FEE_RATE) + buddyItems.reduce((s, b) => s + b.activity - buddyNet(b.activity, b.rate), 0) + albumFees;
 }
+
+// ---- v3.2 버디 등급·정산율 (backend app/core/rules.py 와 같음)
+/** 등급 기준 (높은 등급부터). 평가 기간 = 현재 + 직전 운영 방학, 매월 1일 갱신, 예약 확정 때 정산율 고정 */
+export const GRADE_RULES: { grade: BuddyGrade; rating: number; walks: number; reviews: number; rate: number }[] = [
+  { grade: "top", rating: 4.5, walks: 15, reviews: 5, rate: 0.8 },
+  { grade: "growth", rating: 4.3, walks: 5, reviews: 3, rate: 0.75 },
+  { grade: "basic", rating: 0, walks: 0, reviews: 0, rate: 0.7 },
+];
+export const BASE_PAYOUT_RATE = 0.7;
+/** 운영 기간 중 이만큼 활동이 없으면 휴면 (요청 받기 멈춤) */
+export const DORMANT_DAYS = 30;
+/** 운영 방학 (이름, 시작, 끝) */
+export const VACATIONS: [string, string, string][] = [
+  ["2025 겨울방학", "2025-12-22", "2026-02-28"],
+  ["2026 여름방학", "2026-06-22", "2026-08-31"],
+  ["2027 겨울방학", "2026-12-21", "2027-02-28"],
+];
+/** 버디 몫 = round(활동비 × 정산율) */
+export const buddyNet = (activity: number, rate: number) => Math.round(activity * rate);
+/** 세 조건을 모두 채우는 가장 높은 등급 */
+export function gradeFor(rating: number | null, walks: number, reviews: number) {
+  return GRADE_RULES.find((g) => walks >= g.walks && reviews >= g.reviews && (g.reviews === 0 || (rating ?? 0) >= g.rating)) ?? GRADE_RULES[GRADE_RULES.length - 1];
+}
+export const rateOf = (grade: BuddyGrade) => GRADE_RULES.find((g) => g.grade === grade)?.rate ?? BASE_PAYOUT_RATE;
+/** 0.75 → "75%" */
+export const pct = (rate: number) => `${Math.round(rate * 100)}%`;
 
 // ---- 라벨 (§3)
 export interface CodeLabel { ko: string; en: string }
 type Labels<K extends string> = Record<K, CodeLabel>;
+
+export const GRADE: Labels<BuddyGrade> = {
+  basic: { ko: "기본", en: "Basic" },
+  growth: { ko: "성장", en: "Rising" },
+  top: { ko: "우수", en: "Top" },
+};
 
 export const DIET: Labels<Diet> = {
   vegan: { ko: "비건", en: "Vegan" },
@@ -109,6 +144,25 @@ export const REPORT_CATEGORY: Labels<ReportCategory> = {
   unsafe: { ko: "안전이 걱정돼요", en: "I felt unsafe" },
   other: { ko: "기타", en: "Other" },
 };
+
+// ---- v3.4 무료 AI 산책 코스 (backend app/core/rules.py 와 같게)
+/** 무료 이용자가 하루에 AI에게 할 수 있는 질문 수 (장소 소개는 세지 않음) */
+export const FREE_AI_QUESTIONS = 3;
+/** 광고 화면 기다리는 시간(초). 이야기는 그동안 이미 불러온다 — 일부러 늦추는 대기는 없다 */
+export const AD_SECONDS = 5;
+export const SURVEY_PAIN: Labels<SurveyPain> = {
+  ads: { ko: "광고가 귀찮았어요", en: "The ads" },
+  question_limit: { ko: "질문 3번이 모자랐어요", en: "Only 3 questions a day" },
+  route_fit: { ko: "동선이 내 숙소·시간과 안 맞았어요", en: "The route didn't fit my stay or time" },
+  no_help: { ko: "길을 잃었을 때 물어볼 사람이 없었어요", en: "No one to ask when I was lost" },
+  none: { ko: "딱히 없었어요", en: "Nothing really" },
+};
+/** 무료 코스 광고 자리 — 모두 지어낸 예시 광고(실제 가게·행사 아님) */
+export const SAMPLE_ADS: { title: string; body: string; place: string }[] = [
+  { title: "골목 끝 찻집 '한모금'", body: "대추차 한 잔에 쑥떡 하나를 같이 드려요. 산책하다 쉬어 가세요.", place: "성북동 골목 · 예시 광고" },
+  { title: "겨울 한옥 손뜨개 모임", body: "토요일 오후, 한옥 마루에서 목도리를 같이 떠요. 처음이어도 괜찮아요.", place: "성북동 한옥 · 예시 광고" },
+  { title: "성곽길 아래 빵집 '돌담제과'", body: "아침 8시에 갓 구운 단팥빵이 나와요. 코스 출발 전에 들러 보세요.", place: "성곽길 입구 · 예시 광고" },
+];
 
 /** 요청 → 도움 매핑 (매칭용): vegan/vegetarian → vegan_food, halal → halal_food */
 export const DIET_TO_HELP: Partial<Record<Diet, CanHelp>> = { vegan: "vegan_food", vegetarian: "vegan_food", halal: "halal_food" };

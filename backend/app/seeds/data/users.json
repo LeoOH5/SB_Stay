@@ -115,5 +115,71 @@
   "name": "Lucas Martin",
   "role": "tourist",
   "language": "en"
+ },
+ {
+  "id": 17,
+  "email": "sua@a-univ.ac.kr",
+  "password": "demo1234",
+  "name": "수아",
+  "role": "buddy",
+  "university_id": 1,
+  "language": "ko",
+  "birth_date": "2005-04-20"
+ },
+ {
+  "id": 21,
+  "email": "sofia@example.com",
+  "password": "demo1234",
+  "name": "Sofia Rossi",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 22,
+  "email": "daniel@example.com",
+  "password": "demo1234",
+  "name": "Daniel Park",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 23,
+  "email": "aiko@example.com",
+  "password": "demo1234",
+  "name": "Aiko Tanaka",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 24,
+  "email": "chloe@example.com",
+  "password": "demo1234",
+  "name": "Chloé Dubois",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 25,
+  "email": "liam@example.com",
+  "password": "demo1234",
+  "name": "Liam Walsh",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 26,
+  "email": "ana@example.com",
+  "password": "demo1234",
+  "name": "Ana Silva",
+  "role": "tourist",
+  "language": "en"
+ },
+ {
+  "id": 27,
+  "email": "noah@example.com",
+  "password": "demo1234",
+  "name": "Noah Becker",
+  "role": "tourist",
+  "language": "en"
  }
 ]

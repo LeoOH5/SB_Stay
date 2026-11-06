@@ -1,6 +1,7 @@
 """버디 본인용 — BD-03 프로필 · BD-04 가능 일정 · BD-05 요청함 · BD-06 확정 일정 · BD-07 활동 내역 (B 담당)
 
 v3: 버디(role=buddy)만. 식비 청구 · 활동 기록 · 월 정산 · 지원 5단계(학교 메일 → 인증번호 → 약속 동의 → 퀴즈 → 승인 대기).
+v3.2: 등급·정산율(/buddy/grade), 휴면 복귀(/buddy/confirm-active). 정산은 항목마다 확정 때 고정한 정산율.
 """
 from datetime import UTC, date, datetime
 
@@ -30,6 +31,11 @@ from app.schemas.buddy import (
     BuddySettlementOut,
     EarningItem,
     EarningsOut,
+    GradeNeed,
+    GradeNext,
+    GradeOut,
+    GradeStats,
+    GradeWindow,
     MealClaimIn,
     MealClaimOut,
     QuizAnswersIn,
@@ -40,7 +46,7 @@ from app.schemas.buddy import (
     TouristSummary,
 )
 from app.schemas.common import ListResponse
-from app.services import buddy_quiz, meals
+from app.services import buddy_quiz, grades, meals
 from app.services.booking_state import describe
 from app.services.reviews import average, item_reviews
 
@@ -151,6 +157,7 @@ def set_availability(body: AvailabilityIn, user: User = Depends(SUPPLIER), db: S
     db.execute(delete(BuddyAvailability).where(BuddyAvailability.buddy_id == prof.id))
     for d in sorted(set(body.dates)):
         db.add(BuddyAvailability(buddy_id=prof.id, date=d))
+    prof.active_on = get_settings().today()  # 휴면 계산용 활동
     db.commit()
     return AvailabilityOut(dates=[d.isoformat() for d in sorted(set(body.dates))])
 
@@ -175,7 +182,7 @@ def schedule(date_from: date | None = None, date_to: date | None = None, user: U
 # ---------- BD-07 활동 내역·정산
 @router.get("/earnings", response_model=EarningsOut)
 def earnings(month: str = MONTH, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> EarningsOut:
-    """BD-07: 활동 내역 (금액은 수수료 뺀 net, 식사 보증금·앨범 제외). 지난달 이전 확정분은 paid, 이번 달은 pending (목업)"""
+    """BD-07: 활동 내역 (금액은 정산율을 적용한 버디 몫 net, 식사 보증금·앨범 제외). 지난달 이전 확정분은 paid, 이번 달은 pending (목업)"""
     rows: list[EarningItem] = []
     for it in _my_items(db, user, ["approved", "confirmed"]):
         booking = db.get(Booking, it.booking_id)
@@ -183,7 +190,7 @@ def earnings(month: str = MONTH, user: User = Depends(SUPPLIER), db: Session = D
         title, _ = describe(db, it)
         status = "paid" if it.date_from.isoformat()[:7] < month else "pending"
         rows.append(EarningItem(booking_item_id=it.id, date=it.date_from.isoformat(), tourist=f"{trav.get('name', '')} · {trav.get('nationality', '')}",
-                                activity=title, amount=meals.gross_fee_net(it)[2], status=status))
+                                activity=title, amount=meals.gross_fee_net(db, it)[2], status=status))
     rows.sort(key=lambda r: r.date, reverse=True)
     this_month = [r for r in rows if r.date[:7] == month]
     paid = sum(r.amount for r in rows if r.status == "paid")
@@ -193,7 +200,7 @@ def earnings(month: str = MONTH, user: User = Depends(SUPPLIER), db: Session = D
 
 @router.get("/settlement", response_model=BuddySettlementOut)
 def settlement(month: str = MONTH, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> BuddySettlementOut:
-    """월 정산: 확정 동행의 활동비 − 수수료 10% + 승인된 식비 (앨범은 플랫폼 수입). 다음 달 말일 지급."""
+    """월 정산: 확정 동행의 활동비 × 항목별 고정 정산율 + 승인된 식비 (앨범은 플랫폼 수입). 다음 달 말일 지급."""
     if not meals.MONTH_RE.match(month):
         raise api_error(422, "VALIDATION", "month는 YYYY-MM")
     prof = _profile(db, user)
@@ -202,19 +209,50 @@ def settlement(month: str = MONTH, user: User = Depends(SUPPLIER), db: Session =
     for it in _my_items(db, user, ["confirmed"]):
         if not start <= it.date_from <= end:
             continue
-        gross, fee, net = meals.gross_fee_net(it)
+        gross, fee, net, rate = meals.gross_fee_net(db, it)
         claims = meals.claims_for_item(db, it.id)
         approved = sum(c.amount for c in claims if c.status == "approved")
         pending = sum(c.amount for c in claims if c.status == "requested")
         rows.append(SettlementItem(item_id=it.id, date=it.date_from.isoformat(), tourist=meals.traveler_name(db, db.get(Booking, it.booking_id)),
-                                   gross=gross, fee=fee, meal_approved=approved, meal_pending=pending, net=net,
+                                   gross=gross, payout_rate=float(rate), fee=fee, meal_approved=approved, meal_pending=pending, net=net,
                                    status="meal_pending" if pending else "confirmed"))
     net_sum, meals_ok = sum(r.net for r in rows), sum(r.meal_approved for r in rows)
     return BuddySettlementOut(
-        month=month, pay_date=meals.pay_date(month).isoformat(), account=meals.mask_account(prof.bank_account), walks=len(rows),
+        month=month, pay_date=meals.pay_date(month).isoformat(), account=meals.mask_account(prof.bank_account),
+        grade=prof.grade, payout_rate=float(prof.payout_rate), walks=len(rows),
         gross=sum(r.gross for r in rows), fee=sum(r.fee for r in rows), net=net_sum, meals_approved=meals_ok,
         meals_pending=sum(r.meal_pending for r in rows), payout=net_sum + meals_ok, items=rows,
     )
+
+
+# ---------- 등급·정산율·휴면 (v3.2)
+def grade_out(db: Session, prof: BuddyProfile) -> GradeOut:
+    """저장된 등급(매월 갱신) + 지금 평가 기간 실적 + 다음 등급 기준"""
+    ev = grades.evaluate(db, prof, get_settings().today())
+    nxt = grades.next_grade(prof.grade)
+    return GradeOut(
+        grade=prof.grade, payout_rate=float(prof.payout_rate),
+        window=GradeWindow(from_=ev.window["from"], to=ev.window["to"], label=ev.window["label"]),
+        stats=GradeStats(rating=ev.rating, walks=ev.walks, reviews=ev.reviews),
+        next=GradeNext(grade=nxt.code, payout_rate=float(nxt.rate),
+                       need=GradeNeed(rating=float(nxt.rating), walks=nxt.walks, reviews=nxt.reviews)) if nxt else None,
+        needs_recheck=prof.needs_recheck, dormant_since=prof.dormant_since, updated_at=prof.grade_updated_at,
+    )
+
+
+@router.get("/grade", response_model=GradeOut)
+def my_grade(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> GradeOut:
+    """내 등급·정산율, 이번 평가 기간(현재 + 직전 방학) 평점·동행·후기, 다음 등급까지 필요한 기준"""
+    return grade_out(db, _profile(db, user))
+
+
+@router.post("/confirm-active", response_model=GradeOut)
+def confirm_active(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> GradeOut:
+    """휴면 복귀 '계속 활동할게요': 요청 받기를 다시 켠다. 등급·정산율은 그대로 (첫 동행은 기존 정산율)"""
+    prof = _profile(db, user)
+    grades.confirm_active(prof, get_settings().today())
+    db.commit()
+    return grade_out(db, prof)
 
 
 # ---------- 식비 청구
@@ -302,7 +340,8 @@ def apply_status(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) 
         email_verified=bool(prof and prof.school_email_verified_at), school_email=prof.school_email if prof else None,
         university=uni.name if uni else None, age_ok=_age_ok(user), code_agreed=bool(prof and prof.code_agreed_at),
         quiz_score=prof.quiz_score if prof else None, quiz_passed=bool(prof and (prof.quiz_score or 0) >= rules.QUIZ_PASS),
-        profile_done=bool(prof and prof.major and prof.intro and prof.languages), status=prof.status if prof else "none",
+        profile_done=bool(prof and prof.major and prof.intro and prof.languages),
+        korean_national=bool(prof and prof.korean_national_confirmed_at), status=prof.status if prof else "none",
     )
 
 
@@ -316,10 +355,13 @@ def apply_email(body: ApplyEmailIn, user: User = Depends(SUPPLIER), db: Session 
 
 @router.post("/apply/verify", response_model=ApplyStatusOut)
 def apply_verify(body: ApplyVerifyIn, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> ApplyStatusOut:
-    """2단계: 인증번호 + 생년월일(만 19세 이상). 대학·생년월일 저장, 프로필이 없으면 pending으로 만든다."""
+    """2단계: 인증번호 + 생년월일(만 19세 이상) + 한국 국적 확인. 대학·생년월일 저장, 프로필이 없으면 pending으로 만든다.
+    외국인 유학생은 시간제 취업 허가 문제로 버디(유급 활동)를 할 수 없다."""
     uni = _university_for(db, body.email)
     if body.code.strip() != get_settings().buddy_otp_code:
         raise api_error(422, "BAD_CODE", "인증번호가 맞지 않아요")
+    if not body.korean_national:
+        raise api_error(422, "NOT_KOREAN_NATIONAL", "한국 국적 학생만 버디로 활동할 수 있어요")
     if rules.age_on(body.birth_date, get_settings().today()) < rules.BUDDY_MIN_AGE:
         raise api_error(422, "TOO_YOUNG", f"만 {rules.BUDDY_MIN_AGE}세 이상만 버디로 활동할 수 있어요")
     user.university_id, user.birth_date = uni.id, body.birth_date
@@ -329,6 +371,7 @@ def apply_verify(body: ApplyVerifyIn, user: User = Depends(SUPPLIER), db: Sessio
         db.add(prof)
     prof.university_id = uni.id
     prof.school_email, prof.school_email_verified_at = body.email.strip().lower(), datetime.now(UTC)
+    prof.korean_national_confirmed_at = prof.korean_national_confirmed_at or datetime.now(UTC)
     db.commit()
     return apply_status(user, db)
 

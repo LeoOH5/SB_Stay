@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Header
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import rules
 from app.core.db import get_db
 from app.core.deps import get_current_user, require_role
 from app.core.errors import api_error
@@ -27,7 +28,7 @@ from app.schemas.ai import (
     StoryIn,
     StoryOut,
 )
-from app.services import brief, llm, matcher, notice, planner, story
+from app.services import brief, free_tier, llm, matcher, notice, planner, story
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -65,8 +66,9 @@ _intro_cache: dict[tuple[int, str], tuple[str, bool]] = {}
 
 
 @router.post("/story", response_model=StoryOut)
-async def place_story(body: StoryIn, _: User = Depends(get_current_user), db: Session = Depends(get_db)) -> StoryOut:
-    """AI-02 역사 스토리. 근거는 places.story_doc뿐. 문서 밖 질문이면 grounded=false. 출처는 항상 DB 값."""
+async def place_story(body: StoryIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> StoryOut:
+    """AI-02 역사 스토리. 근거는 places.story_doc뿐. 문서 밖 질문이면 grounded=false. 출처는 항상 DB 값.
+    v3.4: 무료 이용자(free)는 질문을 하루 3번까지 (넘으면 429 AI_LIMIT). 장소 소개(질문 없음)는 세지 않는다."""
     place = db.get(Place, body.place_id)
     if not place:
         raise api_error(404, "NOT_FOUND", "장소를 찾을 수 없습니다")
@@ -76,6 +78,11 @@ async def place_story(body: StoryIn, _: User = Depends(get_current_user), db: Se
     if doc.empty():
         return StoryOut(answer=story.NO_STORY[body.language], sources=sources, grounded=False)
 
+    left = None
+    if question is not None:
+        left = free_tier.use_question(db, user)
+        if left == -1:
+            raise api_error(429, "AI_LIMIT", AI_LIMIT_MESSAGE)
     key = (place.id, body.language)
     if question is None and key in _intro_cache:
         answer, grounded = _intro_cache[key]
@@ -85,10 +92,13 @@ async def place_story(body: StoryIn, _: User = Depends(get_current_user), db: Se
         answer, grounded = story.validate_llm(await llm.complete_json(system, prompt), place.story_doc or "")
         if question is None:
             _intro_cache[key] = (answer, grounded)
-        return StoryOut(answer=answer, sources=sources, grounded=grounded, ai=True)
+        return StoryOut(answer=answer, sources=sources, grounded=grounded, ai=True, questions_left=left)
     except (llm.LLMUnavailable, ValueError):
         answer, grounded = story.fallback_answer(doc, question, body.language)
-        return StoryOut(answer=answer, sources=sources, grounded=grounded)
+        return StoryOut(answer=answer, sources=sources, grounded=grounded, questions_left=left)
+
+
+AI_LIMIT_MESSAGE = f"무료 코스에서는 AI에게 하루 {rules.FREE_AI_QUESTIONS}번까지 물어볼 수 있어요. 내일 다시 물어보거나, 버디와 함께 걸으면 제한 없이 물어볼 수 있어요"
 
 
 def ui_lang(accept_language: str | None) -> str:

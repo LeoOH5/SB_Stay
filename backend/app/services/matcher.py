@@ -1,6 +1,6 @@
 """AI-03 버디 매칭 (A 담당).
 
-1. DB에서 먼저 거른다: 승인(approved) + 그 날짜에 가능 + 요청 언어를 쓰는 버디.
+1. DB에서 먼저 거른다: 승인(approved)·휴면 아님 + 그 날짜에 가능 + 요청 언어를 쓰는 버디.
 2. 점수는 코드가 매긴다: 관심사 겹침 + 쓸 수 있는 언어 수 + 성향·스타일 일치 + 필요한 도움 + 같은 대학.
    (점수는 화면에 '92%'처럼 보일 수 있어 LLM에 맡기지 않는다)
 3. LLM은 후보 안에서 3명을 고르고 한 줄 이유를 쓴다. 키가 없거나 실패하면 점수 순 3명 + 템플릿 이유.
@@ -56,7 +56,7 @@ def score(shared: int, languages: int, traits: int = 0, needs_ok: bool = False, 
 
 
 def candidates(db: Session, req: MatchIn) -> list[BuddyCand]:
-    q = select(BuddyProfile).where(BuddyProfile.status == "approved")
+    q = select(BuddyProfile).where(BuddyProfile.status == "approved", BuddyProfile.needs_recheck.is_(False))
     if req.date:
         q = q.where(BuddyProfile.id.in_(select(BuddyAvailability.buddy_id).where(BuddyAvailability.date == req.date)))
     out = []

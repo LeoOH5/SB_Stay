@@ -1,6 +1,6 @@
-from datetime import date
+from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class GuideBrief(BaseModel):
@@ -70,3 +70,22 @@ class ReviewListOut(BaseModel):
     items: list[ReviewOut]
     average_rating: float | None = None
     next_cursor: str | None = None
+
+
+class SurveyIn(BaseModel):
+    """TR-05 v3.4 무료 코스 완료 설문"""
+    satisfaction: int = Field(ge=1, le=5)
+    pain: str  # rules.SURVEY_PAIN 코드 (ads · question_limit · route_fit · no_help · none)
+    want_buddy: bool
+
+
+class SurveyOut(BaseModel):
+    id: int
+    tour_id: int
+    satisfaction: int
+    pain: str
+    want_buddy: bool
+    plan: str  # 낸 때의 이용 방식 free | buddy
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

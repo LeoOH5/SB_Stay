@@ -134,9 +134,9 @@ def build_candidates(db: Session, req: PlanIn) -> Candidates:
                 courses.append(CourseC(t, d, score, [p.name for p in stop_places]))
     courses.sort(key=lambda c: (-c.score, c.day, c.tour.id))
 
-    # 버디: 승인, 가능 날짜(숙박 기간 안), 요청 언어 구사. 숙소가 있으면 버디는 필수라 with_buddy와 상관없이 만든다
+    # 버디: 승인·휴면 아님, 가능 날짜(숙박 기간 안), 요청 언어 구사. 숙소가 있으면 버디는 필수라 with_buddy와 상관없이 만든다
     buddies: list[BuddyC] = []
-    for b in db.scalars(select(BuddyProfile).where(BuddyProfile.status == "approved").order_by(BuddyProfile.id)).all():
+    for b in db.scalars(select(BuddyProfile).where(BuddyProfile.status == "approved", BuddyProfile.needs_recheck.is_(False)).order_by(BuddyProfile.id)).all():
         if req.language not in (b.languages or []) and req.language != "ko":
             continue
         free = set(db.scalars(select(BuddyAvailability.date).where(BuddyAvailability.buddy_id == b.id)).all())

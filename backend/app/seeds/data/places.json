@@ -340,25 +340,6 @@
     ]
   },
   {
-    "id": 112,
-    "name": "혜화문",
-    "name_en": "Hyehwamun Gate",
-    "lat": 37.587939,
-    "lng": 127.003933,
-    "address": "서울 종로구 창경궁로 307",
-    "hours": "00:00–24:00 (문루 내부 개방은 확인 필요)",
-    "closed_days": [],
-    "fee": 0,
-    "need_reservation": false,
-    "stay_min": 15,
-    "tags": [
-      "fortress",
-      "photo"
-    ],
-    "story_doc": "# p11 혜화문\n\n\n## 한 줄 소개\n한양도성의 동북쪽 작은 문 [확인 필요: 아래 전부 출처를 찾지 못함].\n\n## 기본 사실과 이야기\n- 한양도성 사소문 중 하나 [확인 필요]\n- 일제강점기에 헐렸다가 1994년 원래 자리 근처에 다시 지었다 [확인 필요]\n- 행정구역은 서울 종로구다 [확인 필요]\n\n## English\nIntro: A small gate in the northeast of Seoul's city wall.",
-    "sources": []
-  },
-  {
     "id": 113,
     "name": "성북천(한성대입구역 분수마루)",
     "name_en": "Seongbukcheon Stream",

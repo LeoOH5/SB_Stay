@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     auto_refund_after_hours: int = 0
     auto_refund_check_minutes: int = 10
 
-    # 수수료율 (해커톤은 상수). 숙박·버디 활동비·앨범에만, 식사 보증금에는 없음
-    platform_fee_rate: float = 0.10
+    # 숙박 수수료 (퍼센트 정수). 돈 계산은 정수만 쓴다: rules.pct(금액, 퍼센트)
+    platform_fee_percent: int = 10
 
     # v3 버디: 학교 메일 인증번호(데모는 메일 발송 없이 고정값), debug면 응답에 dev_code 포함
     buddy_otp_code: str = "123456"

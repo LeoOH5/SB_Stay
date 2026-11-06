@@ -16,7 +16,7 @@ from app.models.booking import Booking, BookingItem, MealClaim, Notification, Re
 from app.models.supply import BuddyActivity, BuddyProfile, DormRoom, Place, Tour, University
 from app.models.user import User
 from app.schemas.bookings import BookingItemIn, BookingItemOut, BookingOut, TravelerIn
-from app.services import google_calendar
+from app.services import google_calendar, grades
 from app.services.availability import nights_between, occupied_rooms
 
 log = logging.getLogger(__name__)
@@ -210,6 +210,7 @@ def _price_and_validate(db: Session, it: BookingItemIn) -> tuple[int, dict]:
         prof = db.get(BuddyProfile, it.ref_id)
         if not prof or prof.status != "approved":
             raise BookingError(404, "NOT_FOUND", "버디를 찾을 수 없습니다")
+        resting(prof)
         d = it.date or it.date_from
         if not d:
             raise BookingError(422, "VALIDATION", "동행 날짜가 필요합니다")
@@ -222,6 +223,12 @@ def _price_and_validate(db: Session, it: BookingItemIn) -> tuple[int, dict]:
         return price, {"date_from": d, "time": it.time, "duration_min": dur, "request": clean_request(db, "buddy", it.request),
                        "course_id": it.course_id, "meal_count": it.meal_count, "meal_deposit": deposit, "album": it.album}
     raise BookingError(422, "VALIDATION", "type은 dorm | buddy")
+
+
+def resting(prof: BuddyProfile) -> None:
+    """휴면(needs_recheck) 버디는 '계속 활동할게요' 전까지 새 요청을 받지 않는다"""
+    if prof.needs_recheck:
+        raise BookingError(409, "BUDDY_RESTING", "지금은 요청을 받지 않는 버디예요. 다른 버디를 골라 주세요")
 
 
 def check_stay_rules(items: list[BookingItemIn]) -> None:
@@ -255,14 +262,20 @@ def album_fee(it: BookingItem) -> int:
     return rules.ALBUM_FEE if it.type == "buddy" and it.album else 0
 
 
+def activity_fee(it: BookingItem) -> int:
+    """버디 활동비 = 항목 가격 − 식사 보증금 − 앨범 (정산율은 여기에만)"""
+    return it.price - (it.meal_deposit or 0) - album_fee(it)
+
+
 def recompute_totals(db: Session, booking: Booking) -> None:
     """총액 = 살아 있는 항목 가격 합.
-    수수료 = (총액 − 식사 보증금 − 앨범) × 10% + 앨범 (앨범은 전액 플랫폼 수입, 식사 보증금에는 수수료 없음)"""
+    수수료 = 숙박 × 10% + 활동비 × (1 − 버디 정산율) + 앨범 전액. 식사 보증금에는 수수료 없음.
+    정산율은 확정된 항목은 고정값, 아직이면 버디의 지금 정산율로 어림한다."""
     items = db.scalars(select(BookingItem).where(BookingItem.booking_id == booking.id, BookingItem.status.in_(LIVE))).all()
     booking.total_price = sum(i.price for i in items)
-    albums = sum(album_fee(i) for i in items)
-    base = booking.total_price - sum(i.meal_deposit or 0 for i in items) - albums
-    booking.platform_fee = round(base * get_settings().platform_fee_rate) + albums
+    dorm = sum(i.price for i in items if i.type == "dorm")
+    keep = sum(activity_fee(i) - grades.buddy_net(activity_fee(i), grades.item_rate(db, i)) for i in items if i.type == "buddy")
+    booking.platform_fee = rules.pct(dorm, get_settings().platform_fee_percent) + keep + sum(album_fee(i) for i in items)
 
 
 def create_booking(db: Session, tourist: User, traveler: TravelerIn, items: list[BookingItemIn]) -> Booking:
@@ -300,6 +313,7 @@ def replace_buddy(db: Session, actor: User, booking: Booking, it: BookingItem, b
     prof = db.get(BuddyProfile, buddy_id)
     if not prof or prof.status != "approved":
         raise BookingError(404, "NOT_FOUND", "버디를 찾을 수 없습니다")
+    resting(prof)
     d = new_date or it.date_from
     dorm = db.scalar(select(BookingItem).where(BookingItem.booking_id == booking.id, BookingItem.type == "dorm",
                                                BookingItem.status.in_(LIVE)))
@@ -344,8 +358,15 @@ def decide_item(db: Session, actor: User, it: BookingItem, action: str, reason: 
         it.reject_reason = reason
     it.decided_by = actor.id
     it.decided_at = datetime.now(UTC)
-    db.flush()
     booking = db.get(Booking, it.booking_id)
+    if it.type == "buddy" and it.status == "confirmed":  # 정산율 고정 + 버디 활동(휴면 계산)
+        prof = db.get(BuddyProfile, it.ref_id)
+        grades.lock_rate(it, prof)
+        if actor.id == prof.user_id:
+            prof.active_on = today()
+        db.flush()
+        recompute_totals(db, booking)
+    db.flush()
     recompute_booking_status(db, booking)
     title, _ = describe(db, it)
     label = "승인됨" if action == "approve" else "거절됨"

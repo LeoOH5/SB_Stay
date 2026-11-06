@@ -1,6 +1,6 @@
 # API 상세 명세 목록 (성북스테이)
 
-총 52개 엔드포인트. 공통 규칙은 [../api-spec.md](../api-spec.md) 참고.
+총 54개 엔드포인트. 공통 규칙은 [../api-spec.md](../api-spec.md) 참고.
 
 ## 인증 (Auth)
 
@@ -12,6 +12,7 @@
 - [AU-06](AU-06.md) `PATCH /users/me/role` — 역할 선택, 첫 로그인 (필수 / 구현)
 - [AU-07](AU-07.md) `POST /auth/google/calendar` — 구글 캘린더 연동 (권장 / 구현)
 - [AU-08](AU-08.md) `DELETE /auth/google/calendar` — 구글 캘린더 연동 해제 (권장 / 구현)
+- [AU-09](AU-09.md) `GET /auth/me/plan` — 내 이용 방식 무료/버디, 오늘 남은 AI 질문 (v3.4, 필수 / 구현)
 
 ## 홈 (Home)
 
@@ -32,6 +33,7 @@
 - [TR-02](TR-02.md) `GET /tours/{id}` — 투어 코스 상세 조회 (필수 / 구현)
 - [TR-03](TR-03.md) `GET /places/{id}` — 장소 상세 조회 (필수 / 구현)
 - [TR-04](TR-04.md) `GET /tours/{id}/reviews` — 투어 리뷰 조회 (권장 / 목업)
+- [TR-05](TR-05.md) `POST /tours/{id}/survey` — 무료 코스 완료 설문 (v3.4, 권장 / 구현)
 
 ## 버디 (Buddies)
 

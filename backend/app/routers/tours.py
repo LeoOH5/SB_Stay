@@ -1,4 +1,4 @@
-"""TR-01~04 코스·장소 (A 담당) — 경로·응답 형식은 docs/api-detail/TR-*.md 기준.
+"""TR-01~05 코스·장소 (A 담당) — 경로·응답 형식은 docs/api-detail/TR-*.md 기준.
 
 v3: tours는 무료 AI 산책 코스(price 0, 해설사 없음 → guide null, 예약 항목 아님). 장소 이야기는 AI-02.
 공개 조회라 로그인 없이 호출된다. 운영 요일·좌표 같은 사실 값은 DB 그대로 내보낸다.
@@ -9,11 +9,14 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import rules
 from app.core.db import get_db
+from app.core.deps import require_role
 from app.core.errors import api_error
-from app.models import Place, Tour, TourPlace
+from app.models import CourseSurvey, Place, Tour, TourPlace, User
 from app.schemas.common import ListResponse
-from app.schemas.tours import PlaceOut, ReviewListOut, TourOut, TourPlaceOut
+from app.schemas.tours import PlaceOut, ReviewListOut, SurveyIn, SurveyOut, TourOut, TourPlaceOut
+from app.services import free_tier
 from app.services.reviews import average, item_reviews
 
 router = APIRouter(tags=["tours"])
@@ -77,6 +80,22 @@ def tour_reviews(tour_id: int, cursor: str | None = None, db: Session = Depends(
         raise api_error(404, "NOT_FOUND", "코스를 찾을 수 없습니다")
     items, _ = item_reviews(db, "tour", tour_id)
     return ReviewListOut(items=items, average_rating=average(items))
+
+
+@router.post("/tours/{tour_id}/survey", response_model=SurveyOut, status_code=201)
+def course_survey(tour_id: int, body: SurveyIn, user: User = Depends(require_role("tourist")),
+                  db: Session = Depends(get_db)) -> CourseSurvey:
+    """TR-05 (v3.4): '코스 다 걸었어요' 뒤 설문 3문항 저장. 낸 때의 이용 방식(free|buddy)을 같이 남긴다."""
+    if not db.get(Tour, tour_id):
+        raise api_error(404, "NOT_FOUND", "코스를 찾을 수 없습니다")
+    if body.pain not in rules.SURVEY_PAIN:
+        raise api_error(422, "VALIDATION", f"pain은 {' | '.join(rules.SURVEY_PAIN)}")
+    row = CourseSurvey(user_id=user.id, tour_id=tour_id, satisfaction=body.satisfaction, pain=body.pain,
+                       want_buddy=body.want_buddy, plan=free_tier.plan_of(db, user))
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
 
 
 def _place_out(p: Place) -> PlaceOut:

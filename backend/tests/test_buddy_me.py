@@ -45,18 +45,24 @@ def test_requests_privacy_schedule_and_decide(client, buddy, reset_db):
 def test_earnings_are_net(client):
     minho = login(client, "minho@b-univ.ac.kr")
     j = client.get(f"{B}/earnings", headers=minho).json()
-    assert j["paid"] == 27000 and j["pending"] == 0  # 2026-11 확정 1건 30,000 − 수수료 10%
+    assert j["paid"] == 21000 and j["pending"] == 0  # 2026-11 확정 1건 30,000 × 기본 70%
     jiwoo = client.get(f"{B}/earnings", headers=login(client, "jiwoo@a-univ.ac.kr")).json()
-    assert {i["booking_item_id"]: i["amount"] for i in jiwoo["items"]} == {3: 27000, 32: 27000, 51: 27000, 52: 27000}  # 식사 보증금·앨범 제외
+    jan = {i["booking_item_id"]: i["amount"] for i in jiwoo["items"] if i["date"] >= "2027-01"}
+    assert jan == {3: 22500, 32: 22500, 51: 22500, 52: 22500}  # 식사 보증금·앨범 제외, 성장 75%
+    assert {i["amount"] for i in jiwoo["items"] if i["date"] < "2027"} == {21000}  # 여름: 기본 70%일 때 확정
 
 
 def test_settlement(client, buddy):
     s = client.get(f"{B}/settlement", params={"month": "2027-01"}, headers=buddy).json()
     assert s["pay_date"] == "2027-02-28" and s["account"] == "신한 110-***-***482" and s["walks"] == 4  # Lena·Mia·Emma·Lucas
-    assert (s["gross"], s["fee"], s["net"]) == (120000, 12000, 108000)  # 활동비만 (앨범은 플랫폼 수입)
-    assert s["meals_approved"] == 18000 and s["meals_pending"] == 23500 and s["payout"] == 126000
+    assert (s["grade"], s["payout_rate"]) == ("growth", 0.75)
+    assert (s["gross"], s["fee"], s["net"]) == (120000, 30000, 90000)  # 활동비만 × 75% (앨범은 플랫폼 수입)
+    assert s["meals_approved"] == 18000 and s["meals_pending"] == 23500 and s["payout"] == 108000
     rows = {r["item_id"]: r for r in s["items"]}
-    assert rows[32]["status"] == "confirmed" and rows[3]["status"] == "meal_pending" and rows[3]["net"] == 27000
+    assert rows[32]["status"] == "confirmed" and rows[3]["status"] == "meal_pending" and rows[3]["net"] == 22500
+    assert all(r["payout_rate"] == 0.75 for r in s["items"])
+    summer = client.get(f"{B}/settlement", params={"month": "2026-07"}, headers=buddy).json()
+    assert summer["walks"] == 4 and summer["net"] == 4 * 21000 and {r["payout_rate"] for r in summer["items"]} == {0.7}
     assert client.get(f"{B}/settlement", params={"month": "2027-13"}, headers=buddy).status_code == 422
 
 
@@ -85,12 +91,12 @@ def test_meal_claim_limit_approve_and_settlement(client, buddy, operator, reset_
     assert r.json()["status"] == "rejected" and r.json()["reason"] == "보증금 초과"
     # 정산 반영: 식비 승인 18,000 + 23,500, 확인 중 0
     s = client.get(f"{B}/settlement", headers=buddy).json()
-    assert s["meals_approved"] == 41500 and s["meals_pending"] == 0 and s["payout"] == 108000 + 41500
+    assert s["meals_approved"] == 41500 and s["meals_pending"] == 0 and s["payout"] == 90000 + 41500
     item = next(i for i in client.get("/api/v1/bookings/501", headers=login(client, "emma@example.com")).json()["items"] if i["id"] == 3)
     assert item["meal_used"] == 23500 and item["meal_approved"] == 23500 and item["meal_refund"] == 16500
     a = client.get("/api/v1/admin/settlements", headers=operator).json()
     jiwoo = next(r for r in a["items"] if r["target"] == "버디 지우")
-    assert jiwoo["meals"] == 41500 and jiwoo["payout"] == round(120000 * 0.9) + 41500 and jiwoo["status"] == "pending"
+    assert jiwoo["meals"] == 41500 and jiwoo["payout"] == round(120000 * 0.75) + 41500 and jiwoo["status"] == "pending"
     assert a["meal_refund_total"] == 16500 + 2000
 
 
@@ -120,7 +126,7 @@ def _new_buddy(client, email="new@korea.ac.kr"):
     return h
 
 
-def test_apply_flow(client, univ_admin, reset_db):
+def test_apply_flow(client, univ_admin, operator, reset_db):
     h = _new_buddy(client)
     s = client.get(f"{B}/apply", headers=h).json()
     assert s["status"] == "none" and s["email_verified"] is False and s["quiz_passed"] is False
@@ -131,10 +137,14 @@ def test_apply_flow(client, univ_admin, reset_db):
     assert client.post(f"{B}/apply/agree", headers=h).status_code == 409  # 메일 인증 먼저
     bad = client.post(f"{B}/apply/verify", json={"email": "new@korea.ac.kr", "code": "000000", "birth_date": "2003-01-01"}, headers=h)
     assert bad.status_code == 422 and bad.json()["error"]["code"] == "BAD_CODE"
-    young = client.post(f"{B}/apply/verify", json={"email": "new@korea.ac.kr", "code": "123456", "birth_date": "2008-06-01"}, headers=h)
+    young = client.post(f"{B}/apply/verify", json={"email": "new@korea.ac.kr", "code": "123456", "birth_date": "2008-06-01", "korean_national": True}, headers=h)
     assert young.status_code == 422 and young.json()["error"]["code"] == "TOO_YOUNG"
-    ok = client.post(f"{B}/apply/verify", json={"email": "new@korea.ac.kr", "code": "123456", "birth_date": "2003-01-01"}, headers=h).json()
-    assert ok["email_verified"] and ok["age_ok"] and ok["university"] == "고려대학교" and ok["status"] == "pending"
+    alien = {"email": "new@korea.ac.kr", "code": "123456", "birth_date": "2003-01-01"}  # 국적 확인 없음 → 422
+    r = client.post(f"{B}/apply/verify", json=alien, headers=h)
+    assert r.status_code == 422 and r.json()["error"]["code"] == "NOT_KOREAN_NATIONAL"
+    assert client.get(f"{B}/apply", headers=h).json()["korean_national"] is False
+    ok = client.post(f"{B}/apply/verify", json=alien | {"korean_national": True}, headers=h).json()
+    assert ok["email_verified"] and ok["age_ok"] and ok["korean_national"] and ok["university"] == "고려대학교" and ok["status"] == "pending"
     assert client.post(f"{B}/apply/agree", headers=h).json()["code_agreed"] is True
     qs = client.get(f"{B}/apply/quiz", headers=h).json()["questions"]
     assert len(qs) == 10 and all("answer" not in q and len(q["options"]) >= 2 for q in qs)
@@ -143,14 +153,14 @@ def test_apply_flow(client, univ_admin, reset_db):
     assert client.post(f"{B}/apply/quiz", json={"answers": seven}, headers=h).json() == {"score": 7, "total": 10, "passed": False, "best_score": 7}
     # 퀴즈 7점이면 승인 불가
     prof_id = client.get(f"{B}/profile", headers=h).json()["id"]
-    r = client.patch(f"/api/v1/admin/buddies/{prof_id}", json={"action": "approve"}, headers=univ_admin)
+    r = client.patch(f"/api/v1/admin/buddies/{prof_id}", json={"action": "approve"}, headers=operator)
     assert r.status_code == 409 and r.json()["error"]["code"] == "NOT_READY" and "퀴즈" in r.json()["error"]["message"]
     r = client.post(f"{B}/apply/quiz", json={"answers": right}, headers=h).json()
     assert r["score"] == 10 and r["passed"] is True
     client.put(f"{B}/profile", json={"major": "사학", "intro": "안녕하세요", "languages": ["ko", "en"]}, headers=h)
     s = client.get(f"{B}/apply", headers=h).json()
     assert s["quiz_score"] == 10 and s["profile_done"] is True
-    r = client.patch(f"/api/v1/admin/buddies/{prof_id}", json={"action": "approve"}, headers=univ_admin)
+    r = client.patch(f"/api/v1/admin/buddies/{prof_id}", json={"action": "approve"}, headers=operator)
     assert r.status_code == 200 and r.json()["status"] == "approved" and r.json()["age"] == 24 and r.json()["quiz_score"] == 10
 
 

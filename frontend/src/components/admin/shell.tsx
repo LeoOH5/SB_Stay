@@ -62,7 +62,7 @@ export function OperatorOnly({ title, children }: { title: string; children: Rea
     <AdminGate>
       {user?.role === "operator" ? children : (
         <GateMessage icon="shield" title={`${title}${topic(title)} 운영팀이 맡아요`}>
-          식비 청구·신고·정산은 성북스테이 운영팀 계정에서만 볼 수 있어요. 확인이 필요하면 운영팀에 알려 주세요.
+          버디 승인·산책 코스·식비 청구·신고는 성북스테이 운영팀 계정에서만 볼 수 있어요. 확인이 필요하면 운영팀에 알려 주세요.
         </GateMessage>
       )}
     </AdminGate>

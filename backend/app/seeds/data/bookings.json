@@ -5,7 +5,7 @@
   "tourist_id": 1,
   "status": "confirmed",
   "total_price": 180000,
-  "platform_fee": 18500,
+  "platform_fee": 23000,
   "traveler": {
    "name": "Emma Clark",
    "nationality": "US",
@@ -22,7 +22,7 @@
   "tourist_id": 1,
   "status": "confirmed",
   "total_price": 90000,
-  "platform_fee": 9000,
+  "platform_fee": 15000,
   "traveler": {
    "name": "Emma Clark",
    "nationality": "US",
@@ -54,7 +54,7 @@
   "tourist_id": 2,
   "status": "requested",
   "total_price": 110000,
-  "platform_fee": 11000,
+  "platform_fee": 15500,
   "traveler": {
    "name": "Yuki Sato",
    "nationality": "JP",
@@ -70,7 +70,7 @@
   "tourist_id": 14,
   "status": "confirmed",
   "total_price": 164000,
-  "platform_fee": 14400,
+  "platform_fee": 18900,
   "traveler": {
    "name": "Lena Weber",
    "nationality": "DE",
@@ -86,7 +86,7 @@
   "tourist_id": 2,
   "status": "confirmed",
   "total_price": 30000,
-  "platform_fee": 3000,
+  "platform_fee": 9000,
   "traveler": {
    "name": "Yuki Sato",
    "nationality": "JP",
@@ -102,7 +102,7 @@
   "tourist_id": 15,
   "status": "confirmed",
   "total_price": 30000,
-  "platform_fee": 3000,
+  "platform_fee": 7500,
   "traveler": {
    "name": "Mia Chen",
    "nationality": "TW",
@@ -118,7 +118,7 @@
   "tourist_id": 16,
   "status": "confirmed",
   "total_price": 30000,
-  "platform_fee": 3000,
+  "platform_fee": 7500,
   "traveler": {
    "name": "Lucas Martin",
    "nationality": "FR",
@@ -127,5 +127,341 @@
   },
   "paid_at": "2027-01-08T15:05:00Z",
   "created_at": "2027-01-08T15:00:00Z"
+ },
+ {
+  "id": 401,
+  "code": "SB-2026-0708",
+  "tourist_id": 21,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Sofia Rossi",
+   "nationality": "IT",
+   "email": "sofia@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-04T09:05:00Z",
+  "created_at": "2026-07-04T09:00:00Z"
+ },
+ {
+  "id": 402,
+  "code": "SB-2026-0715",
+  "tourist_id": 22,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Daniel Park",
+   "nationality": "US",
+   "email": "daniel@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-11T09:05:00Z",
+  "created_at": "2026-07-11T09:00:00Z"
+ },
+ {
+  "id": 403,
+  "code": "SB-2026-0722",
+  "tourist_id": 23,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Aiko Tanaka",
+   "nationality": "JP",
+   "email": "aiko@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-18T09:05:00Z",
+  "created_at": "2026-07-18T09:00:00Z"
+ },
+ {
+  "id": 404,
+  "code": "SB-2026-0729",
+  "tourist_id": 24,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Chloé Dubois",
+   "nationality": "FR",
+   "email": "chloe@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-25T09:05:00Z",
+  "created_at": "2026-07-25T09:00:00Z"
+ },
+ {
+  "id": 405,
+  "code": "SB-2026-0805",
+  "tourist_id": 25,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Liam Walsh",
+   "nationality": "IE",
+   "email": "liam@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-08-01T09:05:00Z",
+  "created_at": "2026-08-01T09:00:00Z"
+ },
+ {
+  "id": 406,
+  "code": "SB-2026-0811",
+  "tourist_id": 26,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Ana Silva",
+   "nationality": "BR",
+   "email": "ana@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-08-07T09:05:00Z",
+  "created_at": "2026-08-07T09:00:00Z"
+ },
+ {
+  "id": 411,
+  "code": "SB-2026-0624",
+  "tourist_id": 21,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Sofia Rossi",
+   "nationality": "IT",
+   "email": "sofia@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-06-20T09:05:00Z",
+  "created_at": "2026-06-20T09:00:00Z"
+ },
+ {
+  "id": 412,
+  "code": "SB-2026-0627",
+  "tourist_id": 22,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Daniel Park",
+   "nationality": "US",
+   "email": "daniel@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-06-23T09:05:00Z",
+  "created_at": "2026-06-23T09:00:00Z"
+ },
+ {
+  "id": 413,
+  "code": "SB-2026-0701",
+  "tourist_id": 23,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Aiko Tanaka",
+   "nationality": "JP",
+   "email": "aiko@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-06-27T09:05:00Z",
+  "created_at": "2026-06-27T09:00:00Z"
+ },
+ {
+  "id": 414,
+  "code": "SB-2026-0704",
+  "tourist_id": 24,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Chloé Dubois",
+   "nationality": "FR",
+   "email": "chloe@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-06-30T09:05:00Z",
+  "created_at": "2026-06-30T09:00:00Z"
+ },
+ {
+  "id": 415,
+  "code": "SB-2026-0709",
+  "tourist_id": 25,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Liam Walsh",
+   "nationality": "IE",
+   "email": "liam@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-05T09:05:00Z",
+  "created_at": "2026-07-05T09:00:00Z"
+ },
+ {
+  "id": 416,
+  "code": "SB-2026-0711",
+  "tourist_id": 26,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Ana Silva",
+   "nationality": "BR",
+   "email": "ana@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-07T09:05:00Z",
+  "created_at": "2026-07-07T09:00:00Z"
+ },
+ {
+  "id": 417,
+  "code": "SB-2026-0718",
+  "tourist_id": 21,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Sofia Rossi",
+   "nationality": "IT",
+   "email": "sofia@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-14T09:05:00Z",
+  "created_at": "2026-07-14T09:00:00Z"
+ },
+ {
+  "id": 418,
+  "code": "SB-2026-0721",
+  "tourist_id": 22,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Daniel Park",
+   "nationality": "US",
+   "email": "daniel@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-17T09:05:00Z",
+  "created_at": "2026-07-17T09:00:00Z"
+ },
+ {
+  "id": 419,
+  "code": "SB-2026-0725",
+  "tourist_id": 23,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Aiko Tanaka",
+   "nationality": "JP",
+   "email": "aiko@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-21T09:05:00Z",
+  "created_at": "2026-07-21T09:00:00Z"
+ },
+ {
+  "id": 420,
+  "code": "SB-2026-0801",
+  "tourist_id": 24,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 9000,
+  "traveler": {
+   "name": "Chloé Dubois",
+   "nationality": "FR",
+   "email": "chloe@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-28T09:05:00Z",
+  "created_at": "2026-07-28T09:00:00Z"
+ },
+ {
+  "id": 421,
+  "code": "SB-2026-0804",
+  "tourist_id": 25,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 7500,
+  "traveler": {
+   "name": "Liam Walsh",
+   "nationality": "IE",
+   "email": "liam@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-07-31T09:05:00Z",
+  "created_at": "2026-07-31T09:00:00Z"
+ },
+ {
+  "id": 422,
+  "code": "SB-2026-0808",
+  "tourist_id": 26,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 7500,
+  "traveler": {
+   "name": "Ana Silva",
+   "nationality": "BR",
+   "email": "ana@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-08-04T09:05:00Z",
+  "created_at": "2026-08-04T09:00:00Z"
+ },
+ {
+  "id": 423,
+  "code": "SB-2026-0814",
+  "tourist_id": 21,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 7500,
+  "traveler": {
+   "name": "Sofia Rossi",
+   "nationality": "IT",
+   "email": "sofia@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-08-10T09:05:00Z",
+  "created_at": "2026-08-10T09:00:00Z"
+ },
+ {
+  "id": 424,
+  "code": "SB-2026-0816",
+  "tourist_id": 22,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 7500,
+  "traveler": {
+   "name": "Daniel Park",
+   "nationality": "US",
+   "email": "daniel@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-08-12T09:05:00Z",
+  "created_at": "2026-08-12T09:00:00Z"
+ },
+ {
+  "id": 425,
+  "code": "SB-2026-0819",
+  "tourist_id": 23,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 7500,
+  "traveler": {
+   "name": "Aiko Tanaka",
+   "nationality": "JP",
+   "email": "aiko@example.com",
+   "guests": 1
+  },
+  "paid_at": "2026-08-15T09:05:00Z",
+  "created_at": "2026-08-15T09:00:00Z"
  }
 ]

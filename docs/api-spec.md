@@ -22,6 +22,7 @@
 | AU-06 | PATCH | /users/me/role | 전체 | 첫 로그인 후 역할 선택 (`tourist` \| `buddy` \| `guide`, buddy/guide는 `university_id` 필수). univ_admin·operator는 시드 계정만 | T0(역할 선택) | 필수 | 구현 |
 | AU-07 | POST | /auth/google/calendar | buddy, guide | 증분 인증으로 `calendar.events` 범위 동의 코드를 받아 refresh token 저장(암호화), `calendar_connected=true` | B3 | 권장 | 구현 |
 | AU-08 | DELETE | /auth/google/calendar | buddy, guide | 캘린더 연동 해제 (토큰 폐기, `calendar_connected=false`) | B3 | 권장 | 구현 |
+| AU-09 | GET | /auth/me/plan | 전체 | v3.4 내 이용 방식 `free`/`buddy` + 오늘 남은 AI 질문 (무료 하루 3번) | T08 | 필수 | 구현 |
 
 AU-01 Request (`code` 또는 `id_token` 중 하나)
 ```json
@@ -66,7 +67,7 @@ AU-07 Request → Response 200
 
 DM-02 Response 200
 ```json
-{ "items": [ { "id": 10, "university": { "id": 1, "name": "A대학교", "name_en": "A University" }, "building": "국제관", "room_type": "double", "price_per_night": 35000, "open_from": "2027-01-05", "open_to": "2027-02-20", "available_rooms": 12, "photos": ["..."], "rules": ["체크인 15:00 / 체크아웃 11:00", "취사 금지"] } ] }
+{ "items": [ { "id": 10, "university": { "id": 1, "name": "고려대학교", "name_en": "Korea University" }, "building": "프런티어관", "room_type": "double", "price_per_night": 35000, "open_from": "2027-01-05", "open_to": "2027-02-20", "available_rooms": 12, "photos": ["..."], "rules": ["체크인 15:00 / 체크아웃 11:00", "취사 금지"] } ] }
 ```
 
 ## 3. 투어 (Tours)
@@ -77,6 +78,7 @@ DM-02 Response 200
 | TR-02 | GET | /tours/{id} | 전체 | 코스 상세 (장소 순서·좌표, 해설사, 소요시간, 가격, 운영 요일) | T4 | 필수 | 구현 |
 | TR-03 | GET | /places/{id} | 전체 | 장소 상세 (이름 한·영, 좌표, 운영시간, 휴관일, 요금, 태그) | T4 | 필수 | 구현 |
 | TR-04 | GET | /tours/{id}/reviews | 전체 | 리뷰 (샘플) | T4 | 권장 | 목업 |
+| TR-05 | POST | /tours/{id}/survey | tourist | v3.4 무료 코스 완료 설문 (만족도·불편했던 점·버디 의향) | T08c | 권장 | 구현 |
 
 TR-02 Response 200
 ```json
@@ -97,7 +99,7 @@ TR-02 Response 200
 
 BD-01 Response 200
 ```json
-{ "items": [ { "id": 31, "name": "지우", "university": "A대학교", "major": "국어국문", "year": 3, "languages": ["ko", "en", "ja"], "interests": ["literature", "walking"], "intro": "...", "avatar": "illust_01.png", "available_dates": ["2027-01-13", "2027-01-14"], "rating": 4.9, "review_count": 12 } ] }
+{ "items": [ { "id": 31, "name": "지우", "university": "고려대학교", "major": "국어국문", "year": 3, "languages": ["ko", "en", "ja"], "interests": ["literature", "walking"], "intro": "...", "avatar": "illust_01.png", "available_dates": ["2027-01-13", "2027-01-14"], "rating": 4.9, "review_count": 12 } ] }
 ```
 
 ## 5. AI
@@ -116,7 +118,7 @@ AI-01 Request
 ```
 Response 200 (후보는 DB에서 날짜·가격·운영일로 먼저 거르고 LLM은 선택·순서·설명만)
 ```json
-{ "plan_id": "pl_8f2", "reason": "문학·독립운동 관심에 맞춰 한용운·이태준이 살던 성북동 코스를 넣었어요. 숙소에서 걸어서 20분.", "total_price": 155000, "days": [ { "date": "2027-01-12", "items": [ { "time": "15:00", "type": "dorm", "ref_id": 10, "title": "A대학교 국제관 체크인", "price": 105000 } ] }, { "date": "2027-01-13", "items": [ { "time": "10:00", "type": "tour", "ref_id": 3, "title": "문인의 성북동 산책", "price": 20000 }, { "time": "14:00", "type": "buddy", "ref_id": 31, "title": "버디와 캠퍼스·동네 걷기", "price": 30000 } ] }, { "date": "2027-01-14", "items": [ { "time": null, "type": "free", "ref_id": null, "title": "정릉 · 선잠박물관 추천", "price": 0 } ] } ] }
+{ "plan_id": "pl_8f2", "reason": "문학·독립운동 관심에 맞춰 한용운·이태준이 살던 성북동 코스를 넣었어요. 숙소에서 걸어서 20분.", "total_price": 155000, "days": [ { "date": "2027-01-12", "items": [ { "time": "15:00", "type": "dorm", "ref_id": 10, "title": "고려대학교 프런티어관 체크인", "price": 105000 } ] }, { "date": "2027-01-13", "items": [ { "time": "10:00", "type": "tour", "ref_id": 3, "title": "문인의 성북동 산책", "price": 20000 }, { "time": "14:00", "type": "buddy", "ref_id": 31, "title": "버디와 캠퍼스·동네 걷기", "price": 30000 } ] }, { "date": "2027-01-14", "items": [ { "time": null, "type": "free", "ref_id": null, "title": "정릉 · 선잠박물관 추천", "price": 0 } ] } ] }
 ```
 
 AI-02 Request
@@ -286,3 +288,23 @@ AD-01 Response 200
 | GET/PUT | /buddy/profile | buddy | 변경 | + `can_drive: bool` |
 | GET | /admin/buddies | admin | 변경 | + `can_drive` |
 | GET | /admin/settlements | operator | 변경 | + `profit {sales, sales_dorm, sales_buddy, sales_album, cost_university, cost_buddy, cost_other, profit, margin}`. 판매가 − 원가 = 이익, 식사 보증금·식비 제외 |
+
+### v3.2 추가 — 버디 등급·정산율, 휴면, 한국 국적
+등급(기본 70% · 성장 75% · 우수 80%)은 현재 + 직전 운영 방학의 완료 동행·평균 평점·후기 수로 매월 1회 갱신. 정산율은 버디 항목이 확정될 때 `booking_items.payout_rate`로 고정.
+`booking.platform_fee = round(숙박 × 0.10) + Σ(활동비 − round(활동비 × 정산율)) + Σ앨범` (확정 전 항목은 버디의 지금 정산율로 어림). 버디 정산 = Σ round(활동비 × 항목 정산율) + 승인 식비.
+
+| Method | Path | 역할 | 변경 | 내용 |
+|---|---|---|---|---|
+| GET | /buddies, /buddies/{id} | 공개 | 변경 | + `grade` (basic \| growth \| top, 화면 배지는 성장·우수만). 휴면(`needs_recheck`) 버디는 목록·AI 추천(AI-01·03)에서 빠짐(상세는 열림) |
+| POST | /bookings, replace-buddy | 예약자 | 변경 | 휴면 버디 → 409 `BUDDY_RESTING` |
+| PATCH | /bookings/{id}/items/{item_id} | buddy | 변경 | 버디가 수락(confirmed)하면 그때 정산율을 항목에 고정하고 예약 `platform_fee` 다시 계산 |
+| GET | /buddy/grade | buddy | 신규 | `{grade, payout_rate, window:{from,to,label}, stats:{rating,walks,reviews}, next:{grade,payout_rate,need:{rating,walks,reviews}}\|null, needs_recheck, dormant_since, updated_at}` (`need` = 다음 등급 기준값) |
+| POST | /buddy/confirm-active | buddy | 신규 | 휴면 복귀 '계속 활동할게요' → `needs_recheck=false`. 등급·정산율 그대로. 응답 = /buddy/grade |
+| GET | /buddy/settlement | buddy | 변경 | + `grade, payout_rate`, items[] + `payout_rate`. `fee` = 활동비 − net, `net` = round(활동비 × 항목 정산율) |
+| GET | /buddy/earnings | buddy | 변경 | `amount` = 항목 정산율을 적용한 버디 몫 |
+| GET | /buddy/apply | buddy | 변경 | + `korean_national` |
+| POST | /buddy/apply/verify | buddy | 변경 | body + `korean_national: bool` (true 아니면 422 `NOT_KOREAN_NATIONAL` — 외국인 유학생은 시간제 취업 허가 문제로 불가) |
+| GET | /admin/buddies | admin | 변경 | + `korean_national, grade, payout_rate, eval_rating, eval_walks, eval_reviews, needs_recheck` |
+| PATCH | /admin/buddies/{id} | admin | 변경 | approve는 한국 국적 확인도 필요 (409 `NOT_READY`) |
+| POST | /admin/buddies/recompute-grades | operator | 신규 | 등급·정산율 갱신 → 휴면 판정. 바뀐 버디 행 `{items:[AdminBuddyRow]}`. 매월 1일 실행 (`scripts/recompute_grades.py`도 같음) |
+| GET | /admin/settlements | operator | 변경 | 버디 행 `fee` = 활동비 − Σ 버디 몫(항목 정산율), + `payout_rate`(실효값). `profit.cost_buddy` 도 항목 정산율로 |

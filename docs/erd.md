@@ -274,7 +274,7 @@ erDiagram
 |---|---|---|
 | id | bigserial | PK |
 | university_id | bigint | FK → universities.id, NOT NULL |
-| building | varchar(100) | 건물명 (예: 국제관) |
+| building | varchar(100) | 건물명 (예: 프런티어관) |
 | room_type | varchar(20) | `single`/`double`/`twin` |
 | price_per_night | int | KRW |
 | total_rooms | int | 총 객실 수. 남은 객실 = total_rooms − 해당 날짜에 `approved`/`confirmed` 인 dorm 항목 수 (DM-03) |

@@ -17,6 +17,7 @@ const DEMO_PW = "demo1234";
 const DEMO: { role: string; who: string; email: string }[] = [
   { role: "관광객", who: "Emma, 영어", email: "emma@example.com" },
   { role: "관광객", who: "Yuki, 일본어에서 영어", email: "yuki@example.com" },
+  { role: "관광객", who: "Noah, 예약 없음 · 무료 코스만", email: "noah@example.com" },
   { role: "버디", who: "지우, 고려대학교", email: "jiwoo@a-univ.ac.kr" },
   { role: "대학 담당자", who: "고려대학교 기숙사", email: "admin@a-univ.ac.kr" },
   { role: "운영자", who: "성북스테이 운영팀", email: "operator@sbstay.app" },

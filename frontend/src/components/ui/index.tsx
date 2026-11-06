@@ -261,6 +261,30 @@ export function ScoreBar({ label, value, max = 5, className }: { label: string; 
   );
 }
 
+/** v3.2 버디 등급 배지 — 성장·우수만 보인다 (기본은 표시 없음). 우수는 감 주황, 성장은 쪽빛 */
+export function GradeBadge({ grade, className, suffix = "버디" }: { grade?: string | null; className?: string; suffix?: string }) {
+  if (grade !== "growth" && grade !== "top") return null;
+  return (
+    <span className={cn("inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[12px] font-semibold",
+      grade === "top" ? "bg-orange-bg text-orange-ink" : "bg-navy-bg text-navy", className)}>
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden><path d="M12 3.5 14.4 9l5.9.5-4.5 3.9 1.4 5.8L12 16.1l-5.2 3.1 1.4-5.8L3.7 9.5 9.6 9 12 3.5Z" fill="currentColor" /></svg>
+      {grade === "top" ? "우수" : "성장"}{suffix ? ` ${suffix}` : ""}
+    </span>
+  );
+}
+
+/** 목표 대비 진행 한 줄 — 라벨 · 쪽빛 막대 · '지금 / 목표' (다 채우면 막대가 꽉 참) */
+export function GoalBar({ label, value, goal, format = (v) => String(v), className }: { label: string; value: number; goal: number; format?: (v: number) => string; className?: string }) {
+  const pct = goal > 0 ? Math.max(0, Math.min(100, (value / goal) * 100)) : 100;
+  return (
+    <div className={cn("flex items-center gap-3 text-[14px]", className)}>
+      <span className="w-[44px] shrink-0 text-muted">{label}</span>
+      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-bg"><span className={cn("block h-full rounded-full", pct >= 100 ? "bg-navy" : "bg-orange")} style={{ width: `${pct}%` }} /></span>
+      <span className="w-[76px] shrink-0 text-right text-ink"><b className="font-bold">{format(value)}</b><span className="text-muted"> / {format(goal)}</span></span>
+    </div>
+  );
+}
+
 /** − n + 숫자 고르기 */
 export function Stepper({ value, onChange, min = 0, max = 99, label, className }: { value: number; onChange: (v: number) => void; min?: number; max?: number; label?: string; className?: string }) {
   const btn = "flex h-9 w-9 items-center justify-center rounded-full border border-line text-ink transition hover:border-navy disabled:opacity-30";

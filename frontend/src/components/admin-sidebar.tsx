@@ -1,5 +1,5 @@
 "use client";
-// 어드민 왼쪽 메뉴 — v3: 흰 바탕 + 로고 "관리" 배지. 식비·신고·정산은 운영팀(operator) 계정에서만 보인다.
+// 어드민 왼쪽 메뉴 — v3: 흰 바탕 + 로고 "관리" 배지. 대학 담당자는 대시보드·객실·예약·정산(자기 학교)만, 나머지는 운영팀(operator)만.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,11 +12,11 @@ const MENU: { href: string; label: string; icon: IconName; operatorOnly?: boolea
   { href: "/admin", label: "대시보드", icon: "grid" },
   { href: "/admin/rooms", label: "대학·객실", icon: "building" },
   { href: "/admin/bookings", label: "예약", icon: "list" },
-  { href: "/admin/members", label: "회원·버디 승인", icon: "users" },
-  { href: "/admin/tours", label: "산책 코스", icon: "route" },
+  { href: "/admin/members", label: "회원·버디 승인", icon: "users", operatorOnly: true },
+  { href: "/admin/tours", label: "산책 코스", icon: "route", operatorOnly: true },
   { href: "/admin/meal-claims", label: "식비 청구", icon: "receipt", operatorOnly: true },
   { href: "/admin/reports", label: "신고", icon: "flag", operatorOnly: true },
-  { href: "/admin/settlements", label: "정산", icon: "wallet", operatorOnly: true },
+  { href: "/admin/settlements", label: "정산", icon: "wallet" },
 ];
 
 export function AdminSidebar() {
@@ -53,7 +53,7 @@ export function AdminSidebar() {
           );
         })}
       </nav>
-      <p className="px-5 pb-6 text-[13px] leading-relaxed text-muted">식비·신고·정산은 운영팀 계정에서만 보여요</p>
+      <p className="px-5 pb-6 text-[13px] leading-relaxed text-muted">버디 승인·산책 코스·식비·신고는 운영팀 계정에서만 보여요</p>
     </aside>
   );
 }

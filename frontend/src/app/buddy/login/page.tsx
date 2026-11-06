@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { GoogleG } from "@/components/buddy/ui";
 import { isProvider } from "@/components/buddy/format";
 import { Brand, Button, LinkButton, inputCls } from "@/components/ui";
+import { BUDDY_ELIGIBILITY } from "@/lib/codes";
 import { post } from "@/lib/api";
 import { session } from "@/lib/auth";
 import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
@@ -62,7 +63,7 @@ export default function Page() {
       <p className="mt-4 text-[14px] text-muted">데모: jiwoo@a-univ.ac.kr (비밀번호 demo1234)</p>
 
       <h2 className="mt-10 text-[18px] font-bold text-ink">버디가 되고 싶어요</h2>
-      <p className="mt-1.5 text-[14px] text-muted">성북구 대학 재학생, 만 19세 이상이면 지원할 수 있어요.</p>
+      <p className="mt-1.5 text-[14px] text-muted">{BUDDY_ELIGIBILITY}이면 지원할 수 있어요.</p>
       <LinkButton href="/buddy/apply" variant="secondary" className="mt-4">5단계로 지원하기</LinkButton>
     </div>
   );

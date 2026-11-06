@@ -166,10 +166,11 @@ class SettlementItem(BaseModel):
     date: str
     tourist: str
     gross: int  # 활동비 (앨범·식사 보증금 제외)
-    fee: int
+    payout_rate: float  # 확정 때 고정한 버디 정산율
+    fee: int  # 플랫폼 몫 = gross − net
     meal_approved: int
     meal_pending: int
-    net: int  # gross − fee
+    net: int  # round(gross × payout_rate)
     status: str  # confirmed | meal_pending
 
 
@@ -177,6 +178,8 @@ class BuddySettlementOut(BaseModel):
     month: str
     pay_date: str
     account: str | None = None  # 마스킹
+    grade: str  # 지금 등급 basic | growth | top
+    payout_rate: float  # 지금 정산율 (항목마다는 items[].payout_rate)
     walks: int
     gross: int
     fee: int
@@ -197,6 +200,7 @@ class ApplyStatusOut(BaseModel):
     quiz_score: int | None = None
     quiz_passed: bool
     profile_done: bool
+    korean_national: bool = False  # 한국 국적 확인 (외국인 유학생은 시간제 취업 허가 문제로 불가)
     status: str  # none | pending | approved | suspended
 
 
@@ -208,6 +212,7 @@ class ApplyVerifyIn(BaseModel):
     email: str = Field(max_length=255)
     code: str
     birth_date: date
+    korean_national: bool = False  # 대한민국 국적이에요 (필수)
 
 
 class QuizQuestion(BaseModel):
@@ -229,3 +234,40 @@ class QuizResultOut(BaseModel):
     total: int = 10
     passed: bool
     best_score: int
+
+
+# ---------- 등급·정산율 (v3.2)
+class GradeWindow(BaseModel):
+    from_: str | None = Field(default=None, serialization_alias="from")
+    to: str | None = None
+    label: str = ""
+
+
+class GradeStats(BaseModel):
+    rating: float | None = None  # 평가 기간 완료 동행 후기 평균
+    walks: int = 0  # 완료 동행
+    reviews: int = 0
+
+
+class GradeNeed(BaseModel):
+    rating: float  # 다음 등급 기준값
+    walks: int
+    reviews: int
+
+
+class GradeNext(BaseModel):
+    grade: str
+    payout_rate: float
+    need: GradeNeed
+
+
+class GradeOut(BaseModel):
+    """GET /buddy/grade"""
+    grade: str  # basic | growth | top
+    payout_rate: float
+    window: GradeWindow
+    stats: GradeStats
+    next: GradeNext | None = None  # 우수면 null
+    needs_recheck: bool = False
+    dormant_since: date | None = None
+    updated_at: date | None = None

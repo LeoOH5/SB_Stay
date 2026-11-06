@@ -8,7 +8,7 @@ from app.models.booking import (  # noqa: F401
     Report,
     Review,
 )
-from app.models.content import AiPlan, Content, Package  # noqa: F401
+from app.models.content import AiPlan, AiUsage, Content, CourseSurvey, Package  # noqa: F401
 from app.models.payment import Payment  # noqa: F401
 from app.models.supply import (  # noqa: F401
     BuddyActivity,

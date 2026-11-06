@@ -37,7 +37,8 @@
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
   "bank_account": "신한 110-123-456482",
-  "can_drive": false
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
  },
  {
   "id": 32,
@@ -74,7 +75,8 @@
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
   "bank_account": "국민 123-45-678901",
-  "can_drive": true
+  "can_drive": true,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
  },
  {
   "id": 33,
@@ -110,7 +112,8 @@
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 7,
   "bank_account": null,
-  "can_drive": false
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
  },
  {
   "id": 34,
@@ -145,7 +148,8 @@
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
   "bank_account": null,
-  "can_drive": false
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
  },
  {
   "id": 35,
@@ -180,7 +184,8 @@
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
   "bank_account": "우리 1002-345-678901",
-  "can_drive": false
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
  },
  {
   "id": 36,
@@ -215,6 +220,46 @@
   "code_agreed_at": "2026-12-01T10:05:00Z",
   "quiz_score": 9,
   "bank_account": "하나 391-910-123456",
-  "can_drive": true
+  "can_drive": true,
+  "korean_national_confirmed_at": "2026-12-01T10:00:00Z"
+ },
+ {
+  "id": 37,
+  "user_id": 17,
+  "university_id": 1,
+  "major": "영어영문",
+  "year": 2,
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "interests": [
+   "photo",
+   "cafe"
+  ],
+  "intro": "사진 찍는 걸 좋아해요. 성북동 예쁜 카페 골목을 같이 걸어요.",
+  "avatar": "illust_05",
+  "status": "approved",
+  "hourly_fee": 15000,
+  "personality": [
+   "lively",
+   "listener"
+  ],
+  "style": [
+   "photo_walk",
+   "cafe_break"
+  ],
+  "can_help": [
+   "photo",
+   "shopping",
+   "subway"
+  ],
+  "school_email": "sua@a-univ.ac.kr",
+  "school_email_verified_at": "2026-06-08T10:00:00Z",
+  "code_agreed_at": "2026-06-10T10:05:00Z",
+  "quiz_score": 10,
+  "bank_account": "우리 1002-345-678901",
+  "can_drive": false,
+  "korean_national_confirmed_at": "2026-06-08T10:00:00Z"
  }
 ]

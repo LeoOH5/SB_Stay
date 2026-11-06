@@ -2,12 +2,13 @@
 // 상태 변경은 메모리에 유지(새로고침 시 초기화). 오류는 실제 API처럼 ApiError(status, code, message)로 던진다.
 import { ApiError } from "../errors";
 import {
-  ALBUM_FEE, ALLERGIES, BUDDY_MIN_AGE, CAN_HELP, DIET, DIET_TO_HELP, MEAL_LIMIT, MEAL_MAX, PACE, PERSONALITY, QUIZ_PASS, QUIZ_TOTAL,
-  REPORT_CATEGORY, REPORT_SUSPEND_AT, REQUEST_NOTE_MAX, REQUEST_PLACES_MAX, REVIEW_TAGS, STYLE, SUB_SCORES, buddyItemPrice, label, platformFee,
+  ALBUM_FEE, ALLERGIES, BUDDY_MIN_AGE, CAN_HELP, DIET, DIET_TO_HELP, FREE_AI_QUESTIONS, MEAL_LIMIT, MEAL_MAX, PACE, PERSONALITY, QUIZ_PASS, QUIZ_TOTAL,
+  REPORT_CATEGORY, REPORT_SUSPEND_AT, REQUEST_NOTE_MAX, REQUEST_PLACES_MAX, REVIEW_TAGS, STYLE, SUB_SCORES, SURVEY_PAIN, VACATIONS, buddyItemPrice, buddyNet,
+  gradeFor, label, platformFee, rateOf, GRADE_RULES,
 } from "../codes";
 import type {
-  Activity, AdminBookingRow, AdminBuddyRow, AdminCourseRow, AdminMealClaimRow, AdminReportRow, AiPlan, AiStory, Booking, BookingItem,
-  BuddyApplyStatus, BuddyDetail, BuddyMatch, BuddyProfile, BuddyRequest, BuddyRequestBody, BuddySettlement, BuddyStatus, CanHelp,
+  Activity, AdminBookingRow, AdminBuddyRow, AdminCourseRow, AdminMealClaimRow, AdminReportRow, AiPlan, AiStory, Booking, BookingItem, CourseSurvey, MyPlan,
+  BuddyApplyStatus, BuddyDetail, BuddyGradeInfo, BuddyMatch, BuddyProfile, BuddyRequest, BuddyRequestBody, BuddySettlement, BuddyStatus, CanHelp,
   CartItem, DormRequest, ItemStatus, ListResponse, MealClaim, PlanDay, PlanItem, PlanWarning, PublicActivity, Report, ReportCategory,
   Review, ReviewTag, SettlementRow, Settlements, SubScores, Traveler, User,
 } from "../types";
@@ -18,7 +19,7 @@ const ALBUM_IN_GROSS = false;
 const DEFAULT_MONTH = D.TODAY.slice(0, 7);
 
 interface ApplyState {
-  school_email: string | null; university: string | null; university_id: number | null; email_verified: boolean;
+  school_email: string | null; university: string | null; university_id: number | null; email_verified: boolean; korean_national: boolean;
   birth_date: string | null; code_agreed: boolean; quiz_score: number | null; profile_done: boolean; status: BuddyStatus | "none";
 }
 
@@ -33,13 +34,18 @@ const state = {
   activities: structuredClone(D.activities),
   mealClaims: structuredClone(D.mealClaims),
   reports: structuredClone(D.reports),
+  grades: structuredClone(D.buddyGrades),
+  rates: { ...D.itemRates } as Record<number, number>,
   notifications: structuredClone(D.notifications),
   availability: new Set<string>(D.buddies[0].available_dates),
   bankAccount: D.BANK_ACCOUNT as string | null,
   apply: {
-    "jiwoo@a-univ.ac.kr": { school_email: "jiwoo@a-univ.ac.kr", university: "고려대학교", university_id: 1, email_verified: true, birth_date: "2004-05-02", code_agreed: true, quiz_score: 9, profile_done: true, status: "approved" },
+    "jiwoo@a-univ.ac.kr": { school_email: "jiwoo@a-univ.ac.kr", university: "고려대학교", university_id: 1, email_verified: true, korean_national: true, birth_date: "2004-05-02", code_agreed: true, quiz_score: 9, profile_done: true, status: "approved" },
   } as Record<string, ApplyState>,
   calendarConnected: false,
+  /** v3.4 무료 이용자 AI 질문 수: "이메일|날짜" → 횟수 */
+  aiUsage: {} as Record<string, number>,
+  surveys: [] as (CourseSurvey & { email: string })[],
   currentUser: null as User | null,
   nextId: 600,
 };
@@ -70,6 +76,13 @@ const buddyOf = (id: number) => state.buddies.find((b) => b.id === id);
 const dormOf = (id: number) => D.dorms.find((d) => d.id === id);
 const courseOf = (id?: number | null) => (id == null ? undefined : D.tours.find((t) => t.id === id));
 const statusOf = (id: number) => state.buddyStatus[id] ?? "pending";
+const gradeOf = (id: number) => state.grades[id] ?? { grade: "basic" as const, rating: null, walks: 0, reviews: 0, needs_recheck: false, dormant_since: null };
+/** 공개 목록·AI 추천에 나오는 버디: 승인 + 휴면 아님 */
+const listed = (id: number) => statusOf(id) === "approved" && !gradeOf(id).needs_recheck;
+const withGrade = <T extends { id: number }>(bd: T) => ({ ...bd, grade: gradeOf(bd.id).grade });
+const activityOf = (it: BookingItem) => it.price - (it.meal_count ?? 0) * MEAL_LIMIT - (it.album ? ALBUM_FEE : 0);
+/** 확정 때 고정한 정산율, 아직이면 버디의 지금 정산율 */
+const rateFor = (it: BookingItem) => state.rates[it.id] ?? rateOf(gradeOf(it.ref_id).grade);
 
 function findItem(itemId: number): { b: Booking; it: BookingItem } | null {
   for (const b of state.bookings) { const it = b.items.find((i) => i.id === itemId); if (it) return { b, it }; }
@@ -77,6 +90,24 @@ function findItem(itemId: number): { b: Booking; it: BookingItem } | null {
 }
 const claimsOf = (itemId: number) => state.mealClaims.filter((c) => c.item_id === itemId);
 const sumClaims = (itemId: number, statuses: string[]) => claimsOf(itemId).filter((c) => statuses.includes(c.status)).reduce((s, c) => s + c.amount, 0);
+
+// ------------------------------------------------------------------ v3.4 이용 방식 (backend services/free_tier.py 와 같은 규칙)
+/** 결제했고 취소되지 않은 예약에 살아 있는 버디 항목이 있으면 buddy. 관광객이 아니면 제한 없음(buddy) */
+function planOf(): MyPlan["plan"] {
+  const u = me();
+  if (!u) return "free";
+  if (u.role !== "tourist") return "buddy";
+  const email = myEmail();
+  const paid = state.bookings.some((bk) => state.owner[bk.id] === email && !!bk.paid_at && bk.status !== "cancelled"
+    && bk.items.some((i) => i.type === "buddy" && ["requested", "approved", "confirmed"].includes(i.status)));
+  return paid ? "buddy" : "free";
+}
+const usageKey = () => `${myEmail()}|${D.TODAY}`;
+function myPlan(): MyPlan {
+  if (planOf() === "buddy") return { plan: "buddy", ai_question_limit: null, ai_questions_left_today: null, ai_questions_used_today: 0 };
+  const used = state.aiUsage[usageKey()] ?? 0;
+  return { plan: "free", ai_question_limit: FREE_AI_QUESTIONS, ai_questions_left_today: Math.max(FREE_AI_QUESTIONS - used, 0), ai_questions_used_today: used };
+}
 
 // ------------------------------------------------------------------ 예약 파생 필드
 function decorateItem(it: BookingItem): BookingItem {
@@ -110,7 +141,8 @@ function recompute(b: Booking) {
 function recalcTotals(b: Booking) {
   const live = b.items.filter((i) => i.status !== "cancelled" && i.status !== "rejected");
   b.total_price = live.reduce((s, i) => s + i.price, 0);
-  b.platform_fee = platformFee(b.total_price, live.reduce((s, i) => s + (i.type === "buddy" ? (i.meal_count ?? 0) * MEAL_LIMIT : 0), 0), live.reduce((s, i) => s + (i.type === "buddy" && i.album ? ALBUM_FEE : 0), 0));
+  const buddies = live.filter((i) => i.type === "buddy");
+  b.platform_fee = platformFee(live.filter((i) => i.type === "dorm").reduce((s, i) => s + i.price, 0), buddies.map((i) => ({ activity: activityOf(i), rate: rateFor(i) })), buddies.filter((i) => i.album).length * ALBUM_FEE);
 }
 
 function notify(title: string, type = "info") {
@@ -125,6 +157,7 @@ function decideItem(itemId: number, action: "approve" | "reject", reason?: strin
   it.status = action === "approve" ? (it.type === "buddy" ? "confirmed" : "approved") : "rejected";
   it.reject_reason = action === "reject" ? reason ?? null : null;
   if (it.type === "buddy" && action === "approve" && state.calendarConnected) it.google_event_id = "evt_" + itemId;
+  if (it.type === "buddy" && it.status === "confirmed") { state.rates[it.id] ??= rateOf(gradeOf(it.ref_id).grade); recalcTotals(b); } // 확정 때 정산율 고정
   recompute(b);
   notify(`${it.title} · ${it.status === "rejected" ? "거절됨" : it.type === "buddy" ? "수락됨" : "승인됨"}`, `item_${it.status}`);
   return it;
@@ -180,6 +213,7 @@ function buildItems(raw: CartItem[], baseId: number): BookingItem[] {
     }
     const bd = buddyOf(r.ref_id) ?? fail(404, "NOT_FOUND", "버디 없음");
     if (statusOf(bd.id) !== "approved") fail(409, "BUDDY_UNAVAILABLE", `${bd.name} 버디는 지금 요청을 받지 않아요`);
+    if (gradeOf(bd.id).needs_recheck) fail(409, "BUDDY_RESTING", "지금은 요청을 받지 않는 버디예요. 다른 버디를 골라 주세요");
     const date = r.date ?? r.date_from;
     if (!date) fail(422, "VALIDATION", "버디 날짜를 골라 주세요");
     const meal = r.meal_count ?? 0;
@@ -230,15 +264,16 @@ function buddySettlement(buddyId: number, month: string): BuddySettlement {
     const albumFee = it.album ? ALBUM_FEE : 0;
     const activity = it.price - (it.meal_count ?? 0) * MEAL_LIMIT - albumFee;
     const gross = activity + (ALBUM_IN_GROSS ? albumFee : 0);
-    const fee = Math.round(gross * 0.1);
+    const payout_rate = rateFor(it), net = buddyNet(gross, payout_rate);
     const meal_approved = sumClaims(it.id, ["approved"]), meal_pending = sumClaims(it.id, ["requested"]);
-    return { item_id: it.id, date: it.date_from ?? "", tourist: b.traveler?.name ?? "", gross, fee, meal_approved, meal_pending, net: gross - fee, status: (meal_pending > 0 ? "meal_pending" : "confirmed") as "confirmed" | "meal_pending" };
+    return { item_id: it.id, date: it.date_from ?? "", tourist: b.traveler?.name ?? "", gross, payout_rate, fee: gross - net, meal_approved, meal_pending, net, status: (meal_pending > 0 ? "meal_pending" : "confirmed") as "confirmed" | "meal_pending" };
   });
   const sum = (k: "gross" | "fee" | "net" | "meal_approved" | "meal_pending") => items.reduce((s, i) => s + i[k], 0);
   const [y, m] = month.split("-").map(Number);
   const last = new Date(Date.UTC(y, m + 1, 0));
   const masked = buddyId === 31 && state.bankAccount ? state.bankAccount.replace(/(\d{3})-(\d{3})-(\d{3})(\d{3})/, "$1-***-***$4") : null;
-  return { month, pay_date: last.toISOString().slice(0, 10), account: masked, walks: items.length, gross: sum("gross"), fee: sum("fee"), net: sum("net"), meals_approved: sum("meal_approved"), meals_pending: sum("meal_pending"), payout: sum("net") + sum("meal_approved"), items };
+  const g = gradeOf(buddyId).grade;
+  return { month, pay_date: last.toISOString().slice(0, 10), account: masked, grade: g, payout_rate: rateOf(g), walks: items.length, gross: sum("gross"), fee: sum("fee"), net: sum("net"), meals_approved: sum("meal_approved"), meals_pending: sum("meal_pending"), payout: sum("net") + sum("meal_approved"), items };
 }
 
 function toMealClaim(c: D.MealClaimRow): MealClaim {
@@ -273,7 +308,24 @@ function toAdminBuddy(id: number): AdminBuddyRow | null {
   const bd = buddyOf(id), info = state.adminInfo[id], st = statusOf(id);
   if (!bd || !info || st === "rejected") return null;
   return { id, name: bd.name, email: info.email, major: bd.major, year: bd.year, university: bd.university, university_id: bd.university_id, languages: bd.languages, status: st,
-    age: info.age, school_email_verified: info.school_email_verified, code_agreed: info.code_agreed, quiz_score: info.quiz_score, report_count: reportCount(id), can_help: bd.can_help, can_drive: bd.can_drive, walk_count: bd.walk_count, rating: bd.rating };
+    age: info.age, school_email_verified: info.school_email_verified, code_agreed: info.code_agreed, quiz_score: info.quiz_score, report_count: reportCount(id), can_help: bd.can_help, can_drive: bd.can_drive, walk_count: bd.walk_count, rating: bd.rating,
+    korean_national: info.korean_national ?? true, ...gradeCols(id) };
+}
+function gradeCols(id: number) {
+  const g = gradeOf(id);
+  return { grade: g.grade, payout_rate: rateOf(g.grade), eval_rating: g.rating, eval_walks: g.walks, eval_reviews: g.reviews, needs_recheck: g.needs_recheck };
+}
+/** GET /buddy/grade — 평가 기간 = 현재 + 직전 운영 방학 */
+function gradeInfo(id: number): BuddyGradeInfo {
+  const g = gradeOf(id);
+  const cur = VACATIONS.filter(([, start]) => start <= D.TODAY).length - 1;
+  const win = VACATIONS.slice(Math.max(cur - 1, 0), cur + 1);
+  const i = GRADE_RULES.findIndex((r) => r.grade === g.grade);
+  const nx = i > 0 ? GRADE_RULES[i - 1] : null;
+  return { grade: g.grade, payout_rate: rateOf(g.grade), window: { from: win[0]?.[1] ?? null, to: win[win.length - 1]?.[2] ?? null, label: win.map(([n]) => n).join(" + ") },
+    stats: { rating: g.rating, walks: g.walks, reviews: g.reviews },
+    next: nx ? { grade: nx.grade, payout_rate: nx.rate, need: { rating: nx.rating, walks: nx.walks, reviews: nx.reviews } } : null,
+    needs_recheck: g.needs_recheck, dormant_since: g.dormant_since, updated_at: D.GRADE_UPDATED };
 }
 
 function adminBookingRows(): AdminBookingRow[] {
@@ -287,14 +339,14 @@ function adminBookingRows(): AdminBookingRow[] {
 }
 
 function applyStateFor(email: string): ApplyState {
-  return (state.apply[email] ??= { school_email: null, university: null, university_id: null, email_verified: false, birth_date: null, code_agreed: false, quiz_score: null, profile_done: false, status: "none" });
+  return (state.apply[email] ??= { school_email: null, university: null, university_id: null, email_verified: false, korean_national: false, birth_date: null, code_agreed: false, quiz_score: null, profile_done: false, status: "none" });
 }
 function ageOn(birth: string, today: string): number {
   const [by, bm, bd] = birth.split("-").map(Number), [ty, tm, td] = today.split("-").map(Number);
   return ty - by - (tm < bm || (tm === bm && td < bd) ? 1 : 0);
 }
 function applyOut(s: ApplyState): BuddyApplyStatus {
-  return { email_verified: s.email_verified, school_email: s.school_email, university: s.university, age_ok: !!s.birth_date && ageOn(s.birth_date, D.TODAY) >= BUDDY_MIN_AGE, code_agreed: s.code_agreed, quiz_score: s.quiz_score, quiz_passed: (s.quiz_score ?? 0) >= QUIZ_PASS, profile_done: s.profile_done, status: s.status };
+  return { email_verified: s.email_verified, korean_national: s.korean_national, school_email: s.school_email, university: s.university, age_ok: !!s.birth_date && ageOn(s.birth_date, D.TODAY) >= BUDDY_MIN_AGE, code_agreed: s.code_agreed, quiz_score: s.quiz_score, quiz_passed: (s.quiz_score ?? 0) >= QUIZ_PASS, profile_done: s.profile_done, status: s.status };
 }
 function univByEmail(email: string) {
   const domain = email.split("@")[1]?.toLowerCase() ?? "";
@@ -304,7 +356,7 @@ function univByEmail(email: string) {
 function buddyProfile(id: number): BuddyProfile {
   const bd = buddyOf(id)!;
   const st = statusOf(id);
-  return { ...structuredClone(bd), available_dates: id === 31 ? [...state.availability].sort() : bd.available_dates, status: st === "rejected" ? "pending" : st, bank_account: id === 31 && state.bankAccount ? state.bankAccount.replace(/(\d{3})-(\d{3})-(\d{3})(\d{3})/, "$1-***-***$4") : null, school_email: state.adminInfo[id]?.email ?? null };
+  return { ...structuredClone(withGrade(bd)), available_dates: id === 31 ? [...state.availability].sort() : bd.available_dates, status: st === "rejected" ? "pending" : st, bank_account: id === 31 && state.bankAccount ? state.bankAccount.replace(/(\d{3})-(\d{3})-(\d{3})(\d{3})/, "$1-***-***$4") : null, school_email: state.adminInfo[id]?.email ?? null };
 }
 
 // ------------------------------------------------------------------ AI
@@ -317,7 +369,7 @@ function makePlan(b: Record<string, unknown>): AiPlan {
   const walkDay = dates[Math.min(1, dates.length - 1)];
   const course = courseOf(3)!;
   // 숙소와 같은 대학 버디 우선, 그날 가능한 사람
-  const cand = state.buddies.filter((x) => statusOf(x.id) === "approved" && x.university_id === room.university.id).sort((a, c) => (a.id === 31 ? -1 : c.id === 31 ? 1 : 0));
+  const cand = state.buddies.filter((x) => listed(x.id) && x.university_id === room.university.id).sort((a, c) => (a.id === 31 ? -1 : c.id === 31 ? 1 : 0));
   const bd = cand.find((x) => (x.id === 31 ? state.availability.has(walkDay) : x.available_dates.includes(walkDay))) ?? cand[0];
   const warnings: PlanWarning[] = [];
   const days: PlanDay[] = dates.map((date) => ({ date, items: [] as PlanItem[] }));
@@ -344,7 +396,7 @@ function buddyMatch(b: Record<string, unknown>): BuddyMatch {
   const needs = [...new Set([...(arr(b.needs) as CanHelp[]), ...arr(b.diet).map((d) => DIET_TO_HELP[d as keyof typeof DIET_TO_HELP]).filter((v): v is CanHelp => !!v)])];
   const univ = b.university_id != null ? Number(b.university_id) : null;
   const date = isStr(b.date) ? b.date : null;
-  const scored = state.buddies.filter((x) => statusOf(x.id) === "approved" && (!date || x.available_dates.includes(date))).map((x) => {
+  const scored = state.buddies.filter((x) => listed(x.id) && (!date || x.available_dates.includes(date))).map((x) => {
     let s = 0.6 + Math.min(2, x.interests.filter((i) => interests.includes(i)).length) * 0.05;
     const reasons: string[] = [];
     const fit = Math.min(2, x.personality.filter((p) => personality.includes(p)).length + x.style.filter((p) => style.includes(p)).length);
@@ -375,6 +427,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     state.currentUser = u; return { access_token: "mock", user: u, needs_role_setup: false };
   }
   if (method === "POST" && path === "/auth/signup") { const u: User = { id: state.nextId++, name: String(b.name ?? "New User"), email: String(b.email), role: "tourist", university_id: null, language: (b.language as "ko" | "en") ?? "en" }; state.currentUser = u; return { access_token: "mock", user: u, needs_role_setup: true }; }
+  if (method === "GET" && path === "/auth/me/plan") { if (!me()) fail(401, "UNAUTHORIZED", "로그인이 필요합니다"); return myPlan(); }
   if (method === "GET" && path === "/auth/me") { const u = me(); if (!u) fail(401, "UNAUTHORIZED", "로그인이 필요합니다"); return u; }
   if (method === "PATCH" && (path === "/auth/me" || path === "/users/me")) { const u = me(); if (u) { state.currentUser = { ...u, ...(b as Partial<User>) }; } return state.currentUser; }
   if (method === "PATCH" && path === "/users/me/role") {
@@ -397,6 +450,18 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   // ---- 코스(tours)·장소
   if (method === "GET" && path === "/tours") return list(D.tours.filter((t) => (!q("theme") || t.theme === q("theme")) && (!q("language") || t.languages.includes(q("language")!))));
   if ((x = m(/^\/tours\/(\d+)\/reviews$/)) && method === "GET") return list<Review>([]);
+  if ((x = m(/^\/tours\/(\d+)\/survey$/)) && method === "POST") {
+    if (!me()) fail(401, "UNAUTHORIZED", "로그인이 필요합니다");
+    if (role !== "tourist") fail(403, "FORBIDDEN", "권한이 없습니다");
+    const tourId = Number(x[1]);
+    if (!courseOf(tourId)) fail(404, "NOT_FOUND", "코스를 찾을 수 없습니다");
+    const sat = Number(b.satisfaction);
+    if (!Number.isInteger(sat) || sat < 1 || sat > 5) fail(422, "VALIDATION", "만족도는 1~5예요");
+    if (!(String(b.pain) in SURVEY_PAIN)) fail(422, "VALIDATION", "불편했던 점을 골라 주세요");
+    const row: CourseSurvey = { id: state.nextId++, tour_id: tourId, satisfaction: sat, pain: b.pain as CourseSurvey["pain"], want_buddy: !!b.want_buddy, plan: planOf(), created_at: nowIso() };
+    state.surveys.push({ ...row, email: myEmail() });
+    return row;
+  }
   if ((x = m(/^\/tours\/(\d+)$/)) && method === "GET") return courseOf(Number(x[1])) ?? fail(404, "NOT_FOUND", "코스 없음");
   if ((x = m(/^\/places\/(\d+)$/)) && method === "GET") return D.places.find((p) => p.id === Number(x![1])) ?? fail(404, "NOT_FOUND", "장소 없음");
   if (method === "GET" && path === "/places") return list(D.places);
@@ -404,10 +469,10 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   // ---- 버디 (관광객 측, approved 만)
   if (method === "GET" && path === "/buddies") {
     const has = (k: string, vals: string[]) => { const v = q(k); return !v || v.split(",").some((s) => vals.includes(s)); };
-    return list(state.buddies.filter((bd) => statusOf(bd.id) === "approved"
+    return list(state.buddies.filter((bd) => listed(bd.id)
       && has("language", bd.languages) && has("interest", bd.interests) && has("personality", bd.personality) && has("style", bd.style) && has("can_help", bd.can_help)
       && (!q("date") || (bd.id === 31 ? state.availability.has(q("date")!) : bd.available_dates.includes(q("date")!)))
-      && (!q("university_id") || bd.university_id === Number(q("university_id")))).map((bd) => (bd.id === 31 ? { ...bd, available_dates: [...state.availability].sort() } : bd)));
+      && (!q("university_id") || bd.university_id === Number(q("university_id")))).map((bd) => withGrade(bd.id === 31 ? { ...bd, available_dates: [...state.availability].sort() } : bd)));
   }
   if ((x = m(/^\/buddies\/(\d+)\/reviews$/)) && method === "GET") return list(state.reviews[`buddy:${x[1]}`] ?? []);
   if ((x = m(/^\/buddies\/(\d+)\/activities$/)) && method === "GET") return list(publicActivities(Number(x[1]), 10));
@@ -415,7 +480,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     const id = Number(x[1]);
     const bd = buddyOf(id);
     if (!bd || statusOf(id) !== "approved") fail(404, "NOT_FOUND", "버디 없음");
-    const out: BuddyDetail = { ...structuredClone(bd!), available_dates: id === 31 ? [...state.availability].sort() : bd!.available_dates, recent_activities: publicActivities(id, 3), reviews: state.reviews[`buddy:${id}`] ?? [] };
+    const out: BuddyDetail = { ...structuredClone(withGrade(bd!)), available_dates: id === 31 ? [...state.availability].sort() : bd!.available_dates, recent_activities: publicActivities(id, 3), reviews: state.reviews[`buddy:${id}`] ?? [] };
     return out;
   }
 
@@ -426,8 +491,16 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     if (!s) return { answer: "자료에 없는 장소예요.", sources: [], grounded: false } satisfies AiStory;
     const qq = String(b.question ?? "").toLowerCase().trim();
     if (!qq) return { answer: s.intro, sources: s.sources, grounded: true } satisfies AiStory;
+    // v3.4 무료 이용자는 질문 하루 3번 (장소 소개는 세지 않음)
+    let left: number | null = null;
+    if (planOf() === "free") {
+      const used = state.aiUsage[usageKey()] ?? 0;
+      if (used >= FREE_AI_QUESTIONS) fail(429, "AI_LIMIT", `무료 코스에서는 AI에게 하루 ${FREE_AI_QUESTIONS}번까지 물어볼 수 있어요. 내일 다시 물어보거나, 버디와 함께 걸으면 제한 없이 물어볼 수 있어요`);
+      state.aiUsage[usageKey()] = used + 1;
+      left = FREE_AI_QUESTIONS - used - 1;
+    }
     const hit = s.qa.find((p) => qq.includes(p.q.split(" ")[0]) || qq.includes("north") || qq.includes("북"));
-    return hit ? ({ answer: hit.a, sources: s.sources, grounded: true } satisfies AiStory) : ({ answer: "자료에 없는 내용이에요. 다른 질문을 해 보거나 버디에게 같이 찾아보자고 해 보세요.", sources: s.sources, grounded: false } satisfies AiStory);
+    return hit ? ({ answer: hit.a, sources: s.sources, grounded: true, questions_left: left } satisfies AiStory) : ({ answer: "자료에 없는 내용이에요. 다른 질문을 해 보거나 버디에게 같이 찾아보자고 해 보세요.", sources: s.sources, grounded: false, questions_left: left } satisfies AiStory);
   }
   if (method === "POST" && path === "/ai/buddy-match") return buddyMatch(b);
   if (method === "POST" && path === "/ai/buddy-brief") { const f = findItem(Number(b.item_id)); return { brief: f ? briefFor(f.it) : "관심사를 먼저 물어보고 동선을 같이 정해 보세요." }; }
@@ -551,11 +624,12 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     const email = String(b.email ?? "").trim().toLowerCase();
     const u = univByEmail(email) ?? fail(422, "NOT_SEONGBUK_SCHOOL", "성북구 대학 메일이 아니에요");
     if (String(b.code ?? "") !== D.OTP_CODE) fail(422, "BAD_CODE", "인증번호가 맞지 않아요");
+    if (b.korean_national !== true) fail(422, "NOT_KOREAN_NATIONAL", "한국 국적 학생만 버디로 활동할 수 있어요");
     const birth = String(b.birth_date ?? "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(birth)) fail(422, "VALIDATION", "생년월일을 입력해 주세요");
     if (ageOn(birth, D.TODAY) < BUDDY_MIN_AGE) fail(422, "TOO_YOUNG", `만 ${BUDDY_MIN_AGE}세 이상만 버디로 활동할 수 있어요`);
     const s = applyStateFor(myEmail());
-    Object.assign(s, { school_email: email, university: u.name, university_id: u.id, email_verified: true, birth_date: birth, status: s.status === "none" ? "pending" : s.status });
+    Object.assign(s, { school_email: email, university: u.name, university_id: u.id, email_verified: true, korean_national: true, birth_date: birth, status: s.status === "none" ? "pending" : s.status });
     const cu = me(); if (cu) state.currentUser = { ...cu, university_id: u.id, birth_date: birth };
     return applyOut(s);
   }
@@ -572,6 +646,8 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if (method === "GET" && path === "/buddy/schedule") return list(buddyItems(myBuddyId()).filter(({ it }) => it.status === "confirmed").map(({ b: bk, it }) => toBuddyRequest(bk, it)).sort((a, c) => a.date.localeCompare(c.date)));
   if (method === "GET" && path === "/buddy/availability") return { dates: [...state.availability].sort() };
   if (method === "PUT" && path === "/buddy/availability") { state.availability = new Set((b.dates as string[]) ?? []); return { dates: [...state.availability].sort() }; }
+  if (method === "GET" && path === "/buddy/grade") return gradeInfo(myBuddyId());
+  if (method === "POST" && path === "/buddy/confirm-active") { if (role && role !== "buddy") fail(403, "FORBIDDEN", "권한이 없습니다"); gradeOf(myBuddyId()).needs_recheck = false; return gradeInfo(myBuddyId()); }
   if (method === "GET" && path === "/buddy/profile") return buddyProfile(myBuddyId());
   if (method === "PUT" && path === "/buddy/profile") {
     const bd = buddyOf(myBuddyId())!;
@@ -619,13 +695,30 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   // ---- 어드민
   if (method === "GET" && path === "/admin/dashboard") return D.dashboard;
   if (method === "GET" && path === "/admin/bookings") return list(adminBookingRows().filter((r) => (!q("type") || r.type === q("type")) && (!q("status") || r.status === q("status")) && (role !== "univ_admin" || !me()?.university_id || r.university_id === me()?.university_id)));
-  if (method === "GET" && path === "/admin/buddies") return list(Object.keys(state.adminInfo).map(Number).map(toAdminBuddy).filter((r): r is AdminBuddyRow => !!r && (!q("status") || r.status === q("status"))));
+  if (method === "GET" && path === "/admin/buddies") {
+    requireOperator(); // v3.3: 버디 승인·목록은 운영팀만
+    return list(Object.keys(state.adminInfo).map(Number).map(toAdminBuddy).filter((r): r is AdminBuddyRow => !!r && (!q("status") || r.status === q("status"))));
+  }
+  if (method === "POST" && path === "/admin/buddies/recompute-grades") {
+    requireOperator();
+    // 매월 1일 갱신: 휴면 중이면 등급 그대로, 아니면 세 조건을 모두 채우는 가장 높은 등급
+    const changed = Object.keys(state.grades).map(Number).filter((id) => {
+      const g = state.grades[id];
+      if (g.needs_recheck) return false;
+      const nx = gradeFor(g.rating, g.walks, g.reviews).grade;
+      if (nx === g.grade) return false;
+      g.grade = nx;
+      return true;
+    });
+    return list(changed.map(toAdminBuddy).filter((r): r is AdminBuddyRow => !!r));
+  }
   if ((x = m(/^\/admin\/buddies\/(\d+)$/)) && method === "PATCH") {
+    requireOperator();
     const id = Number(x[1]);
     const row = toAdminBuddy(id) ?? fail(404, "NOT_FOUND", "버디 없음");
     const action = String(b.action);
     if (action === "approve") {
-      const missing = [!row.school_email_verified && "학교 메일 인증", (row.age ?? 0) < BUDDY_MIN_AGE && `만 ${BUDDY_MIN_AGE}세`, !row.code_agreed && "약속 동의", (row.quiz_score ?? 0) < QUIZ_PASS && `퀴즈 ${row.quiz_score ?? 0}/${QUIZ_TOTAL} (${QUIZ_PASS}점 이상)`].filter(Boolean);
+      const missing = [!row.school_email_verified && "학교 메일 인증", !row.korean_national && "한국 국적 확인", (row.age ?? 0) < BUDDY_MIN_AGE && `만 ${BUDDY_MIN_AGE}세`, !row.code_agreed && "약속 동의", (row.quiz_score ?? 0) < QUIZ_PASS && `퀴즈 ${row.quiz_score ?? 0}/${QUIZ_TOTAL} (${QUIZ_PASS}점 이상)`].filter(Boolean);
       if (missing.length) fail(409, "NOT_READY", `아직 안 된 항목: ${missing.join(", ")}`);
       state.buddyStatus[id] = "approved";
     } else if (action === "suspend") state.buddyStatus[id] = "suspended";
@@ -636,7 +729,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   }
   if (method === "GET" && path === "/admin/users") return list(Object.values(D.users));
   if (method === "GET" && path === "/admin/settlements") {
-    requireOperator();
+    if (role !== "operator" && role !== "univ_admin") fail(403, "FORBIDDEN", "관리자 계정만 볼 수 있어요");
     const month = q("month") ?? DEFAULT_MONTH;
     const univRows: SettlementRow[] = [
       { party_type: "university", party_id: 1, target: "고려대학교 프런티어관", count: 18, revenue: 1890000, fee: 189000, meals: 0, payout: 1701000, status: "pending" },
@@ -644,7 +737,8 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
     ];
     const buddyRows: SettlementRow[] = [31, 35].map((id) => {
       const s = buddySettlement(id, month);
-      return { party_type: "buddy", party_id: id, target: `버디 ${buddyOf(id)?.name ?? ""}`, count: s.walks, revenue: s.gross, fee: s.fee, meals: s.meals_approved, payout: s.payout, status: s.meals_pending > 0 ? "meal_pending" : "pending" };
+      return { party_type: "buddy", party_id: id, target: `버디 ${buddyOf(id)?.name ?? ""}`, count: s.walks, revenue: s.gross, fee: s.fee, meals: s.meals_approved, payout: s.payout, status: s.meals_pending > 0 ? "meal_pending" : "pending",
+        payout_rate: s.gross ? Math.round((s.net / s.gross) * 1000) / 1000 : null };
     });
     const items = [...univRows, ...buddyRows];
     let refund = 0;
@@ -653,13 +747,17 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
       if (sumClaims(it.id, ["requested"]) > 0) continue;
       refund += (it.meal_count ?? 0) * MEAL_LIMIT - sumClaims(it.id, ["approved"]);
     }
-    // 판매가 − 원가 = 이익 (원가 = 대학·버디 지급 = revenue − fee, 식비·보증금은 통과 금액이라 뺀다)
+    // 판매가 − 원가 = 이익 (원가 = 대학 지급 90% · 버디 지급 = 항목별 정산율, 식비·보증금은 통과 금액이라 뺀다)
     const part = (t: SettlementRow["party_type"], k: "revenue" | "fee") => items.filter((r) => r.party_type === t).reduce((s, r) => s + r[k], 0);
     const albumSales = state.bookings.flatMap((bk) => bk.items).filter((it) => it.type === "buddy" && it.album && it.status === "confirmed" && (it.date_from ?? "").startsWith(month)).length * ALBUM_FEE;
     const salesDorm = part("university", "revenue"), salesBuddy = part("buddy", "revenue");
     const costUni = salesDorm - part("university", "fee"), costBuddy = salesBuddy - part("buddy", "fee");
     const sales = salesDorm + salesBuddy + albumSales, profitAmt = sales - costUni - costBuddy;
     const profit = { sales, sales_dorm: salesDorm, sales_buddy: salesBuddy, sales_album: albumSales, cost_university: costUni, cost_buddy: costBuddy, cost_other: 0, profit: profitAmt, margin: sales ? Math.round((profitAmt / sales) * 1000) / 1000 : 0 };
+    if (role === "univ_admin") { // 대학 담당자: 자기 학교 숙박 행만, 수익 구조 없음
+      const mine = univRows.filter((r) => r.party_id === (me()?.university_id ?? 1));
+      return { period: { from: `${month}-01`, to: `${month}-31` }, total: mine.reduce((s, r) => s + r.revenue, 0), items: mine, meal_refund_total: 0, profit: null } satisfies Settlements;
+    }
     const out: Settlements = { period: { from: `${month}-01`, to: `${month}-31` }, total: items.reduce((s, r) => s + r.revenue + r.meals, 0), items, meal_refund_total: refund, profit };
     return out;
   }
@@ -690,6 +788,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if ((x = m(/^\/admin\/dorms\/(\d+)$/)) && method === "PATCH") return { id: Number(x[1]), ...b };
   if ((x = m(/^\/admin\/universities\/(\d+)$/)) && method === "PATCH") return { id: Number(x[1]), ...b };
   if (method === "GET" && path === "/admin/tours") {
+    requireOperator();
     const walks = (id: number) => state.bookings.flatMap((bk) => bk.items).filter((i) => i.type === "buddy" && i.course_id === id && i.status !== "cancelled").length;
     return list<AdminCourseRow>(D.tours.map((t) => ({ id: t.id, title: t.title, theme: t.theme, duration_min: t.duration_min, places: t.places.map((p) => p.name), place_count: t.places.length, story_ready: t.places.filter((p) => !!D.stories[p.id]).length, buddy_walks: walks(t.id) })));
   }

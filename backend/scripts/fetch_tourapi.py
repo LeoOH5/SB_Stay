@@ -10,6 +10,12 @@
    places.json 의 lat·lng·photo_url·photo_credit 을 고치고, 좌표가 생긴 places_pending 장소는 places.json 으로 옮긴다.
    그다음 uv run python -m app.seeds
 사진은 공공누리 제1유형(출처표시)만 쓴다. 다른 유형은 photo_url을 비워 둔다.
+
+4) AI-02 근거 보강:  uv run python scripts/fetch_tourapi.py overview
+   places.json 장소마다 TourAPI 국문(KorService2)·영문(EngService2) 개요(detailCommon2 overview)를 받아
+   app/seeds/data/place_overviews.json 에 저장한다. 시드 때 story_doc·sources 에 붙는다 (app/seeds/overviews.py).
+   영문 서비스는 공공데이터포털에서 '한국관광공사_영문 관광정보서비스_GW'를 따로 활용신청해야 한다(같은 키).
+   화면에 나온 매칭 결과를 보고, 틀린 장소는 json 에서 그 id 를 지우면 된다.
 """
 import argparse
 import json
@@ -29,6 +35,9 @@ DATA = ROOT / "app" / "seeds" / "data"
 PLACES, PENDING = DATA / "places.json", DATA / "places_pending.json"
 REVIEW = ROOT / "tourapi_review.xlsx"
 TOUR_BASE = "https://apis.data.go.kr/B551011/KorService2"
+ENG_BASE = "https://apis.data.go.kr/B551011/EngService2"
+OVERVIEWS = DATA / "place_overviews.json"
+EN_NEAR_M = 200  # 영문 결과는 이름이 달라서 좌표가 이 안이고 영어 이름 단어가 겹칠 때만 쓴다
 KAKAO_URL = "https://dapi.kakao.com/v2/local/search/keyword.json"
 GU = "성북구"
 MOVE_M = 50  # 이보다 멀면 좌표를 바꾸자고 표시
@@ -120,8 +129,8 @@ def pick_kakao(docs: list[dict], name: str = "", old: tuple | None = None) -> di
     return hit["_doc"] if hit else None
 
 
-def _tour_get(client: httpx.Client, op: str, params: dict) -> dict:
-    r = client.get(f"{TOUR_BASE}/{op}", params={"MobileOS": "ETC", "MobileApp": "SBStay", "_type": "json", **params})
+def _tour_get(client: httpx.Client, op: str, params: dict, base: str = TOUR_BASE) -> dict:
+    r = client.get(f"{base}/{op}", params={"MobileOS": "ETC", "MobileApp": "SBStay", "_type": "json", **params})
     r.raise_for_status()
     try:
         return r.json()
@@ -247,6 +256,67 @@ def read_review(path: Path) -> list[dict]:
     return [dict(zip(head, r)) for r in ws.iter_rows(min_row=2, values_only=True) if r and r[1] is not None]
 
 
+def _words(s: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z]+", (s or "").lower()) if len(w) > 3 and w not in {"house", "seoul", "seongbuk"}}
+
+
+def tour_overview(client: httpx.Client, key: str, contentid: str, base: str = TOUR_BASE) -> str:
+    items = items_of(_tour_get(client, "detailCommon2", {"serviceKey": key, "contentId": contentid}, base))
+    return (items[0].get("overview") or "") if items else ""
+
+
+def en_match(client: httpx.Client, key: str, place: dict) -> dict | None:
+    """영문 서비스: 장소 좌표 200 m 안에서 영어 이름 단어가 겹치는 가장 가까운 것"""
+    if place.get("lat") is None:
+        return None
+    data = _tour_get(client, "locationBasedList2", {"serviceKey": key, "mapX": place["lng"], "mapY": place["lat"],
+                                                   "radius": EN_NEAR_M, "numOfRows": 50, "pageNo": 1, "arrange": "E"}, ENG_BASE)
+    want = _words(place.get("name_en", ""))
+    cands = [(distance_m(place["lat"], place["lng"], i.get("mapy"), i.get("mapx")) or 0, i) for i in items_of(data)
+             if want & _words(i.get("title", ""))]
+    return min(cands, key=lambda c: c[0])[1] if cands else None
+
+
+def overview() -> None:
+    key = env("TOUR_API_KEY")
+    if not key:
+        sys.exit("TOUR_API_KEY 를 backend/.env 에 넣어 주세요")
+    places = json.loads(PLACES.read_text(encoding="utf-8"))
+    out: dict[str, dict] = {}
+    with httpx.Client(timeout=15) as c:
+        try:
+            nearby = tour_nearby_all(c, key)
+        except (httpx.HTTPError, RuntimeError) as e:
+            nearby = []
+            print(f"  ! 위치 기반 목록 실패: {e}")
+        en_ok = True
+        for p in places:
+            old = (p.get("lat"), p.get("lng")) if p.get("lat") is not None else None
+            entry: dict = {}
+            try:
+                ko = pick_tour(nearby, p["name"], old) or pick_tour(tour_search(c, key, p["name"]), p["name"], old)
+                if ko and (text := tour_overview(c, key, ko["contentid"])):
+                    entry["ko"] = {"contentid": ko["contentid"], "title": ko.get("title"), "overview": text}
+            except (httpx.HTTPError, RuntimeError) as e:
+                print(f"  ! {p['id']} {p['name']} 국문: {e}")
+            if en_ok:
+                try:
+                    en = en_match(c, key, p)
+                    if en and (text := tour_overview(c, key, en["contentid"], ENG_BASE)):
+                        entry["en"] = {"contentid": en["contentid"], "title": en.get("title"), "overview": text}
+                except (httpx.HTTPError, RuntimeError) as e:
+                    en_ok = False  # 영문 서비스 활용신청 전이면 여기서 멈추고 국문만
+                    print(f"  ! 영문 서비스 사용 불가 → 국문만 받아요 ({str(e)[:80]})")
+            if entry:
+                out[str(p["id"])] = entry
+            ko_t = (entry.get("ko") or {}).get("title") or "-"
+            en_t = (entry.get("en") or {}).get("title") or "-"
+            print(f"{p['id']:>4} {p['name'][:14]:<14} 국문: {ko_t[:18]:<18} 영문: {en_t[:30]}")
+            time.sleep(0.1)
+    OVERVIEWS.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"\n저장: {OVERVIEWS.name} ({len(out)}곳). 틀린 매칭은 그 id 를 지우고: uv run python -m app.seeds")
+
+
 def apply(path: Path) -> None:
     places = json.loads(PLACES.read_text(encoding="utf-8"))
     pending = json.loads(PENDING.read_text(encoding="utf-8")) if PENDING.exists() else []
@@ -279,10 +349,13 @@ def apply(path: Path) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="TourAPI·카카오로 관광지 좌표·사진 채우기")
-    ap.add_argument("mode", choices=["fetch", "apply"])
+    ap.add_argument("mode", choices=["fetch", "apply", "overview"])
     ap.add_argument("xlsx", nargs="?", default=str(REVIEW))
     a = ap.parse_args()
-    (fetch if a.mode == "fetch" else apply)(Path(a.xlsx))
+    if a.mode == "overview":
+        overview()
+    else:
+        (fetch if a.mode == "fetch" else apply)(Path(a.xlsx))
 
 
 if __name__ == "__main__":

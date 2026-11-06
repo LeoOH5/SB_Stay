@@ -1,5 +1,5 @@
 """어드민 — AD-01 대시보드 · AD-02 예약 목록 · AD-03/04 버디 목록·승인 · AD-05 회원 · AD-06 정산 · AD-07 코스 조회
-· 식비 심사 · 신고 처리 (B 담당)
+· 식비 심사 · 신고 처리 · 버디 등급 재산정 (B 담당)
 
 응답은 프론트(frontend/src/lib/types.ts)의 평면 행 형식을 따른다. univ_admin은 자기 대학 데이터만, operator는 전체.
 """
@@ -35,9 +35,9 @@ from app.schemas.admin import (
 )
 from app.schemas.buddy import AdminMealClaimOut
 from app.schemas.common import ListResponse
-from app.services import meals, reports
+from app.services import grades, meals, reports
 from app.services.availability import nights_between
-from app.services.booking_state import album_fee, describe, meal_sums
+from app.services.booking_state import activity_fee, album_fee, describe, meal_sums
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 ADMIN = require_role("univ_admin", "operator")
@@ -68,7 +68,7 @@ def dashboard(from_: date | None = None, to: date | None = None, user: User = De
     """AD-01: 기간 내 숙박 항목 기준 예약 수·승인 대기·박수·숙박 매출·플랫폼 수수료·상태별 건수·일별 추이"""
     f, t = from_ or DEMO_FROM, to or DEMO_TO
     items = [i for i in _visible_items(db, user) if i.type == "dorm" and i.date_from and f <= i.date_from <= t]
-    fee_rate = get_settings().platform_fee_rate
+    fee_percent = get_settings().platform_fee_percent
     nights = sum(nights_between(i.date_from, i.date_to) for i in items if i.status in OK and i.date_to)
     revenue = sum(i.price for i in items if i.status in OK)
     by_status: dict[str, int] = defaultdict(int)
@@ -83,7 +83,7 @@ def dashboard(from_: date | None = None, to: date | None = None, user: User = De
     return DashboardOut(
         period={"from": f.isoformat(), "to": t.isoformat()}, bookings=len({i.booking_id for i in items}),
         pending=sum(1 for i in items if i.status == "requested"), nights=nights, dorm_revenue=revenue,
-        platform_fee=round(revenue * fee_rate), fee_rate=fee_rate, by_status=dict(by_status),
+        platform_fee=rules.pct(revenue, fee_percent), fee_rate=fee_percent / 100, by_status=dict(by_status),
         daily=sorted(daily.values(), key=lambda p: p.date),
     )
 
@@ -113,22 +113,27 @@ def admin_bookings(type: str | None = None, status: str | None = None, q: str | 
 
 def _buddy_row(db: Session, prof: BuddyProfile) -> AdminBuddyRow:
     u = db.get(User, prof.user_id)
+    ev = grades.evaluate(db, prof, get_settings().today())
     return AdminBuddyRow(
         id=prof.id, user_id=u.id, name=u.name, email=u.email, university_id=prof.university_id, major=prof.major, year=prof.year,
         languages=prof.languages or [], interests=prof.interests or [], status=prof.status,
         age=rules.age_on(u.birth_date, get_settings().today()) if u.birth_date else None,
         school_email_verified=prof.school_email_verified_at is not None, code_agreed=prof.code_agreed_at is not None,
         quiz_score=prof.quiz_score, report_count=reports.count_for(db, prof.id), can_help=prof.can_help or [],
-        can_drive=bool(prof.can_drive),
+        can_drive=bool(prof.can_drive), korean_national=prof.korean_national_confirmed_at is not None,
+        grade=prof.grade, payout_rate=float(prof.payout_rate), eval_rating=ev.rating, eval_walks=ev.walks,
+        eval_reviews=ev.reviews, needs_recheck=prof.needs_recheck,
     )
 
 
 def missing_for_approval(db: Session, prof: BuddyProfile) -> list[str]:
-    """승인 조건: 학교 메일 인증 · 만 19세 · 약속 동의 · 퀴즈 8점 이상"""
+    """승인 조건: 학교 메일 인증 · 한국 국적 · 만 19세 · 약속 동의 · 퀴즈 8점 이상"""
     u = db.get(User, prof.user_id)
     miss = []
     if not prof.school_email_verified_at:
         miss.append("학교 메일 인증")
+    if not prof.korean_national_confirmed_at:
+        miss.append("한국 국적 확인")
     if not u.birth_date or rules.age_on(u.birth_date, get_settings().today()) < rules.BUDDY_MIN_AGE:
         miss.append(f"만 {rules.BUDDY_MIN_AGE}세 확인")
     if not prof.code_agreed_at:
@@ -139,7 +144,7 @@ def missing_for_approval(db: Session, prof: BuddyProfile) -> list[str]:
 
 
 @router.get("/buddies", response_model=ListResponse[AdminBuddyRow])
-def admin_buddies(status: str | None = None, user: User = Depends(ADMIN), db: Session = Depends(get_db)) -> ListResponse[AdminBuddyRow]:
+def admin_buddies(status: str | None = None, user: User = Depends(OPERATOR), db: Session = Depends(get_db)) -> ListResponse[AdminBuddyRow]:
     """AD-03: 소속 버디 목록"""
     q = select(BuddyProfile).order_by(BuddyProfile.id)
     if user.role == "univ_admin":
@@ -149,9 +154,18 @@ def admin_buddies(status: str | None = None, user: User = Depends(ADMIN), db: Se
     return ListResponse(items=[_buddy_row(db, p) for p in db.scalars(q).all()])
 
 
+@router.post("/buddies/recompute-grades", response_model=ListResponse[AdminBuddyRow])
+def recompute_grades(user: User = Depends(OPERATOR), db: Session = Depends(get_db)) -> ListResponse[AdminBuddyRow]:
+    """버디 등급 다시 계산 (운영자, 매월 1회): 등급·정산율 갱신 → 휴면 판정. 바뀐 버디 행만 돌려준다.
+    이미 확정된 예약 항목의 정산율은 바뀌지 않는다. 스크립트: scripts/recompute_grades.py"""
+    changed = grades.recompute_all(db, get_settings().today())
+    db.commit()
+    return ListResponse(items=[_buddy_row(db, p) for p in changed])
+
+
 @router.patch("/buddies/{profile_id}", response_model=AdminBuddyRow)
-def decide_buddy(profile_id: int, body: BuddyActionIn, user: User = Depends(ADMIN), db: Session = Depends(get_db)) -> AdminBuddyRow:
-    """AD-04: 버디 승인·제재. 승인은 학교 메일·만 19세·약속 동의·퀴즈 8점을 모두 채워야 한다 (아니면 409 NOT_READY)."""
+def decide_buddy(profile_id: int, body: BuddyActionIn, user: User = Depends(OPERATOR), db: Session = Depends(get_db)) -> AdminBuddyRow:
+    """AD-04: 버디 승인·제재. 승인은 학교 메일·한국 국적·만 19세·약속 동의·퀴즈 8점을 모두 채워야 한다 (아니면 409 NOT_READY)."""
     prof = db.get(BuddyProfile, profile_id)
     if not prof:
         raise api_error(404, "NOT_FOUND", "버디를 찾을 수 없습니다")
@@ -176,15 +190,16 @@ def admin_users(role: str | None = None, user: User = Depends(OPERATOR), db: Ses
 
 
 @router.get("/settlements", response_model=SettlementsOut)
-def settlements(from_: date | None = None, to: date | None = None, user: User = Depends(OPERATOR), db: Session = Depends(get_db)) -> SettlementsOut:
-    """AD-06 (운영자): 확정 항목을 대학·버디별로 집계. 수수료 10%는 숙박·활동비에만, 버디 지급 = 활동비×0.9 + 승인 식비.
+def settlements(from_: date | None = None, to: date | None = None, user: User = Depends(ADMIN), db: Session = Depends(get_db)) -> SettlementsOut:
+    """AD-06: 확정 항목을 대학·버디별로 집계. 대학 담당자는 자기 학교 숙박 행만 받고 버디 행·수익 구조(profit)는 없다. 대학 지급 = 숙박 × 0.9, 버디 지급 = Σ round(활동비 × 항목 정산율) + 승인 식비.
     앨범(5,000)은 전액 플랫폼 수입이라 버디 행에 넣지 않는다.
     meal_refund_total = 여행자에게 돌려줄 남은 식사 보증금 합. 지급 처리는 목업(전부 pending).
     profit = 판매가(숙박 + 활동비 + 앨범) − 원가(대학·버디 지급, 기타 0) — 식사 보증금은 통과 금액이라 뺀다."""
     f, t = from_ or DEMO_FROM, to or DEMO_TO
-    fee_rate = get_settings().platform_fee_rate
+    fee_percent = get_settings().platform_fee_percent
     agg: dict[tuple[str, int], SettlementRow] = {}
     meal_pending: set[int] = set()
+    buddy_net: dict[int, int] = defaultdict(int)
     refund = album = 0
     for it in db.scalars(select(BookingItem).where(BookingItem.status.in_(OK), BookingItem.type.in_(("dorm", "buddy")))).all():
         if not it.date_from or not (f <= it.date_from <= t):
@@ -198,8 +213,10 @@ def settlements(from_: date | None = None, to: date | None = None, user: User = 
             key, name = ("buddy", prof.id), f"버디 {db.get(User, prof.user_id).name}"
         row = agg.setdefault(key, SettlementRow(party_type=key[0], party_id=key[1], target=name, count=0, revenue=0, fee=0, payout=0, status="pending"))
         row.count += 1
-        row.revenue += it.price - (it.meal_deposit or 0) - album_fee(it)
+        row.revenue += activity_fee(it) if it.type == "buddy" else it.price
         album += album_fee(it)
+        if it.type == "buddy":
+            buddy_net[key[1]] += grades.buddy_net(activity_fee(it), grades.item_rate(db, it))
         if it.type == "buddy" and it.meal_deposit:
             used, approved = meal_sums(db, it.id)
             row.meals += approved
@@ -207,11 +224,19 @@ def settlements(from_: date | None = None, to: date | None = None, user: User = 
             if used > approved:
                 meal_pending.add(key[1])
     for row in agg.values():
-        row.fee = round(row.revenue * fee_rate)
+        if row.party_type == "buddy":
+            row.fee = row.revenue - buddy_net[row.party_id]
+            row.payout_rate = round((row.revenue - row.fee) / row.revenue, 3) if row.revenue else None
+        else:
+            row.fee = rules.pct(row.revenue, fee_percent)
         row.payout = row.revenue - row.fee + row.meals
         if row.party_type == "buddy" and row.party_id in meal_pending:
             row.status = "meal_pending"
     items = sorted(agg.values(), key=lambda r: -r.revenue)
+    if user.role == "univ_admin":
+        mine = [r for r in items if r.party_type == "university" and r.party_id == user.university_id]
+        return SettlementsOut(period={"from": f.isoformat(), "to": t.isoformat()}, total=sum(r.revenue for r in mine),
+                              meal_refund_total=0, profit=None, items=mine)
     return SettlementsOut(period={"from": f.isoformat(), "to": t.isoformat()}, total=sum(r.revenue for r in items),
                           meal_refund_total=refund, profit=_profit(items, album), items=items)
 
@@ -229,7 +254,7 @@ def _profit(items: list[SettlementRow], album: int, cost_other: int = 0) -> Sett
 
 
 @router.get("/tours", response_model=ListResponse[AdminTourRow])
-def admin_tours(user: User = Depends(ADMIN), db: Session = Depends(get_db)) -> ListResponse[AdminTourRow]:
+def admin_tours(user: User = Depends(OPERATOR), db: Session = Depends(get_db)) -> ListResponse[AdminTourRow]:
     """AD-07: 무료 산책 코스 (장소·이야기 자료 준비 수·이 코스를 고른 버디 동행 수)"""
     rows = []
     for t in db.scalars(select(Tour).order_by(Tour.id)).all():

@@ -30,8 +30,8 @@ def test_create_booking_prices_and_status(booking):
     assert booking["code"].startswith("SB-2027-")
     # 숙박 105,000 + 버디 (활동 30,000 + 앨범 5,000 + 식사 2 × 20,000)
     assert booking["total_price"] == 105000 + 75000
-    # 식사 보증금에는 수수료 없음, 앨범 5,000은 전액 플랫폼 수입
-    assert booking["platform_fee"] == round((180000 - 40000 - 5000) * 0.1) + 5000
+    # 숙박 10% + 활동비 × (1 − 지우 정산율 75%) + 앨범 전액. 식사 보증금에는 수수료 없음
+    assert booking["platform_fee"] == round(105000 * 0.1) + round(30000 * 0.25) + 5000
     by_type = {i["type"]: i for i in booking["items"]}
     assert by_type["dorm"]["status"] == "requested" and by_type["buddy"]["status"] == "requested"
     assert booking["status"] == "requested"
@@ -75,9 +75,9 @@ def test_other_validation(client, tourist, reset_db):
 def test_buddy_only_drops_passport(client, tourist, reset_db):
     r = _post(client, tourist, [BUDDY | {"meal_count": 0, "album": False}])
     assert r.status_code == 201 and "passport_no" not in r.json()["traveler"]
-    assert r.json()["total_price"] == 30000 and r.json()["platform_fee"] == 3000
+    assert r.json()["total_price"] == 30000 and r.json()["platform_fee"] == 7500  # 성장 75% → 플랫폼 25%
     r = _post(client, tourist, [BUDDY | {"meal_count": 1, "album": True}])
-    assert r.json()["total_price"] == 30000 + 5000 + 20000 and r.json()["platform_fee"] == 3000 + 5000
+    assert r.json()["total_price"] == 30000 + 5000 + 20000 and r.json()["platform_fee"] == 7500 + 5000
 
 
 def test_detail_privacy(client, tourist, univ_admin, booking):
@@ -140,7 +140,7 @@ def test_replace_buddy(client, tourist, buddy, booking):
     new = next(i for i in j["items"] if i["type"] == "buddy" and i["status"] == "requested")
     assert new["ref_id"] == 35 and new["time"] == "15:00" and new["date_from"] == "2027-01-13"
     assert new["request"] == old["request"] and new["course_id"] == 3 and new["meal_count"] == 2 and new["album"] is True
-    assert j["total_price"] == 180000 and j["platform_fee"] == 18500  # 취소 항목은 빼고 다시 계산
+    assert j["total_price"] == 180000 and j["platform_fee"] == 10500 + 9000 + 5000  # 취소 항목 빼고, 서연(기본 70%)으로 어림
     seen = client.get(f"{URL}/{bid}", headers=buddy).json()["items"]  # 지우에게는 취소된 자기 항목만
     assert [(i["id"], i["status"]) for i in seen] == [(old["id"], "cancelled")]
     # 거절된 항목을 바꾸면 거절 상태 그대로
@@ -169,7 +169,7 @@ def test_room_availability_decreases(client, tourist, booking):
 def test_seeded_demo_booking(client, tourist):
     """Emma SB-2027-0112: 숙박 + 지우(코스 3, 비건·버섯·천천히, 식사 2, 앨범). 식비 1건 확인 중, 앨범 6장"""
     b = next(x for x in client.get("/api/v1/bookings/me", headers=tourist).json()["items"] if x["code"] == "SB-2027-0112")
-    assert b["status"] == "confirmed" and b["total_price"] == 180000 and b["platform_fee"] == 18500
+    assert b["status"] == "confirmed" and b["total_price"] == 180000 and b["platform_fee"] == 10500 + 7500 + 5000  # 지우 75% 고정
     bud = next(i for i in b["items"] if i["type"] == "buddy")
     assert bud["course_id"] == 3 and bud["request"]["pace"] == "slow" and bud["album_photos"] == 6
     assert bud["meal_used"] == 23500 and bud["meal_approved"] == 0 and bud["meal_refund"] == 40000
@@ -195,9 +195,9 @@ def test_review_trip_not_done_and_sub_scores(client, tourist, buddy, reset_db):
     assert client.post(f"{URL}/501/reviews", json=body, headers=tourist).status_code == 409
     item = next(i for i in client.get(f"{URL}/501", headers=tourist).json()["items"] if i["id"] == 3)
     assert item["reviewed"] is True and item["can_review"] is False
-    jiwoo = client.get("/api/v1/buddies/31").json()  # 시드 후기(Lena) + 방금 후기 평균
+    jiwoo = client.get("/api/v1/buddies/31").json()  # 세부 점수 있는 시드 후기(Lena) + 방금 후기 평균
     assert jiwoo["sub_scores"] == {"kind": 5.0, "talk": 4.0, "punctual": 5.0, "local": 4.0}
-    assert set(jiwoo["tags_top"][:2]) == {"knows_food", "cares_requests"} and jiwoo["review_count"] == 2
+    assert set(jiwoo["tags_top"][:2]) == {"knows_food", "cares_requests"} and jiwoo["review_count"] == 5  # 여름 후기 3건 포함
 
 
 def test_album(client, tourist):

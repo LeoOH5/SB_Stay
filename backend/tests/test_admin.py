@@ -23,41 +23,53 @@ def test_admin_bookings_filters(client, univ_admin, operator):
     assert {r["type"] for r in all_rows} == {"dorm", "buddy"}  # 코스는 예약 항목이 아님
 
 
-def test_buddy_rows_and_approve_readiness(client, univ_admin, reset_db):
-    rows = client.get("/api/v1/admin/buddies", params={"status": "pending"}, headers=univ_admin).json()["items"]
+def test_buddy_rows_and_approve_readiness(client, univ_admin, operator, reset_db):
+    # v3.3: 버디 승인은 운영자만. 대학 담당자는 버디 목록·승인 모두 403
+    assert client.get("/api/v1/admin/buddies", headers=univ_admin).status_code == 403
+    assert client.patch("/api/v1/admin/buddies/34", json={"action": "approve"}, headers=univ_admin).status_code == 403
+    rows = client.get("/api/v1/admin/buddies", params={"status": "pending"}, headers=operator).json()["items"]
     by_name = {r["name"]: r for r in rows}
-    assert set(by_name) == {"하린", "도윤"}
+    assert {"하린", "도윤"} <= set(by_name)
     assert by_name["하린"]["quiz_score"] == 7 and by_name["하린"]["school_email_verified"] and by_name["하린"]["age"] == 23
-    r = client.patch("/api/v1/admin/buddies/33", json={"action": "approve"}, headers=univ_admin)
+    r = client.patch("/api/v1/admin/buddies/33", json={"action": "approve"}, headers=operator)
     assert r.status_code == 409 and r.json()["error"]["code"] == "NOT_READY" and "퀴즈 8점" in r.json()["error"]["message"]
-    r = client.patch("/api/v1/admin/buddies/34", json={"action": "approve"}, headers=univ_admin)
+    r = client.patch("/api/v1/admin/buddies/34", json={"action": "approve"}, headers=operator)
     assert r.status_code == 200 and r.json()["status"] == "approved" and r.json()["can_help"] == ["subway", "shopping"]
-    assert client.patch("/api/v1/admin/buddies/32", json={"action": "approve"}, headers=univ_admin).status_code == 403  # 국민대 버디
-    assert client.patch("/api/v1/admin/buddies/34", json={"action": "x"}, headers=univ_admin).status_code == 422
-    junseo = next(r for r in client.get("/api/v1/admin/buddies", headers=univ_admin).json()["items"] if r["name"] == "준서")
+    assert client.patch("/api/v1/admin/buddies/34", json={"action": "x"}, headers=operator).status_code == 422
+    junseo = next(r for r in client.get("/api/v1/admin/buddies", headers=operator).json()["items"] if r["name"] == "준서")
     assert junseo["report_count"] == 1
 
 
 def test_users_and_settlements_operator_only(client, univ_admin, operator):
     assert client.get("/api/v1/admin/users", headers=univ_admin).status_code == 403
     assert {u["role"] for u in client.get("/api/v1/admin/users", headers=operator).json()["items"]} == {"tourist", "buddy", "univ_admin", "operator"}
-    assert len(client.get("/api/v1/admin/users", params={"role": "buddy"}, headers=operator).json()["items"]) == 6
+    assert len(client.get("/api/v1/admin/users", params={"role": "buddy"}, headers=operator).json()["items"]) == 7  # + 수아(휴면)
     s = client.get("/api/v1/admin/settlements", headers=operator).json()
     targets = {r["target"]: r for r in s["items"]}
     assert set(targets) == {"고려대학교 프런티어관", "버디 지우", "버디 준서"}  # 해설사 행 없음
     assert targets["고려대학교 프런티어관"]["revenue"] == 105000 + 114000 and targets["고려대학교 프런티어관"]["meals"] == 0
-    j = targets["버디 지우"]  # 1월 동행 4회 활동비 120,000 (앨범·보증금 제외) · 승인 식비 18,000 · 대기 1건
-    assert (j["revenue"], j["fee"], j["meals"], j["payout"], j["status"]) == (120000, 12000, 18000, 126000, "meal_pending")
+    j = targets["버디 지우"]  # 1월 동행 4회 활동비 120,000 (앨범·보증금 제외) × 정산율 75% · 승인 식비 18,000 · 대기 1건
+    assert (j["revenue"], j["fee"], j["meals"], j["payout"], j["status"]) == (120000, 30000, 18000, 108000, "meal_pending")
+    assert j["payout_rate"] == 0.75 and targets["버디 준서"]["payout_rate"] == 0.7 and targets["버디 준서"]["fee"] == 9000
     assert s["meal_refund_total"] == 40000 + 2000 and s["total"] == sum(r["revenue"] for r in s["items"])
-    # 판매가(숙박 219,000 + 활동비 150,000 + 앨범 5,000) − 원가(대학 90% + 버디 90%) = 이익 (식비·보증금 제외)
+    # 판매가(숙박 219,000 + 활동비 150,000 + 앨범 5,000) − 원가(대학 90% + 버디 항목별 정산율) = 이익 (식비·보증금 제외)
     p = s["profit"]
     assert (p["sales_dorm"], p["sales_buddy"], p["sales_album"], p["sales"]) == (219000, 150000, 5000, 374000)
-    assert (p["cost_university"], p["cost_buddy"], p["cost_other"]) == (197100, 135000, 0)
-    assert p["profit"] == 41900 == 21900 + 15000 + 5000 and p["margin"] == 0.112
+    assert (p["cost_university"], p["cost_buddy"], p["cost_other"]) == (197100, 90000 + 21000, 0)  # 지우 75% · 준서 70%
+    assert p["profit"] == 65900 == 21900 + 39000 + 5000 and p["margin"] == 0.176
 
 
-def test_admin_courses(client, univ_admin):
-    rows = client.get("/api/v1/admin/tours", headers=univ_admin).json()["items"]
+def test_settlements_univ_admin_sees_own_dorm_only(client, univ_admin):
+    """대학 담당자: 자기 학교 숙박 행만, 버디 행·수익 구조 없음"""
+    s = client.get("/api/v1/admin/settlements", headers=univ_admin).json()
+    assert [r["target"] for r in s["items"]] == ["고려대학교 프런티어관"]
+    assert s["items"][0]["payout"] == 219000 - 21900 and s["total"] == 219000
+    assert s["profit"] is None and s["meal_refund_total"] == 0
+
+
+def test_admin_courses(client, univ_admin, operator):
+    assert client.get("/api/v1/admin/tours", headers=univ_admin).status_code == 403  # 코스 관리는 운영자만
+    rows = client.get("/api/v1/admin/tours", headers=operator).json()["items"]
     assert len(rows) == 5
     by_id = {r["id"]: r for r in rows}
     assert by_id[3]["places"] == ["성북근현대문학관", "수연산방(이태준 가옥)", "심우장", "길상사"] and by_id[3]["place_count"] == 4

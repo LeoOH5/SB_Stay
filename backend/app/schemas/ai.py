@@ -57,6 +57,7 @@ class StoryOut(BaseModel):
     sources: list[Source]
     grounded: bool  # false면 화면은 "자료에 없다" 안내
     ai: bool = False  # LLM이 쓴 답이면 true, 규칙 기반 검색이면 false
+    questions_left: int | None = None  # v3.4 무료 이용자가 질문했을 때 오늘 남은 질문 수. 소개·버디 이용자는 null
 
 
 # ---------- AI-03 버디 매칭 ----------

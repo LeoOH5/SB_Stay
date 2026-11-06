@@ -1,29 +1,30 @@
 """식비 청구·버디 정산 계산 (버디 본인 /buddy/* 와 운영자 /admin/* 공용).
 
 버디 항목 가격 = 활동비 + 앨범 + 식사 보증금. 앨범(5,000)은 전액 플랫폼 수입이라 버디 몫이 아니다.
-버디 몫 = 활동비 − 수수료 10% + 승인된 식비(수수료 없음).
+버디 몫 = round(활동비 × 확정 때 고정한 정산율) + 승인된 식비(수수료 없음). 정산율은 services/grades.
 """
 import re
 from calendar import monthrange
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core import rules
-from app.core.config import get_settings
 from app.models.booking import Booking, BookingItem, MealClaim
 from app.models.supply import BuddyProfile
 from app.models.user import User
 from app.schemas.buddy import AdminMealClaimOut, MealClaimOut
-from app.services.booking_state import album_fee, meal_sums
+from app.services import grades
+from app.services.booking_state import activity_fee, meal_sums
 
 
-def gross_fee_net(it: BookingItem) -> tuple[int, int, int]:
-    """버디 항목의 (활동비, 수수료, 수수료 뺀 금액). 식사 보증금·앨범 제외"""
-    gross = it.price - (it.meal_deposit or 0) - album_fee(it)
-    fee = round(gross * get_settings().platform_fee_rate)
-    return gross, fee, gross - fee
+def gross_fee_net(db: Session, it: BookingItem) -> tuple[int, int, int, Decimal]:
+    """버디 항목의 (활동비, 플랫폼 몫, 버디 몫, 정산율). 식사 보증금·앨범 제외"""
+    gross, rate = activity_fee(it), grades.item_rate(db, it)
+    net = grades.buddy_net(gross, rate)
+    return gross, gross - net, net, rate
 
 
 def traveler_name(db: Session, booking: Booking) -> str:

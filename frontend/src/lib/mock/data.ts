@@ -1,7 +1,7 @@
 // 목 데이터 — docs/api-detail + docs/v3/CONTRACT.md 의 Response 형태. 날짜는 2027년 1월(겨울방학), 가격은 가정값.
 // v3: 해설사 없음, 코스(tours)는 무료, 예약 항목은 숙박(dorm) + 버디(buddy). 화면 그림: docs/v3/screens
 import type {
-  Booking, Buddy, BuddyStatus, ContentDoc, Dashboard, DormRoom, MealClaimStatus, Notification, Package, Place, QuizQuestion,
+  Booking, Buddy, BuddyGrade, BuddyStatus, ContentDoc, Dashboard, DormRoom, MealClaimStatus, Notification, Package, Place, QuizQuestion,
   ReportCategory, ReportStatus, Review, Tour, University, User,
 } from "../types";
 
@@ -23,12 +23,14 @@ export const universities: University[] = [
 export const users: Record<string, User> = {
   "emma@example.com": { id: 1, name: "Emma Clark", email: "emma@example.com", role: "tourist", university_id: null, language: "en" },
   "yuki@example.com": { id: 2, name: "Yuki Sato", email: "yuki@example.com", role: "tourist", university_id: null, language: "en" },
+  "noah@example.com": { id: 27, name: "Noah Becker", email: "noah@example.com", role: "tourist", university_id: null, language: "en" },
   "jiwoo@a-univ.ac.kr": { id: 3, name: "지우", email: "jiwoo@a-univ.ac.kr", role: "buddy", university_id: 1, language: "ko", calendar_connected: false, birth_date: "2004-05-02" },
+  "sua@a-univ.ac.kr": { id: 17, name: "수아", email: "sua@a-univ.ac.kr", role: "buddy", university_id: 1, language: "ko", calendar_connected: false, birth_date: "2005-04-20" },
   "admin@a-univ.ac.kr": { id: 5, name: "고려대학교 프런티어관 담당자", email: "admin@a-univ.ac.kr", role: "univ_admin", university_id: 1, language: "ko" },
   "operator@sbstay.app": { id: 6, name: "운영자", email: "operator@sbstay.app", role: "operator", university_id: null, language: "ko" },
 };
 /** 로그인한 버디 계정 → buddy_profiles.id */
-export const buddyIdByEmail: Record<string, number> = { "jiwoo@a-univ.ac.kr": 31 };
+export const buddyIdByEmail: Record<string, number> = { "jiwoo@a-univ.ac.kr": 31, "sua@a-univ.ac.kr": 37 };
 
 export const dorms: DormRoom[] = [
   { id: 10, university: universities[0], building: "프런티어관", room_type: "double", price_per_night: 35000, open_from: "2027-01-05", open_to: "2027-02-20", available_rooms: 12, photos: ["/dorms/korea.jpg"], rules: ["체크인 15:00 / 체크아웃 11:00", "취사 금지, 공용 주방 이용", "외부인 출입 불가, 23:00 이후 정숙", "여권 정보는 예약 시점에만 입력"] },
@@ -89,37 +91,54 @@ export const stories: Record<number, { intro: string; qa: { q: string; a: string
 // ---- 버디 프로필 (상태는 buddyStatus, 관리자 정보는 buddyAdminInfo)
 export const buddies: Buddy[] = [
   { id: 31, name: "지우", university: "고려대학교", university_id: 1, major: "국어국문", year: 3, languages: ["ko", "en", "ja"], interests: ["literature", "walking", "cafe"], intro: "성북동 골목이랑 캠퍼스 맛집을 같이 걸어요. 비건 식당도 몇 곳 알아요.", avatar: "illust_01", available_dates: ["2027-01-13", "2027-01-14", "2027-01-16", "2027-01-17", "2027-01-20", "2027-01-22"], rating: 4.8, review_count: 9, hourly_fee: 15000,
-    personality: ["calm", "listener"], style: ["slow_walk", "cafe_break"], can_help: ["vegan_food", "photo", "subway"], sub_scores: { kind: 4.9, talk: 4.7, punctual: 5.0, local: 4.6 }, tags_top: ["fun_talk", "good_photos", "knows_food"], walk_count: 12, can_drive: false, verified: { school_email: true, trained: true } },
+    personality: ["calm", "listener"], style: ["slow_walk", "cafe_break"], can_help: ["vegan_food", "photo", "subway"], sub_scores: { kind: 4.9, talk: 4.7, punctual: 5.0, local: 4.6 }, tags_top: ["fun_talk", "good_photos", "knows_food"], walk_count: 12, can_drive: false, grade: "growth", verified: { school_email: true, trained: true } },
   { id: 32, name: "민호", university: "국민대학교", university_id: 2, major: "사학과", year: 2, languages: ["ko", "en"], interests: ["independence", "photo"], intro: "성북동 답사 동아리에서 활동해요. 사진 찍기 좋은 골목을 알아요.", avatar: "illust_02", available_dates: ["2027-01-13", "2027-01-15", "2027-01-20"], rating: 4.7, review_count: 8, hourly_fee: 15000,
-    personality: ["lively", "humor"], style: ["explore", "photo_walk"], can_help: ["photo", "subway"], sub_scores: { kind: 4.7, talk: 4.6, punctual: 4.8, local: 4.7 }, tags_top: ["knows_food", "easy_guide"], walk_count: 8, can_drive: true, verified: { school_email: true, trained: true } },
+    personality: ["lively", "humor"], style: ["explore", "photo_walk"], can_help: ["photo", "subway"], sub_scores: { kind: 4.7, talk: 4.6, punctual: 4.8, local: 4.7 }, tags_top: ["knows_food", "easy_guide"], walk_count: 8, can_drive: true, grade: "basic", verified: { school_email: true, trained: true } },
   { id: 37, name: "수아", university: "고려대학교", university_id: 1, major: "영어영문", year: 2, languages: ["ko", "en"], interests: ["photo", "cafe"], intro: "사진 찍는 걸 좋아해요. 성북동 예쁜 카페 골목을 같이 걸어요.", avatar: "illust_05", available_dates: ["2027-01-12", "2027-01-13", "2027-01-14", "2027-01-15"], rating: 4.8, review_count: 7, hourly_fee: 15000,
-    personality: ["lively", "listener"], style: ["photo_walk", "cafe_break"], can_help: ["photo", "shopping", "subway"], sub_scores: { kind: 4.8, talk: 4.9, punctual: 4.7, local: 4.6 }, tags_top: ["good_photos", "fun_talk"], walk_count: 7, can_drive: false, verified: { school_email: true, trained: true } },
+    personality: ["lively", "listener"], style: ["photo_walk", "cafe_break"], can_help: ["photo", "shopping", "subway"], sub_scores: { kind: 4.8, talk: 4.9, punctual: 4.7, local: 4.6 }, tags_top: ["good_photos", "fun_talk"], walk_count: 7, can_drive: false, grade: "top", verified: { school_email: true, trained: true } },
   { id: 38, name: "현우", university: "고려대학교", university_id: 1, major: "기계공학", year: 3, languages: ["ko", "en"], interests: ["walking", "royal"], intro: "정릉과 성곽길을 자주 걸어요. 할랄 식당도 안내할 수 있어요.", avatar: "illust_06", available_dates: ["2027-01-13", "2027-01-14", "2027-01-15"], rating: 4.7, review_count: 4, hourly_fee: 15000,
-    personality: ["calm"], style: ["slow_walk", "explore"], can_help: ["halal_food", "subway"], sub_scores: { kind: 4.7, talk: 4.6, punctual: 4.9, local: 4.8 }, tags_top: ["easy_guide"], walk_count: 4, can_drive: false, verified: { school_email: true, trained: true } },
+    personality: ["calm"], style: ["slow_walk", "explore"], can_help: ["halal_food", "subway"], sub_scores: { kind: 4.7, talk: 4.6, punctual: 4.9, local: 4.8 }, tags_top: ["easy_guide"], walk_count: 4, can_drive: false, grade: "basic", verified: { school_email: true, trained: true } },
   { id: 35, name: "서연", university: "국민대학교", university_id: 2, major: "영문학", year: 3, languages: ["ko", "en"], interests: ["literature", "craft"], intro: "영어 토론 동아리. 공예 체험 같이 가요.", avatar: "illust_05", available_dates: ["2027-01-13", "2027-01-17"], rating: 4.9, review_count: 6, hourly_fee: 15000,
-    personality: ["listener", "calm"], style: ["cafe_break"], can_help: ["vegan_food", "shopping"], sub_scores: { kind: 4.9, talk: 4.9, punctual: 4.8, local: 4.8 }, tags_top: ["cares_requests", "fun_talk"], walk_count: 6, can_drive: false, verified: { school_email: true, trained: true } },
+    personality: ["listener", "calm"], style: ["cafe_break"], can_help: ["vegan_food", "shopping"], sub_scores: { kind: 4.9, talk: 4.9, punctual: 4.8, local: 4.8 }, tags_top: ["cares_requests", "fun_talk"], walk_count: 6, can_drive: false, grade: "basic", verified: { school_email: true, trained: true } },
   { id: 33, name: "하린", university: "고려대학교", university_id: 1, major: "관광학", year: 4, languages: ["ko", "en", "zh"], interests: ["food", "cafe"], intro: "교환학생 버디 경험 2회. 성북동 국수 골목 안내해요.", avatar: "illust_03", available_dates: ["2027-01-14", "2027-01-16"], rating: 0, review_count: 0, hourly_fee: 15000,
-    personality: ["lively"], style: ["explore"], can_help: ["halal_food", "shopping"], sub_scores: null, tags_top: [], walk_count: 0, can_drive: false, verified: { school_email: true, trained: true } },
+    personality: ["lively"], style: ["explore"], can_help: ["halal_food", "shopping"], sub_scores: null, tags_top: [], walk_count: 0, can_drive: false, grade: "basic", verified: { school_email: true, trained: true } },
   { id: 34, name: "도윤", university: "고려대학교", university_id: 1, major: "경영", year: 2, languages: ["ko", "en"], interests: ["walking", "sports"], intro: "캠퍼스 투어와 야경 산책 담당.", avatar: "illust_04", available_dates: ["2027-01-20", "2027-01-21"], rating: 0, review_count: 0, hourly_fee: 15000,
-    personality: ["humor"], style: ["explore"], can_help: ["photo"], sub_scores: null, tags_top: [], walk_count: 0, can_drive: false, verified: { school_email: true, trained: false } },
+    personality: ["humor"], style: ["explore"], can_help: ["photo"], sub_scores: null, tags_top: [], walk_count: 0, can_drive: false, grade: "basic", verified: { school_email: true, trained: false } },
   { id: 36, name: "준서", university: "고려대학교", university_id: 1, major: "건축학", year: 4, languages: ["ko", "en", "ja"], interests: ["hanok", "architecture"], intro: "근대 건축과 한옥 이야기를 좋아해요.", avatar: "illust_06", available_dates: ["2027-01-14", "2027-01-15"], rating: 4.3, review_count: 5, hourly_fee: 15000,
-    personality: ["humor"], style: ["explore", "photo_walk"], can_help: ["photo"], sub_scores: { kind: 4.1, talk: 4.3, punctual: 4.2, local: 4.6 }, tags_top: ["knows_food"], walk_count: 5, can_drive: true, verified: { school_email: true, trained: true } },
+    personality: ["humor"], style: ["explore", "photo_walk"], can_help: ["photo"], sub_scores: { kind: 4.1, talk: 4.3, punctual: 4.2, local: 4.6 }, tags_top: ["knows_food"], walk_count: 5, can_drive: true, grade: "basic", verified: { school_email: true, trained: true } },
 ];
 
 /** 초기 버디 상태 — BD-01 은 approved 만 노출 */
 export const buddyStatus: Record<number, BuddyStatus> = { 31: "approved", 32: "approved", 35: "approved", 37: "approved", 38: "approved", 33: "pending", 34: "pending", 36: "suspended" };
 
-/** 관리자 화면용 (AD-04): 학교 메일·나이·약속 동의·퀴즈 */
-export const buddyAdminInfo: Record<number, { email: string; age: number; school_email_verified: boolean; code_agreed: boolean; quiz_score: number | null }> = {
+/** 관리자 화면용 (AD-04): 학교 메일·나이·약속 동의·퀴즈 (한국 국적 확인은 모두 완료) */
+export const buddyAdminInfo: Record<number, { email: string; age: number; school_email_verified: boolean; code_agreed: boolean; quiz_score: number | null; korean_national?: boolean }> = {
   31: { email: "jiwoo@a-univ.ac.kr", age: 22, school_email_verified: true, code_agreed: true, quiz_score: 9 },
   32: { email: "minho@kookmin.ac.kr", age: 21, school_email_verified: true, code_agreed: true, quiz_score: 9 },
   33: { email: "harin@korea.ac.kr", age: 22, school_email_verified: true, code_agreed: true, quiz_score: 9 },
   34: { email: "doyun@korea.ac.kr", age: 20, school_email_verified: true, code_agreed: true, quiz_score: 7 },
   35: { email: "seoyeon@kookmin.ac.kr", age: 22, school_email_verified: true, code_agreed: true, quiz_score: 9 },
   36: { email: "junseo@korea.ac.kr", age: 24, school_email_verified: true, code_agreed: true, quiz_score: 9 },
-  37: { email: "sua@korea.ac.kr", age: 20, school_email_verified: true, code_agreed: true, quiz_score: 10 },
+  37: { email: "sua@a-univ.ac.kr", age: 20, school_email_verified: true, code_agreed: true, quiz_score: 10 },
   38: { email: "hyunwoo@korea.ac.kr", age: 23, school_email_verified: true, code_agreed: true, quiz_score: 8 },
 };
+/** v3.2 등급 실적 (평가 기간 = 2026 여름방학 + 2027 겨울방학, 2027-01-14 기준) + 휴면.
+ * 지우 성장(여름 6회 + 1월 3회 · 후기 4건 평균 4.5), 수아 우수(여름 15회 · 후기 6건 4.67)지만 8/19 이후 활동이 없어 1/7부터 휴면 */
+export interface GradeRow { grade: BuddyGrade; rating: number | null; walks: number; reviews: number; needs_recheck: boolean; dormant_since: string | null }
+export const GRADE_UPDATED = TODAY;
+export const buddyGrades: Record<number, GradeRow> = {
+  31: { grade: "growth", rating: 4.5, walks: 9, reviews: 4, needs_recheck: false, dormant_since: null },
+  37: { grade: "top", rating: 4.67, walks: 15, reviews: 6, needs_recheck: true, dormant_since: "2027-01-07" },
+  32: { grade: "basic", rating: 4.7, walks: 2, reviews: 1, needs_recheck: false, dormant_since: null },
+  35: { grade: "basic", rating: 4.9, walks: 3, reviews: 2, needs_recheck: false, dormant_since: null },
+  36: { grade: "basic", rating: 4.3, walks: 4, reviews: 3, needs_recheck: false, dormant_since: null },
+  38: { grade: "basic", rating: 4.7, walks: 4, reviews: 3, needs_recheck: false, dormant_since: null },
+  33: { grade: "basic", rating: null, walks: 0, reviews: 0, needs_recheck: false, dormant_since: null },
+  34: { grade: "basic", rating: null, walks: 0, reviews: 0, needs_recheck: false, dormant_since: null },
+};
+/** 확정 때 고정한 정산율 (item_id → rate). 지우 1월 동행은 1/1 갱신 후 확정이라 75% */
+export const itemRates: Record<number, number> = { 3: 0.75, 31: 0.75, 41: 0.75, 52: 0.75, 13: 0.7, 62: 0.7, 63: 0.7, 81: 0.7 };
+
 /** 지우 정산 계좌 (응답은 마스킹) */
 export const BANK_ACCOUNT = "신한 110-123-456482";
 export const BANK_ACCOUNT_MASKED = "신한 110-***-***482";

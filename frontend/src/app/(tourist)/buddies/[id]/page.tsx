@@ -4,7 +4,7 @@
 // 날짜는 장바구니 숙박(또는 ?from&to) 기간 안에서만. "이 버디로 정하기" → 요청 단계(/buddies/[id]/request)
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Button, Chip, DormPhoto, Icon, PhotoTile, ScoreBar, Spinner, TagChip, TopBar } from "@/components/ui";
+import { Button, Chip, DormPhoto, GradeBadge, Icon, PhotoTile, ScoreBar, Spinner, TagChip, TopBar } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { errMsg, INTEREST_LABEL, okv, parseDate } from "@/components/tourist/format";
 import { Avatar, BottomBar, InfoRow, SectionHead, TotalLine } from "@/components/tourist/v3";
@@ -103,7 +103,7 @@ function Detail() {
           <div className="flex items-center gap-5 pt-2">
             <Avatar name={buddy.name} size="lg" />
             <div className="min-w-0">
-              <h1 className="text-[24px] font-bold leading-tight text-ink">{buddy.name}</h1>
+              <h1 className="flex items-center gap-2 text-[24px] font-bold leading-tight text-ink">{buddy.name}<GradeBadge grade={buddy.grade} /></h1>
               <div className="mt-1 text-[14.5px] text-muted">{buddy.university} {buddy.major} {buddy.year}학년</div>
               {(buddy.verified.school_email || buddy.verified.trained) && (
                 <div className="mt-1 flex items-center gap-1.5 text-[13.5px] font-semibold text-navy">

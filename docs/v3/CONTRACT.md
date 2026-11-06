@@ -15,7 +15,7 @@ v3 화면(해설사 없음, 버디만, 쪽빛 남색 + 감 주황, 로고 C '한
 ## 1. 숫자 규칙 (core/config 또는 상수)
 | 이름 | 값 | 뜻 |
 |---|---|---|
-| `platform_fee_rate` | 0.10 | 숙박·버디 활동비에만. 식사 보증금에는 수수료 없음. 앨범 요금은 전액 플랫폼 수입 |
+| `platform_fee_percent` | 10 (정수 %) | 숙박에만 (v3.2: 버디 활동비는 등급 정산율 → §12). 식사 보증금에는 수수료 없음. 앨범 요금은 전액 플랫폼 수입 |
 | `MEAL_LIMIT` | 20000 | 식사 1회 한도(2인). 보증금 = 횟수 × 20000 |
 | `MEAL_MAX` | 4 | 버디 항목 1개당 식사 최대 횟수 |
 | `ALBUM_FEE` | 5000 | 여행 앨범 옵션 |
@@ -27,6 +27,7 @@ v3 화면(해설사 없음, 버디만, 쪽빛 남색 + 감 주황, 로고 C '한
 
 버디 항목 가격 = `hourly_fee × 시간` + (`album` ? 5000 : 0) + `meal_count × 20000`.
 `booking.platform_fee = round((total_price − Σ meal_deposit − Σ album_fee) × 0.10) + Σ album_fee` (앨범은 버디 정산에 들어가지 않는다).
+v3.2부터: `booking.platform_fee = round(숙박 × 0.10) + Σ(활동비 − round(활동비 × 정산율)) + Σ album_fee` (§12).
 
 ## 2. DB 변경 — Alembic 1개: `v3_buddy_only` (down_revision = `776d75a1c756`)
 - `users` + `birth_date DATE NULL`
@@ -114,6 +115,7 @@ BD-01 쿼리 추가: `personality`, `style`, `can_help`, `university_id`
 - 정산: `GET /buddy/settlement?month=2027-01` →
   `{month, pay_date:"2027-02-28", account(마스킹), walks, gross, fee, net, meals_approved, meals_pending, payout, items:[{item_id, date, tourist, gross, fee, meal_approved, meal_pending, net, status:"confirmed"|"meal_pending"}]}`
   gross = 활동비(앨범 제외), fee = round(gross×0.1), net = gross − fee, payout = net 합 + meals_approved.
+  (v3.2: net = round(gross × 항목 payout_rate), fee = gross − net — §12)
 - `GET /buddy/earnings` amount는 수수료 뺀 금액(net)으로.
 - 지원 5단계 (`/buddy/apply/*`):
   - `GET /buddy/apply` → `{email_verified, school_email, university, age_ok, code_agreed, quiz_score, quiz_passed, profile_done, status}`
@@ -152,3 +154,23 @@ BD-01 쿼리 추가: `personality`, `style`, `can_help`, `university_id`
 - 탭: 관광객 홈 · 숙박 · 코스 · 내 여행 / 버디 홈 · 요청함 · 일정 · 내 활동.
 - 로고 SVG: `frontend/public/brand/*.svg` (C안).
 - 목업(`lib/mock`)도 이 문서의 새 경로를 모두 지원한다(USE_MOCK=true에서 전 화면 시연 가능해야 함).
+
+## 12. v3.2 버디 등급·정산율·휴면·국적 (Alembic `v3d_buddy_grade`, down_revision `v3c_place_photo`)
+- 규칙(`app/core/rules.py` · 프론트 `lib/codes.ts`): `GRADES` 기본 basic(조건 없음, 0.700) · 성장 growth(평점 ≥ 4.3, 완료 ≥ 5, 후기 ≥ 3, 0.750) · 우수 top(≥ 4.5, ≥ 15, ≥ 5, 0.800). `VACATIONS` = [(이름, 시작, 끝)] (2025 겨울 2025-12-22~2026-02-28, 2026 여름 2026-06-22~08-31, 2027 겨울 2026-12-21~2027-02-28). `DORMANT_DAYS` 30.
+- 평가 기간 = 오늘이 든 방학(없으면 가장 최근) + 직전 방학. 실적 = 그 기간 안의 확정·날짜 ≤ 오늘 버디 항목 수, 그 항목 후기 평균·개수.
+- DB: `buddy_profiles` + `grade VARCHAR(10) DEFAULT 'basic'`, `payout_rate NUMERIC(4,3) DEFAULT 0.700`, `grade_updated_at DATE`, `needs_recheck BOOL DEFAULT false`, `dormant_since DATE`, `active_on DATE`(마지막 요청 수락·가능 날짜 수정·활동 확인), `korean_national_confirmed_at TIMESTAMPTZ`. `booking_items` + `payout_rate NUMERIC(4,3) NULL`(버디 항목 확정 때 고정).
+- 서비스 `services/grades.py`: `evaluate(db, buddy, today)`, `recompute_all(db, today)`(등급 → 휴면 순, 바뀐 버디 반환), `lock_rate`, `buddy_net(gross, rate)`.
+- 휴면 = 운영 기간만 세어 30일간 활동(완료 동행·요청 수락·가능 날짜 수정)이 없음 → `needs_recheck`. 목록·AI 추천에서 빠지고 새 예약 409 `BUDDY_RESTING`. 휴면 중·복귀 후 첫 동행 전에는 등급 재산정을 하지 않는다(정산율 불이익 없음).
+- API: BuddyOut `grade` · `GET /buddy/grade` · `POST /buddy/confirm-active` · `/buddy/settlement` + `grade, payout_rate`, items[].`payout_rate` · AdminBuddyRow + `korean_national, grade, payout_rate, eval_rating, eval_walks, eval_reviews, needs_recheck` · `POST /admin/buddies/recompute-grades`(operator) · SettlementRow + `payout_rate`. 자세한 모양은 `docs/api-spec.md` v3.2.
+- 국적: `POST /buddy/apply/verify` + `korean_national: bool` (아니면 422 `NOT_KOREAN_NATIONAL`), `/buddy/apply` + `korean_national`, AD-04 승인 조건에 국적 확인.
+
+## 13. v3.4 세 가지 이용 방식 · 무료 AI 산책 코스 (Alembic `v3e_ai_usage`, down_revision `v3d_buddy_grade`)
+- 이용 방식: ① 숙박 + 버디(유료, `BUDDY_REQUIRED`·`BUDDY_OUT_OF_STAY` 그대로) ② 버디만(유료, 숙박 없는 버디 예약 허용 — 그대로) ③ 무료 AI 산책 코스(기본 입구, ②·①로 이끄는 제한판).
+- 무료/버디 판정 `services/free_tier.py`: 결제(`paid_at`)했고 취소되지 않은 예약에 살아 있는 버디 항목(requested·approved·confirmed)이 있으면 `buddy`, 아니면 `free`. 관광객이 아닌 역할은 제한 없음(`buddy`).
+- `GET /auth/me/plan` (AU-09) → `{plan: "free"|"buddy", ai_question_limit: 3|null, ai_questions_left_today: int|null, ai_questions_used_today: int}`.
+- AI-02 `/ai/story`: `free`는 질문(`question` 있음)을 하루 `FREE_AI_QUESTIONS`=3번. 넘으면 **429 `AI_LIMIT`**. 장소 소개(질문 없음)는 세지 않음. StoryOut + `questions_left: int|null`. 하루 = `get_settings().today()`.
+- `POST /tours/{id}/survey` (TR-05, tourist) body `{satisfaction 1~5, pain, want_buddy}` → 201 `{id, tour_id, satisfaction, pain, want_buddy, plan, created_at}`. pain 코드: ads · question_limit · route_fit · no_help · none (`rules.SURVEY_PAIN`, 프론트 `codes.SURVEY_PAIN`).
+- DB: 새 표 `ai_usage`(id, user_id FK users, day DATE, questions SMALLINT, UNIQUE(user_id, day)), `course_surveys`(id, user_id FK, tour_id FK tours, satisfaction, pain VARCHAR(20), want_buddy, plan VARCHAR(10), created_at).
+- 정직한 제한만: 길 안내를 틀리게 하지 않고, 코스 순서·데이터를 바꾸지 않고, 일부러 늦추지 않는다. 광고는 '광고'·'예시 광고' 표시, 5초 뒤 건너뛰기(이야기는 그동안 불러옴), 지어낸 가게만. 할인 금액 약속 없음.
+- 화면(T08 · T08a 광고 · T08b 질문 한도 · T08c 완료 설문 · T08d 설문 뒤 제안 · T08e 도움 안내 · T09a 버디만): 업셀 버튼은 ②버디 목록(`/buddies?course=`)이 먼저, ①숙박 + 버디(`/stay`)는 보조 링크.
+- 시드: 무료 데모 관광객 `noah@example.com`(예약 없음). 목업도 같은 규칙(`lib/mock`: `/auth/me/plan`, AI_LIMIT, `/tours/{id}/survey`).

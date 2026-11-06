@@ -1,5 +1,6 @@
 """예약·소통: bookings, booking_items, reviews, messages, notifications, meal_claims, reports"""
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
@@ -8,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Numeric,
     SmallInteger,
     String,
     Text,
@@ -59,6 +61,7 @@ class BookingItem(Base):
     meal_count: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
     meal_deposit: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # 수수료 없음
     album: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    payout_rate: Mapped[Decimal | None] = mapped_column(Numeric(4, 3))  # buddy: 확정 때 고정한 버디 정산율
 
 
 class Review(Base, TimestampMixin):

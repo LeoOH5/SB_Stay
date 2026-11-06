@@ -24,6 +24,8 @@ export type ReportAction = "warn" | "suspend" | "unsuspend" | "dismiss";
 export type MealClaimStatus = "requested" | "approved" | "rejected";
 export type BuddyStatus = "pending" | "approved" | "suspended";
 export type PlanWarning = "NO_BUDDY" | "OVER_BUDGET";
+/** v3.2 버디 등급 (라벨·기준은 codes.ts GRADE·GRADE_RULES) */
+export type BuddyGrade = "basic" | "growth" | "top";
 
 export interface User {
   id: number; name: string; email: string; role: Role; university_id: number | null;
@@ -67,6 +69,8 @@ export interface Buddy {
   tags_top: ReviewTag[];
   walk_count: number;
   verified: { school_email: boolean; trained: boolean };
+  /** 공개 배지 (화면은 성장·우수만 표시) */
+  grade?: BuddyGrade;
   /** BD-02 상세에서만 (최대 3개) */
   recent_activities?: PublicActivity[];
   reviews?: Review[];
@@ -87,7 +91,15 @@ export interface PlanItem {
 }
 export interface PlanDay { date: string; items: PlanItem[] }
 export interface AiPlan { plan_id: string; reason: string; total_price: number; days: PlanDay[]; warnings: PlanWarning[]; ai?: boolean }
-export interface AiStory { answer: string; sources: { title: string; url?: string }[]; grounded: boolean }
+/** questions_left: v3.4 무료 이용자가 질문했을 때 오늘 남은 질문 수 (소개·버디 이용자는 null) */
+export interface AiStory { answer: string; sources: { title: string; url?: string }[]; grounded: boolean; questions_left?: number | null }
+
+// ---- v3.4 이용 방식 (AU-09 GET /auth/me/plan) · 코스 완료 설문 (TR-05)
+export type PlanKind = "free" | "buddy";
+export interface MyPlan { plan: PlanKind; ai_question_limit: number | null; ai_questions_left_today: number | null; ai_questions_used_today: number }
+export type SurveyPain = "ads" | "question_limit" | "route_fit" | "no_help" | "none";
+export interface CourseSurveyBody { satisfaction: number; pain: SurveyPain; want_buddy: boolean }
+export interface CourseSurvey extends CourseSurveyBody { id: number; tour_id: number; plan: PlanKind; created_at: string }
 export interface BuddyMatch { reason: string; matches: { buddy_id: number; score: number; reason: string }[] }
 
 // ---- 요청 사항
@@ -196,17 +208,40 @@ export interface Activity {
 }
 /** GET /buddy/settlement?month= */
 export interface BuddySettlementItem {
-  item_id: number; date: string; tourist: string; gross: number; fee: number; meal_approved: number; meal_pending: number; net: number;
+  item_id: number; date: string; tourist: string; gross: number;
+  /** 예약 확정 때 고정한 정산율 (0.75 = 75%) */
+  payout_rate: number;
+  /** 플랫폼 몫 = gross − net */
+  fee: number; meal_approved: number; meal_pending: number;
+  /** round(gross × payout_rate) */
+  net: number;
   status: "confirmed" | "meal_pending";
 }
 export interface BuddySettlement {
-  month: string; pay_date: string; account: string | null; walks: number; gross: number; fee: number; net: number;
+  month: string; pay_date: string; account: string | null;
+  /** 지금 등급·정산율 (항목마다는 items[].payout_rate) */
+  grade: BuddyGrade; payout_rate: number;
+  walks: number; gross: number; fee: number; net: number;
   meals_approved: number; meals_pending: number; payout: number; items: BuddySettlementItem[];
+}
+/** GET /buddy/grade · POST /buddy/confirm-active */
+export interface BuddyGradeInfo {
+  grade: BuddyGrade; payout_rate: number;
+  /** 평가 기간 = 현재 + 직전 운영 방학 */
+  window: { from: string | null; to: string | null; label: string };
+  /** 평가 기간 완료 동행의 평균 평점·동행 수·후기 수 */
+  stats: { rating: number | null; walks: number; reviews: number };
+  /** 다음 등급과 그 기준값 (우수면 null) */
+  next: { grade: BuddyGrade; payout_rate: number; need: { rating: number; walks: number; reviews: number } } | null;
+  /** 30일간 활동이 없어 요청 받기를 멈춤 */
+  needs_recheck: boolean; dormant_since: string | null; updated_at: string | null;
 }
 /** 버디 지원 5단계 — GET /buddy/apply */
 export interface BuddyApplyStatus {
   email_verified: boolean; school_email: string | null; university: string | null; age_ok: boolean; code_agreed: boolean;
   quiz_score: number | null; quiz_passed: boolean; profile_done: boolean;
+  /** 대한민국 국적 확인 (외국인 유학생은 지원 불가) */
+  korean_national: boolean;
   status: BuddyStatus | "none";
 }
 export interface BuddyApplyEmailOut { sent: boolean; university: string; dev_code?: string | null }
@@ -230,6 +265,12 @@ export interface AdminBuddyRow {
   age: number | null;
   school_email_verified: boolean; code_agreed: boolean; quiz_score: number | null; report_count: number; can_help: CanHelp[];
   can_drive: boolean; walk_count?: number; rating?: number;
+  /** 한국 국적 확인 */
+  korean_national: boolean;
+  /** v3.2 저장된 등급·정산율 + 지금 평가 기간 실적 */
+  grade: BuddyGrade; payout_rate: number; eval_rating: number | null; eval_walks: number; eval_reviews: number;
+  /** 휴면 (목록·AI 추천에서 빠짐) */
+  needs_recheck: boolean;
 }
 export interface AdminCourseRow {
   id: number; title: string; theme: string; duration_min: number; places: string[]; place_count: number;
@@ -251,11 +292,13 @@ export interface SettlementRow {
   /** 승인된 식비 (버디만, 수수료 없음) */
   meals: number;
   payout: number; status: string;
+  /** 버디: 항목별 고정 정산율의 실효값 (revenue − fee) / revenue */
+  payout_rate?: number | null;
 }
 /** 판매가 − 원가 = 이익. 식사 보증금은 통과 금액이라 판매가에 넣지 않는다 */
 export interface SettlementProfit {
   sales: number; sales_dorm: number; sales_buddy: number; sales_album: number;
-  /** 대학 지급 (숙박비 × 90%) · 버디 지급료 (활동비 × 90%, 식비 제외) · 기타 원가 (카드 수수료 등, 지금은 0) */
+  /** 대학 지급 (숙박비 × 90%) · 버디 지급료 (활동비 × 항목별 정산율 70~80%, 식비 제외) · 기타 원가 (카드 수수료 등, 지금은 0) */
   cost_university: number; cost_buddy: number; cost_other: number;
   profit: number;
   /** profit / sales (소수 셋째 자리) */
@@ -265,6 +308,7 @@ export interface Settlements {
   period?: { from: string; to: string }; total: number; items: SettlementRow[];
   /** 여행자에게 돌려줄 남은 식비 보증금 합 */
   meal_refund_total: number;
-  profit: SettlementProfit;
+  /** 운영자만. 대학 담당자에게는 null (자기 학교 숙박 행만 받는다) */
+  profit: SettlementProfit | null;
 }
 export interface ListResponse<T> { items: T[]; next_cursor: string | null }

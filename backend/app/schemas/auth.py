@@ -46,3 +46,11 @@ class SignupIn(BaseModel):
 class MeUpdateIn(BaseModel):
     language: str | None = None
     name: str | None = None
+
+
+class PlanOut(BaseModel):
+    """AU-09 v3.4 이용 방식. free = 무료 AI 산책 코스(질문 하루 3번), buddy = 결제한 버디 예약이 있음(제한 없음)"""
+    plan: str  # free | buddy
+    ai_question_limit: int | None = None  # free: 3, buddy: null(제한 없음)
+    ai_questions_left_today: int | None = None
+    ai_questions_used_today: int = 0

@@ -1,6 +1,7 @@
 """BD-01~02 버디 목록·상세 (A 담당) — 경로·응답 형식은 docs/api-detail/BD-*.md 기준.
 
 공개 조회라 로그인 없이 호출된다. 승인(approved)된 버디만 보여 주고(신고 누적으로 정지되면 자동으로 빠짐),
+v3.2: 휴면(needs_recheck) 버디는 목록에서 빠진다(상세 링크는 열림). 공개 배지로 등급(grade)을 내보낸다.
 연락처 등 개인정보는 내보내지 않는다. 버디 본인용 API(BD-03~07)는 B 담당 buddy_me.py에 있다.
 """
 from datetime import date
@@ -56,6 +57,7 @@ def to_out(db: Session, b: BuddyProfile, detail: bool = False) -> BuddyOut | Bud
         hourly_fee=b.hourly_fee, available_dates=_dates(db, b.id), rating=average(reviews) or 0, review_count=len(reviews),
         personality=b.personality or [], style=b.style or [], can_help=b.can_help or [], can_drive=bool(b.can_drive),
         sub_scores=sub_score_average(reviews), tags_top=top_tags(reviews), walk_count=walk_count(db, b.id), verified=verified(b),
+        grade=b.grade or "basic",
     )
     if not detail:
         return out
@@ -75,8 +77,8 @@ def list_buddies(
     personality: str | None = None, style: str | None = None, can_help: str | None = None, university_id: int | None = None,
     cursor: str | None = None, db: Session = Depends(get_db),
 ) -> ListResponse[BuddyOut]:
-    """BD-01: 승인된 버디만. 언어·가능 날짜·관심사·전공·성향·스타일·도움·대학으로 거른다. cursor는 받기만 한다."""
-    q = select(BuddyProfile).where(BuddyProfile.status == "approved").order_by(BuddyProfile.id)
+    """BD-01: 승인되고 휴면이 아닌 버디만. 언어·가능 날짜·관심사·전공·성향·스타일·도움·대학으로 거른다. cursor는 받기만 한다."""
+    q = select(BuddyProfile).where(BuddyProfile.status == "approved", BuddyProfile.needs_recheck.is_(False)).order_by(BuddyProfile.id)
     if date:
         q = q.where(BuddyProfile.id.in_(select(BuddyAvailability.buddy_id).where(BuddyAvailability.date == date)))
     if major:

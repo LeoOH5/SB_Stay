@@ -1,5 +1,6 @@
 "use client";
-// B05 내 활동 — GET /buddy/settlement?month= (동행 수·수수료 뺀 활동비·식비·받을 돈), GET /buddy/meal-claims,
+// B05 내 활동 — GET /buddy/grade (등급·정산율·실적, 휴면이면 POST /buddy/confirm-active),
+// GET /buddy/settlement?month= (동행 수·정산율 적용 활동비·식비·받을 돈), GET /buddy/meal-claims,
 // BD-05 GET /buddy/profile, GET /buddy/apply (학교 인증·교육 퀴즈)
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -7,11 +8,11 @@ import { useEffect, useState } from "react";
 import { DEMO_TODAY, krDate } from "@/components/buddy/format";
 import { LoginGate } from "@/components/buddy/login-gate";
 import { InfoRow, MonthSelect } from "@/components/buddy/ui";
-import { Hero, LinkButton, Spinner, StatusPill, TagChip } from "@/components/ui";
-import { CAN_HELP, PERSONALITY, label } from "@/lib/codes";
-import { get, won } from "@/lib/api";
+import { Banner, Button, GoalBar, Hero, LinkButton, Spinner, StatusPill, TagChip } from "@/components/ui";
+import { CAN_HELP, GRADE, PERSONALITY, label, pct } from "@/lib/codes";
+import { get, post, won } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
-import type { BuddyApplyStatus, BuddyProfile, BuddySettlement, ListResponse, MealClaim } from "@/lib/types";
+import type { BuddyApplyStatus, BuddyGradeInfo, BuddyProfile, BuddySettlement, ListResponse, MealClaim } from "@/lib/types";
 
 const MONTHS = ["2026-12", "2027-01", "2027-02"];
 const CLAIM_LABEL: Record<string, string> = { approved: "승인", requested: "확인 중", rejected: "반려" };
@@ -24,6 +25,7 @@ export default function Page() {
   const [claims, setClaims] = useState<MealClaim[] | null>(null);
   const [profile, setProfile] = useState<BuddyProfile | null>(null);
   const [apply, setApply] = useState<BuddyApplyStatus | null>(null);
+  const [grade, setGrade] = useState<BuddyGradeInfo | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -34,6 +36,7 @@ export default function Page() {
     get<ListResponse<MealClaim>>("/buddy/meal-claims").then((r) => setClaims(r.items)).catch(() => setClaims([]));
     get<BuddyProfile>("/buddy/profile").then(setProfile).catch(() => setProfile(null));
     get<BuddyApplyStatus>("/buddy/apply").then(setApply).catch(() => setApply(null));
+    get<BuddyGradeInfo>("/buddy/grade").then(setGrade).catch(() => setGrade(null));
   }, []);
 
   const st = stByMonth[month] ?? null;
@@ -49,11 +52,13 @@ export default function Page() {
       <LoginGate />
 
       <div className="px-5">
+        {grade && <GradeCard g={grade} onActive={setGrade} />}
+
         {!st ? <Spinner /> : (
           <>
             <div className="divide-y divide-line">
               <InfoRow label="이번 달 동행" value={`${st.walks}회`} />
-              <InfoRow label="활동비 (수수료 10% 뺀 금액)" value={won(st.net)} />
+              <InfoRow label={`활동비 (정산율 ${pct(st.payout_rate)} 적용)`} value={won(st.net)} />
               <InfoRow label="식비 환급" value={won(st.meals_approved)} sub={st.meals_pending ? ` (확인 중 ${won(st.meals_pending)})` : ""} />
               <InfoRow label="받을 돈" value={<span className="text-navy">{won(st.payout)} · {krDate(st.pay_date)}</span>} />
             </div>
@@ -103,5 +108,49 @@ export default function Page() {
         <button type="button" onClick={logout} className="mt-6 py-2 text-[15px] text-muted">로그아웃</button>
       </div>
     </div>
+  );
+}
+
+/** 등급 카드: 지금 등급·정산율, 이번 평가 기간 실적 vs 다음 등급 기준. 휴면이면 '계속 활동할게요' */
+function GradeCard({ g, onActive }: { g: BuddyGradeInfo; onActive: (g: BuddyGradeInfo) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const confirm = async () => {
+    setBusy(true); setErr(null);
+    try { onActive(await post<BuddyGradeInfo>("/buddy/confirm-active")); } catch { setErr("잠시 뒤 다시 눌러 주세요"); } finally { setBusy(false); }
+  };
+  const goal = g.next?.need;
+  const s = g.stats;
+  return (
+    <section className="mb-9">
+      {g.needs_recheck && (
+        <Banner variant="warn" className="mb-5">
+          30일간 활동이 없어 요청 받기를 멈췄어요
+          <p className="mt-0.5 text-[13px] font-normal">지금은 버디 목록과 AI 추천에 보이지 않아요. 등급과 정산율은 그대로예요.</p>
+          <Button onClick={confirm} disabled={busy} full={false} className="mt-3 min-h-[40px] px-4 text-[14px]">{busy ? "확인 중…" : "계속 활동할게요"}</Button>
+          {err && <p className="mt-2 text-[13px] text-red">{err}</p>}
+        </Banner>
+      )}
+      <div className="flex items-end justify-between gap-3 border-b border-line pb-3.5">
+        <div>
+          <div className="text-[13px] text-muted">내 등급</div>
+          <div className="mt-0.5 text-[20px] font-bold text-ink">{label(GRADE, g.grade)} 버디</div>
+        </div>
+        <div className="text-right">
+          <div className="text-[13px] text-muted">정산율</div>
+          <div className="mt-0.5 text-[20px] font-bold text-navy">{pct(g.payout_rate)}</div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between pt-3.5 text-[14px]">
+        <span className="font-semibold text-ink">{g.next ? `${label(GRADE, g.next.grade)}까지 (정산율 ${pct(g.next.payout_rate)})` : "가장 높은 등급이에요"}</span>
+        <span className="text-muted">{g.window.label}</span>
+      </div>
+      <div className="mt-3 space-y-2.5">
+        <GoalBar label="평점" value={s.rating ?? 0} goal={goal?.rating ?? 4.5} format={(v) => v.toFixed(1)} />
+        <GoalBar label="동행" value={s.walks} goal={goal?.walks ?? s.walks} format={(v) => `${v}회`} />
+        <GoalBar label="후기" value={s.reviews} goal={goal?.reviews ?? s.reviews} format={(v) => `${v}건`} />
+      </div>
+      <p className="mt-3 text-[13px] leading-relaxed text-muted">등급은 매월 1일 갱신 · 현재와 직전 방학 실적 합산 · 예약 확정 시 정산율 고정</p>
+    </section>
   );
 }

@@ -56,6 +56,13 @@ class AdminBuddyRow(BaseModel):
     report_count: int = 0  # 기각 제외 신고 수
     can_help: list[str] = []
     can_drive: bool = False
+    korean_national: bool = False  # 한국 국적 확인
+    grade: str = "basic"  # v3.2 등급·정산율 (저장값)
+    payout_rate: float = 0.7
+    eval_rating: float | None = None  # 지금 평가 기간 실적 (현재 + 직전 방학)
+    eval_walks: int = 0
+    eval_reviews: int = 0
+    needs_recheck: bool = False  # 휴면 (목록·AI 추천에서 빠짐)
 
 
 class BuddyActionIn(BaseModel):
@@ -83,6 +90,7 @@ class SettlementRow(BaseModel):
     fee: int
     meals: int = 0  # 버디: 승인 식비 (수수료 없음)
     payout: int  # revenue − fee + meals
+    payout_rate: float | None = None  # 버디: 항목별 고정 정산율의 실효값 (revenue − fee) / revenue
     status: str  # pending | meal_pending | settled
 
 
@@ -93,7 +101,7 @@ class SettlementProfit(BaseModel):
     sales_buddy: int  # 버디 활동비 (앨범·보증금 제외)
     sales_album: int  # 앨범 요금 (전액 플랫폼)
     cost_university: int  # 대학 지급 (숙박비 × 90%)
-    cost_buddy: int  # 버디 지급료 (활동비 × 90%, 식비 제외)
+    cost_buddy: int  # 버디 지급료 (활동비 × 항목별 정산율 70~80%, 식비 제외)
     cost_other: int = 0  # 기타 원가 (카드 수수료 등, 지금은 0)
     profit: int  # sales − (cost_university + cost_buddy + cost_other)
     margin: float  # profit / sales (소수 셋째 자리)
@@ -103,7 +111,7 @@ class SettlementsOut(BaseModel):
     period: dict
     total: int
     meal_refund_total: int = 0  # 여행자에게 돌려줄 남은 식사 보증금 합
-    profit: SettlementProfit
+    profit: SettlementProfit | None = None  # 운영자만 (대학 담당자에게는 None)
     items: list[SettlementRow]
 
 

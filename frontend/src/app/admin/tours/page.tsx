@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { get } from "@/lib/api";
 import type { AdminCourseRow, ListResponse } from "@/lib/types";
 import { Button, Icon, Spinner, StatusPill } from "@/components/ui";
-import { AdminGate, AdminHeader, EmptyRow, ErrorText, Note, Table, Td, Tr, errMsg, smallBtn } from "@/components/admin/shell";
+import { OperatorOnly, AdminHeader, EmptyRow, ErrorText, Note, Table, Td, Tr, errMsg, smallBtn } from "@/components/admin/shell";
 
 const THEME_LABEL: Record<string, string> = { literature: "문학", independence: "독립운동", royal: "왕릉·성곽", hanok: "한옥·사찰", history: "역사", temple: "사찰" };
 const walkTime = (min: number) => (min % 60 === 0 ? `${min / 60}시간` : min < 60 ? `${min}분` : `${Math.floor(min / 60)}시간 ${min % 60}분`);
@@ -26,7 +26,7 @@ export default function AdminToursPage() {
   const placeCount = new Set((courses ?? []).flatMap((c) => c.places)).size;
 
   return (
-    <AdminGate>
+    <OperatorOnly title="산책 코스">
       <AdminHeader
         title="산책 코스"
         sub={`무료 코스${courses ? ` ${courses.length}개` : ""}. 장소마다 AI 이야기 자료(출처 포함)가 붙어 있어요.`}
@@ -54,6 +54,6 @@ export default function AdminToursPage() {
         </Table>
       )}
       {courses && <Note className="mt-9">코스에 나오는 장소 {placeCount}곳의 이야기 자료는 성북구청·국가유산청·서울시 자료에서 가져왔어요. 코스는 무료라 결제와 정산이 없어요.</Note>}
-    </AdminGate>
+    </OperatorOnly>
   );
 }
