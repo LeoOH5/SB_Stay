@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class PackageItem(BaseModel):
-    type: str  # dorm | tour | buddy
+    type: str  # dorm | course | buddy (course는 무료 추천 코스, 예약 항목 아님)
     ref_id: int
     title: str
 

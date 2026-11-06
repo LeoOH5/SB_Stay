@@ -10,17 +10,12 @@
   "price": 105000,
   "status": "approved",
   "decided_by": 5,
-  "decided_at": "2027-01-06T09:00:00Z"
- },
- {
-  "id": 2,
-  "booking_id": 501,
-  "type": "tour",
-  "ref_id": 3,
-  "date_from": "2027-01-13",
-  "time": "10:00",
-  "price": 20000,
-  "status": "confirmed"
+  "decided_at": "2027-01-06T09:00:00Z",
+  "request": {
+   "late_checkin": false,
+   "quiet_room": true,
+   "low_floor": false
+  }
  },
  {
   "id": 3,
@@ -30,8 +25,28 @@
   "date_from": "2027-01-13",
   "time": "14:00",
   "duration_min": 120,
-  "price": 30000,
-  "status": "requested"
+  "price": 75000,
+  "status": "confirmed",
+  "decided_by": 3,
+  "decided_at": "2027-01-06T12:00:00Z",
+  "course_id": 3,
+  "request": {
+   "diet": [
+    "vegan"
+   ],
+   "allergies": [
+    "mushroom"
+   ],
+   "pace": "slow",
+   "places": [
+    104,
+    102
+   ],
+   "note": "무릎이 안 좋아서 언덕은 천천히 가고 싶어요."
+  },
+  "meal_count": 2,
+  "meal_deposit": 40000,
+  "album": true
  },
  {
   "id": 11,
@@ -45,16 +60,6 @@
   "status": "confirmed"
  },
  {
-  "id": 12,
-  "booking_id": 480,
-  "type": "tour",
-  "ref_id": 5,
-  "date_from": "2026-11-21",
-  "time": "10:00",
-  "price": 25000,
-  "status": "confirmed"
- },
- {
   "id": 13,
   "booking_id": 480,
   "type": "buddy",
@@ -62,8 +67,9 @@
   "date_from": "2026-11-21",
   "time": "14:00",
   "duration_min": 120,
-  "price": 10000,
-  "status": "confirmed"
+  "price": 30000,
+  "status": "confirmed",
+  "course_id": 5
  },
  {
   "id": 21,
@@ -79,11 +85,12 @@
  {
   "id": 22,
   "booking_id": 470,
-  "type": "tour",
-  "ref_id": 5,
+  "type": "buddy",
+  "ref_id": 32,
   "date_from": "2026-08-13",
-  "time": "10:00",
-  "price": 10000,
+  "time": "14:00",
+  "duration_min": 120,
+  "price": 30000,
   "status": "cancelled"
  },
  {
@@ -96,5 +103,106 @@
   "guests": 1,
   "price": 80000,
   "status": "requested"
+ },
+ {
+  "id": 5,
+  "booking_id": 502,
+  "type": "buddy",
+  "ref_id": 31,
+  "date_from": "2027-01-14",
+  "time": "15:00",
+  "duration_min": 120,
+  "price": 30000,
+  "status": "requested",
+  "course_id": 6,
+  "request": {
+   "diet": [
+    "no_pork"
+   ],
+   "allergies": [],
+   "pace": "normal",
+   "places": [],
+   "note": "한옥 사진을 많이 찍고 싶어요."
+  }
+ },
+ {
+  "id": 31,
+  "booking_id": 490,
+  "type": "dorm",
+  "ref_id": 18,
+  "date_from": "2027-01-05",
+  "date_to": "2027-01-08",
+  "guests": 1,
+  "price": 114000,
+  "status": "approved",
+  "decided_by": 5,
+  "decided_at": "2027-01-03T09:00:00Z"
+ },
+ {
+  "id": 32,
+  "booking_id": 490,
+  "type": "buddy",
+  "ref_id": 31,
+  "date_from": "2027-01-06",
+  "time": "14:00",
+  "duration_min": 120,
+  "price": 50000,
+  "status": "confirmed",
+  "decided_by": 3,
+  "decided_at": "2027-01-03T10:00:00Z",
+  "request": {
+   "diet": [
+    "vegetarian"
+   ],
+   "allergies": [],
+   "pace": "normal",
+   "places": [
+    104,
+    102
+   ],
+   "note": ""
+  },
+  "meal_count": 1,
+  "meal_deposit": 20000
+ },
+ {
+  "id": 41,
+  "booking_id": 503,
+  "type": "buddy",
+  "ref_id": 36,
+  "date_from": "2027-01-09",
+  "time": "14:00",
+  "duration_min": 120,
+  "price": 30000,
+  "status": "confirmed",
+  "decided_by": 13,
+  "decided_at": "2027-01-05T10:00:00Z",
+  "course_id": 6
+ },
+ {
+  "id": 51,
+  "booking_id": 504,
+  "type": "buddy",
+  "ref_id": 31,
+  "date_from": "2027-01-10",
+  "time": "10:00",
+  "duration_min": 120,
+  "price": 30000,
+  "status": "confirmed",
+  "decided_by": 3,
+  "decided_at": "2027-01-04T09:00:00Z"
+ },
+ {
+  "id": 52,
+  "booking_id": 505,
+  "type": "buddy",
+  "ref_id": 31,
+  "date_from": "2027-01-20",
+  "time": "14:00",
+  "duration_min": 120,
+  "price": 30000,
+  "status": "confirmed",
+  "decided_by": 3,
+  "decided_at": "2027-01-09T09:00:00Z"
  }
 ]

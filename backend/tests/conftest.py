@@ -6,6 +6,10 @@ os.environ["JWT_SECRET"] = "test-secret"
 for _k in ("TOSS_SECRET_KEY", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"):
     os.environ[_k] = ""
 os.environ["AUTO_REFUND_AFTER_HOURS"] = "0"
+# v3 데모 '오늘' (지난 여행 후기·식비 정산 시나리오), 버디 지원 인증번호
+os.environ["DEMO_TODAY"] = "2027-01-14"
+os.environ["BUDDY_OTP_CODE"] = "123456"
+os.environ["DEBUG"] = "false"
 os.environ["TOKEN_ENCRYPTION_KEY"] = "u6wXK7hv2iQ0pZ3bYcNq9e1rT4sF8gL5mA2dH7jK0oI="
 
 import pytest
@@ -50,11 +54,6 @@ def tourist(client):
 @pytest.fixture
 def buddy(client):
     return login(client, "jiwoo@a-univ.ac.kr")
-
-
-@pytest.fixture
-def guide(client):
-    return login(client, "guide.park@example.com")
 
 
 @pytest.fixture

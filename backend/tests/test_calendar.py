@@ -1,5 +1,6 @@
 """캘린더 단방향 푸시: 버디 수락 시 이벤트 생성, 취소 시 삭제. 구글 API는 monkeypatch."""
 from app.services import google_calendar, google_oauth
+from tests.conftest import login
 
 
 def _connect(client, buddy, monkeypatch):
@@ -12,10 +13,10 @@ def test_push_on_accept_and_delete_on_cancel(client, buddy, tourist, monkeypatch
     calls: list[tuple] = []
     monkeypatch.setattr(google_calendar, "push_event", lambda **kw: (calls.append(("push", kw)), "evt_123")[1])
     monkeypatch.setattr(google_calendar, "delete_event", lambda **kw: calls.append(("delete", kw)))
-    r = client.patch("/api/v1/bookings/501/items/3", json={"action": "approve"}, headers=buddy)
+    r = client.patch("/api/v1/bookings/502/items/5", json={"action": "approve"}, headers=buddy)  # Yuki → 지우 요청
     assert r.status_code == 200 and r.json()["google_event_id"] == "evt_123"
     assert calls[0][0] == "push" and calls[0][1]["summary"].startswith("[SB Stay]") and calls[0][1]["duration_min"] == 120
-    client.post("/api/v1/bookings/501/cancel", headers=tourist)
+    client.post("/api/v1/bookings/502/cancel", headers=login(client, "yuki@example.com"))
     assert calls[-1] == ("delete", {"refresh_token_enc": calls[0][1]["refresh_token_enc"], "event_id": "evt_123"})
 
 
@@ -25,14 +26,14 @@ def test_push_failure_does_not_block_approval(client, buddy, monkeypatch, reset_
     def boom(**kw):
         raise RuntimeError("google down")
     monkeypatch.setattr(google_calendar, "push_event", boom)
-    r = client.patch("/api/v1/bookings/501/items/3", json={"action": "approve"}, headers=buddy)
+    r = client.patch("/api/v1/bookings/502/items/5", json={"action": "approve"}, headers=buddy)
     assert r.status_code == 200 and r.json()["status"] == "confirmed" and r.json()["google_event_id"] is None
 
 
 def test_no_push_when_not_connected(client, buddy, monkeypatch, reset_db):
     called = []
     monkeypatch.setattr(google_calendar, "push_event", lambda **kw: called.append(1) or "x")
-    r = client.patch("/api/v1/bookings/501/items/3", json={"action": "approve"}, headers=buddy)
+    r = client.patch("/api/v1/bookings/502/items/5", json={"action": "approve"}, headers=buddy)
     assert r.status_code == 200 and called == []
 
 

@@ -1,3 +1,4 @@
+from datetime import date
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -40,8 +41,17 @@ class Settings(BaseSettings):
     auto_refund_after_hours: int = 0
     auto_refund_check_minutes: int = 10
 
-    # 수수료율 (해커톤은 상수)
+    # 수수료율 (해커톤은 상수). 숙박·버디 활동비·앨범에만, 식사 보증금에는 없음
     platform_fee_rate: float = 0.10
+
+    # v3 버디: 학교 메일 인증번호(데모는 메일 발송 없이 고정값), debug면 응답에 dev_code 포함
+    buddy_otp_code: str = "123456"
+    debug: bool = False
+    # 데모용 '오늘' (후기 가능 여부·식비 환불 확정). 비우면 실제 오늘
+    demo_today: date | None = None
+
+    def today(self) -> date:
+        return self.demo_today or date.today()
 
     @property
     def cors_origin_list(self) -> list[str]:

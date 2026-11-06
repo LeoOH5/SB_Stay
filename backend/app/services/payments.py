@@ -36,7 +36,7 @@ def summary(p: Payment | None) -> dict | None:
 
 def order_name(db: Session, b: Booking) -> str:
     items = db.scalars(select(BookingItem).where(BookingItem.booking_id == b.id).order_by(BookingItem.id)).all()
-    label = {"dorm": "숙박", "tour": "투어", "buddy": "버디"}
+    label = {"dorm": "숙박", "buddy": "버디"}
     kinds = [label.get(i.type, i.type) for i in items]
     return f"성북스테이 {'·'.join(dict.fromkeys(kinds))} ({b.code})"[:100]
 

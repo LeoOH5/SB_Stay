@@ -1,5 +1,7 @@
 # 성북스테이(가칭) API 명세서 v1
 
+> **v3 변경(해설사 삭제·버디만)이 이 문서보다 우선합니다.** 맨 아래 [v3 변경](#v3-변경) 표와 `docs/v3/CONTRACT.md`를 보세요.
+
 - 기준일: 2026-11-05 · 해커톤 MVP 기준 (구글 문서 9장 "주요 API" + 와이어프레임 T0~T6 / B1 / A1~A2)
 - Base URL: `/api/v1` · JSON · 인증: `Authorization: Bearer <JWT>` (로그인 응답의 `access_token`)
 - 인증 흐름: 구글 OAuth(Authorization Code) → 백엔드 JWT. 캘린더 범위는 버디가 연동 버튼을 누를 때 증분 요청. 구글 콘솔은 테스트 모드, 데모 계정을 테스트 사용자로 등록. 이메일 로그인(AU-05)은 데모 계정 전용 폴백.
@@ -234,3 +236,45 @@ AD-01 Response 200
 | A-06 외국인 숙박신고 | AD-08 |
 | 신규 어드민 대시보드 | AD-01 |
 | 홈 추천 패키지 / 마이페이지 약관·고객센터 / 어드민 설정 | HM-01 / CM-01 / AD-10 |
+
+
+## v3 변경
+
+기준: `docs/v3/CONTRACT.md` (해설사 삭제, 코스 무료, 예약 항목은 dorm | buddy). 역할은 `tourist | buddy | univ_admin | operator`.
+숫자: 수수료 10%(숙박·버디 활동비) · 앨범 ₩5,000(전액 플랫폼 수입) · 식사 1회 한도 ₩20,000(보증금 = 횟수 × 20,000, 수수료 없음, 최대 4회) · 신고 2건 자동 정지 · 퀴즈 8/10 · 만 19세 · `DEMO_TODAY`(후기·식비 기준일).
+`booking.platform_fee = round((total − Σ식사 보증금 − Σ앨범) × 0.10) + Σ앨범`. 버디 정산 = 활동비 × 0.9 + 승인 식비.
+
+| Method | Path | 역할 | 변경 | 내용 |
+|---|---|---|---|---|
+| PATCH | /auth/me/role | 전체 | 변경 | role은 `tourist` \| `buddy`. `guide` → 422. buddy의 `university_id`는 선택(학교 메일 인증에서 정해짐) |
+| GET | /tours, /tours/{id} | 공개 | 변경 | 무료 AI 산책 코스: `price` 0, `guide` null. 예약 항목 아님 |
+| GET | /packages | 공개 | 변경 | items의 코스는 `type: "course"`. 모든 패키지에 버디, `total_price` = 숙박 + 버디 활동비 |
+| POST | /bookings | tourist | 변경 | 항목에 `request`·`course_id`·`meal_count`(0~4)·`album`. 오류 `COURSE_NOT_BOOKABLE`(tour) · `ONE_STAY` · `BUDDY_REQUIRED` · `BUDDY_OUT_OF_STAY` · `VALIDATION`(요청·코스·식사). 버디만 예약 허용 |
+| GET | /bookings/me, /bookings/{id} | 본인 등 | 변경 | BookingItemOut + `request, course_id, course_title, meal_count, meal_deposit, meal_used, meal_approved, meal_refund, album, album_photos, reviewed, can_review`. 버디는 traveler `{name, nationality, guests}` + 자기 항목만, 대학 담당자는 자기 대학 숙박이 있으면 traveler 전체(남의 항목 request는 null) |
+| POST | /bookings/{id}/items/{item_id}/replace-buddy | 예약자 | 신규 | `{buddy_id, date?, time?}` → 기존 항목 cancelled(거절이면 그대로) + 새 버디 항목 requested(요청·코스·식사·앨범 복사, 총액·수수료 재계산). 응답 BookingOut |
+| POST | /bookings/{id}/reviews | 예약자 | 변경 | `{item_id, rating, text?, sub_scores?:{kind,talk,punctual,local}, tags?:[코드]}`. 확정·지난 항목만 아니면 409 `TRIP_NOT_DONE` |
+| GET | /bookings/{id}/album | 예약자 | 신규 | `{items:[{item_id, buddy_name, date, places, photos}]}` (album=true 버디 항목의 활동 기록 사진) |
+| GET | /buddies | 공개 | 변경 | 쿼리 `personality, style, can_help, university_id` 추가. 응답 + `university_id, personality, style, can_help, sub_scores, tags_top, walk_count, verified{school_email, trained}` |
+| GET | /buddies/{id} | 공개 | 변경 | + `recent_activities:[{date, places, foods}]` 최대 3 |
+| GET | /buddies/{id}/activities | 공개 | 신규 | 공개 활동 기록 최대 10개 `{items:[{date, places, foods}]}` |
+| POST | /ai/plan | tourist | 변경 | 숙소가 있으면 버디 필수(숙박 기간 안·같은 대학 우선), 버디 항목에 `course_id`. 버디가 없으면 `type:"course"`(price 0) 항목. `warnings`: `NO_BUDDY` · `OVER_BUDGET`(버디는 빼지 않음) |
+| POST | /ai/buddy-match | tourist | 변경 | body + `personality, style, needs(can_help 코드), university_id`. 점수 + 성향·스타일 0.05×(최대 2) + 도움 0.10 + 같은 대학 0.10 (최대 0.99) |
+| POST | /ai/buddy-brief | buddy | 변경 | 장소: 코스 → 요청 places → 관심사. 요청(식단·알레르기·속도)을 brief 첫 문장에. guide 역할 삭제 |
+| GET/PUT | /buddy/profile | buddy | 변경 | + `personality, style, can_help, bank_account` (코드값만), 응답 + `school_email, school_email_verified, code_agreed, quiz_score` |
+| GET | /buddy/requests, /buddy/schedule | buddy | 변경 | + `request, course_id, course_title, meal_count, album`. tourist는 `{id, name, nationality, language}`만 |
+| GET | /buddy/earnings | buddy | 변경 | `amount` = 활동비 − 수수료 (식사 보증금·앨범 제외) |
+| GET | /buddy/settlement?month=YYYY-MM | buddy | 신규 | `{month, pay_date, account(마스킹), walks, gross, fee, net, meals_approved, meals_pending, payout, items[]}` |
+| POST/GET | /buddy/meal-claims | buddy | 신규 | `{item_id, place, items, amount, receipt_url?}` → 201 MealClaimOut. 본인 확정 항목, 청구 수(반려 제외) < meal_count 아니면 409 `MEAL_LIMIT` |
+| POST/GET | /buddy/activities | buddy | 신규 | `{item_id?, date, places[], foods?, note?, photos?[]}` → 201 |
+| GET | /buddy/apply | buddy | 신규 | `{email_verified, school_email, university, age_ok, code_agreed, quiz_score, quiz_passed, profile_done, status}` |
+| POST | /buddy/apply/email | buddy | 신규 | `{email}` → `{sent, university, dev_code}`. 성북 대학 도메인 아니면 422 `NOT_SEONGBUK_SCHOOL` |
+| POST | /buddy/apply/verify | buddy | 신규 | `{email, code, birth_date}` → 422 `BAD_CODE` · `TOO_YOUNG`. 대학·생년월일 저장, 프로필 pending 생성 |
+| POST | /buddy/apply/agree | buddy | 신규 | 버디 약속 동의 (메일 인증 전이면 409) |
+| GET/POST | /buddy/apply/quiz | buddy | 신규 | 10문제(정답 미포함) / `{answers:{id: 보기 번호(0부터)}}` → `{score, total, passed, best_score}` |
+| POST | /reports | 예약자 | 신규 | `{booking_item_id, category, text, photo_url?}` (버디 항목만) → 201. 기각 제외 2건이면 자동 정지 `auto_suspended` |
+| GET/PATCH | /admin/reports | operator | 신규 | 목록(`?status=`) / `{action: warn\|suspend\|unsuspend\|dismiss}` |
+| GET/PATCH | /admin/meal-claims | operator | 신규 | MealClaimOut + `buddy_name, deposit, deposit_left(이 청구 제외), request_summary` / `{action: approve\|reject, reason?}`, 승인 합이 보증금을 넘으면 409 `OVER_DEPOSIT` |
+| GET | /admin/buddies | admin | 변경 | + `age, school_email_verified, code_agreed, quiz_score, report_count, can_help` |
+| PATCH | /admin/buddies/{id} | admin | 변경 | approve는 학교 메일·만 19세·약속 동의·퀴즈 8점 모두 필요, 아니면 409 `NOT_READY`(빠진 항목) |
+| GET | /admin/settlements | operator | 변경 | 해설사 행 삭제, 버디 행 + `meals`, `payout` = 활동비×0.9 + meals, 응답 + `meal_refund_total` |
+| GET | /admin/tours | admin | 변경 | 코스 행 `{id, title, theme, duration_min, places, place_count, story_ready, buddy_walks}` |

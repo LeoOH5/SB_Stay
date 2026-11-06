@@ -1,7 +1,8 @@
 """AI-04 동행 준비 자료 (A 담당, 명세상 선택 기능).
 
-버디(또는 해설사)가 요청 카드에서 'AI 자료'를 누르면 부른다.
-- 갈 만한 장소: 같은 예약의 투어 코스 장소(같은 날 우선). 투어가 없으면 버디 관심사에 맞고 그날 여는 장소.
+버디가 요청 카드에서 'AI 자료'를 누르면 부른다.
+- 갈 만한 장소: 버디 항목의 course_id 코스 → 없으면 요청의 places → 없으면 버디 관심사에 맞고 그날 여는 장소.
+- 여행자 요청(식단·알레르기·속도)은 brief 첫 문장에 넣는다 ("비건, 버섯 알레르기 요청이 있어요. 식당에서 꼭 확인해 주세요.").
 - 장소 요약·팁은 DB 값(story_doc 소개, 운영시간, 휴무, 요금)으로만 만든다.
 - LLM은 버디에게 줄 2~3문장 안내(brief)와 관광객에게 쓸 영어 문장(phrases)만 쓴다. 실패하면 템플릿.
 버디 화면은 한국어라 brief와 장소 요약은 한국어, phrases는 관광객에게 말할 영어다.
@@ -13,6 +14,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import rules
 from app.models import Booking, BookingItem, BuddyProfile, Place, Tour, TourPlace, User
 from app.services import story
 
@@ -33,7 +35,7 @@ class Material:
     item: BookingItem
     tourist: str
     nationality: str
-    tour: Tour | None
+    course: Tour | None
     places: list[Place]
 
 
@@ -53,20 +55,16 @@ def gather(db: Session, item: BookingItem, buddy: BuddyProfile | None) -> Materi
     traveler = (booking.traveler or {}) if booking else {}
     tourist = traveler.get("name") or (db.get(User, booking.tourist_id).name if booking else "")
 
-    tour = db.get(Tour, item.ref_id) if item.type == "tour" else None
-    if tour is None and booking:  # 버디 항목: 같은 예약의 투어 (같은 날 우선)
-        tours = db.scalars(select(BookingItem).where(
-            BookingItem.booking_id == booking.id, BookingItem.type == "tour", BookingItem.status != "cancelled"
-        )).all()
-        tours = sorted(tours, key=lambda t: (t.date_from != item.date_from, t.date_from))
-        tour = db.get(Tour, tours[0].ref_id) if tours else None
-
-    places = [p for p in tour_places(db, tour.id) if _open_on(p, item.date_from)] if tour else []
-    if not places:  # 투어가 없으면 버디 관심사에 맞고 그날 여는 장소
+    course = db.get(Tour, item.course_id) if item.course_id else None
+    places = [p for p in tour_places(db, course.id) if _open_on(p, item.date_from)] if course else []
+    if not places:  # 요청에서 고른 장소(그날 여는 곳)
+        ids = (item.request or {}).get("places") or []
+        places = [p for p in (db.get(Place, i) for i in ids) if p and _open_on(p, item.date_from)]
+    if not places:  # 버디 관심사에 맞고 그날 여는 장소
         tags = {TAG_FOR_INTEREST.get(i, i) for i in (buddy.interests if buddy else []) or []}
         pool = [p for p in db.scalars(select(Place).order_by(Place.id)).all() if _open_on(p, item.date_from) and p.story_doc]
         places = sorted(pool, key=lambda p: -len(tags & set(p.tags or [])))
-    return Material(item, tourist.split(" ")[0], traveler.get("nationality", ""), tour, places[:3])
+    return Material(item, tourist.split(" ")[0], traveler.get("nationality", ""), course, places[:3])
 
 
 def place_tips(p: Place) -> str:
@@ -107,22 +105,35 @@ def fallback_phrases(m: Material) -> list[str]:
     return out + GENERIC_PHRASES
 
 
+def request_sentence(m: Material) -> str:
+    """요청을 첫 문장으로: 식단·알레르기는 식당 확인, 천천히는 쉬어 가기"""
+    req = m.item.request or {}
+    food = rules.request_summary({"diet": req.get("diet"), "allergies": req.get("allergies")})
+    parts = []
+    if food:
+        parts.append(f"{food} 요청이 있어요. 식당에서 꼭 확인해 주세요.")
+    if req.get("pace") == "slow":
+        parts.append("천천히 걷고 싶어 해요. 쉬어 갈 곳을 미리 정해 두세요.")
+    return " ".join(parts)
+
+
 def fallback_brief(m: Material) -> str:
     when = f"{m.item.date_from.month}/{m.item.date_from.day}" + (f" {m.item.time}" if m.item.time else "")
     names = "·".join(p.name for p in m.places)
     who = f"{m.tourist} 님" + (f"({m.nationality})" if m.nationality else "")
-    if m.tour and m.item.type == "buddy":
-        return f"{who}은 {when} 전에 '{m.tour.title}' 투어를 들어요. {names} 이야기로 대화를 이어 가면 좋아요."
-    if m.tour:
-        return f"{who}과 {when}에 '{m.tour.title}' 코스를 함께해요. 코스 순서는 {names}예요."
-    return f"{who}과 {when}에 만나요. 그날 여는 {names} 쪽으로 걸어 보세요."
+    if m.course:
+        body = f"{who}과 {when}에 '{m.course.title}' 코스를 함께 걸어요. 순서는 {names}이고, 장소 이야기는 AI가 들려줘요."
+    else:
+        body = f"{who}과 {when}에 만나요. 그날 여는 {names} 쪽으로 걸어 보세요."
+    return " ".join(x for x in [request_sentence(m), body] if x)
 
 
 def material_text(m: Material) -> str:
     d = m.item.date_from
     lines = [
         f"Tourist: {m.tourist} ({m.nationality or 'unknown'}), meeting {d.month}/{d.day} ({d.isoformat()}) {m.item.time or ''}",
-        f"Tour earlier: {m.tour.title} / {m.tour.title_en}" if m.tour else "Tour: none",
+        f"Course to walk together: {m.course.title} / {m.course.title_en}" if m.course else "Course: none",
+        f"Traveler requests: {request_sentence(m) or 'none'}",
     ]
     for p in m.places:
         en = story.parse(p.story_doc)["en"].intro
@@ -135,7 +146,9 @@ def llm_prompt(m: Material) -> tuple[str, str]:
         "You help a Korean university student buddy prepare for a walk with a foreign traveler in Seongbuk, Seoul.\n"
         "Rules:\n"
         "- Use only the facts in MATERIAL. Never add dates, prices, hours or history that are not there.\n"
-        "- brief: 2 or 3 short sentences in Korean for the buddy (what the traveler did, what to talk about).\n"
+        "- brief: 2 or 3 short sentences in Korean for the buddy. If there are traveler requests, the FIRST sentence must\n"
+        "  restate them (diet, allergies, pace) and remind the buddy to check at restaurants. Then what to talk about.\n"
+        "- The buddy does not give history talks; the app's AI tells place stories.\n"
         "- phrases: 3 to 5 short, friendly English sentences the buddy can say to the traveler at these places.\n"
         '- Reply with JSON only: {"brief": "...", "phrases": ["...", "..."]}'
     )

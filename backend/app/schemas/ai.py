@@ -18,11 +18,12 @@ class PlanIn(BaseModel):
 
 class PlanItem(BaseModel):
     time: str | None = None
-    type: str  # dorm | tour | buddy | free
+    type: str  # dorm | buddy | course | free  (course는 무료, 예약 항목 아님)
     ref_id: int | None = None
     title: str
     price: int = 0
     meta: str | None = None  # 화면 보조 문구 (프론트 PlanItem.meta)
+    course_id: int | None = None  # buddy 항목: 같이 걸을 코스 (BK-01 버디 항목의 course_id로 그대로 보냄)
 
 
 class PlanDay(BaseModel):
@@ -36,6 +37,7 @@ class PlanOut(BaseModel):
     total_price: int
     days: list[PlanDay]
     ai: bool = False  # LLM이 고른 결과면 true, 규칙 기반 폴백이면 false
+    warnings: list[str] = []  # NO_BUDDY (숙박 기간에 가능한 버디 없음) · OVER_BUDGET (버디를 넣으니 예산 초과)
 
 
 # ---------- AI-02 역사 스토리 ----------
@@ -58,15 +60,22 @@ class StoryOut(BaseModel):
 
 
 # ---------- AI-03 버디 매칭 ----------
+Code = Annotated[str, StringConstraints(pattern=r"^[a-z_]{2,20}$")]
+
+
 class MatchIn(BaseModel):
     language: Literal["ko", "en", "ja", "zh"] | None = None  # 버디가 쓸 줄 알아야 하는 언어
     date: dt.date | None = None  # 이름이 타입과 같아 dt.date로 적는다
-    interests: list[Annotated[str, StringConstraints(pattern=r"^[a-z_]{2,20}$")]] = Field(default=[], max_length=10)
+    interests: list[Code] = Field(default=[], max_length=10)
+    personality: list[Code] = Field(default=[], max_length=4)  # 원하는 버디 성향 (calm·lively·listener·humor)
+    style: list[Code] = Field(default=[], max_length=4)  # 원하는 걷기 스타일
+    needs: list[Code] = Field(default=[], max_length=5)  # 필요한 도움 (can_help 코드)
+    university_id: int | None = None  # 숙소 대학 → 같은 대학 버디 가산점
 
 
 class MatchItem(BaseModel):
     buddy_id: int
-    score: float  # 0~1, 코드가 계산 (관심사 겹침·언어)
+    score: float  # 0~1, 코드가 계산 (관심사·언어·성향·도움·같은 대학)
     reason: str
 
 

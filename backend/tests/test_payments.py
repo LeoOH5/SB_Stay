@@ -10,9 +10,9 @@ from app.services import toss
 TRAVELER = {"name": "Emma Clark", "nationality": "US", "email": "emma@example.com", "guests": 1}
 ITEMS = [
     {"type": "dorm", "ref_id": 10, "date_from": "2027-01-12", "date_to": "2027-01-15", "guests": 1},
-    {"type": "tour", "ref_id": 3, "date": "2027-01-16", "time": "10:00"},
+    {"type": "buddy", "ref_id": 31, "date": "2027-01-13", "time": "14:00", "duration_min": 60, "album": True},
 ]
-TOTAL = 105000 + 20000
+TOTAL = 105000 + 15000 + 5000  # 숙박 + 버디 1시간 + 앨범
 
 
 @pytest.fixture

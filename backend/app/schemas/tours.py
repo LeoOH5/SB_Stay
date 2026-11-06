@@ -21,12 +21,12 @@ class TourPlaceOut(BaseModel):
 
 
 class TourOut(BaseModel):
-    """TR-01 목록 항목 · TR-02 상세 (프론트 Tour 타입과 같은 모양: 목록에도 places 포함)"""
+    """TR-01 목록 항목 · TR-02 상세 = 무료 AI 산책 코스 (price 0, 예약 항목 아님). 목록에도 places 포함"""
     id: int
     title: str
     title_en: str
     theme: str
-    guide: GuideBrief
+    guide: GuideBrief | None = None  # v3: 해설사 없음 → 항상 null
     duration_min: int
     price: int
     operating_days: list[str] = []
@@ -59,6 +59,8 @@ class ReviewOut(BaseModel):
     rating: int
     text: str | None = None
     author: str = ""  # 프론트 Review 타입: 작성자 이름(성 제외)
+    sub_scores: dict[str, int] | None = None  # {kind, talk, punctual, local}
+    tags: list[str] = []
     created_at: date
 
 

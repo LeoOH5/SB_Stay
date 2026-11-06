@@ -106,14 +106,13 @@ def update_me(body: MeUpdateIn, user: User = Depends(get_current_user), db: Sess
 
 @router.patch("/me/role", response_model=UserOut)
 def set_role(body: RoleIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> User:
-    """AU-06: 첫 로그인 후 역할 선택. buddy·guide는 university_id 필요. univ_admin·operator는 시드 계정만"""
-    if body.role not in ("tourist", "buddy", "guide"):
-        raise api_error(422, "VALIDATION", "role은 tourist | buddy | guide")
+    """AU-06: 첫 로그인 후 역할 선택 (tourist | buddy). buddy의 대학은 university_id로 주거나 지원 단계(학교 메일 인증)에서 정해진다.
+    univ_admin·operator는 시드 계정만"""
+    if body.role not in ("tourist", "buddy"):
+        raise api_error(422, "VALIDATION", "role은 tourist | buddy")
     if user.role in ("univ_admin", "operator"):
         raise api_error(409, "CONFLICT", "관리자 계정은 역할을 바꿀 수 없습니다")
-    if body.role in ("buddy", "guide"):
-        if not body.university_id:
-            raise api_error(422, "VALIDATION", "buddy·guide는 university_id가 필요합니다")
+    if body.role == "buddy" and body.university_id:
         user.university_id = body.university_id
     user.role = body.role
     db.commit()
@@ -124,8 +123,8 @@ def set_role(body: RoleIn, user: User = Depends(get_current_user), db: Session =
 @router.post("/google/calendar")
 def connect_calendar(body: GoogleLoginIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
     """AU-07: calendar.events 범위 증분 인증 code → refresh token 암호화 저장"""
-    if user.role not in ("buddy", "guide"):
-        raise api_error(403, "FORBIDDEN", "버디·해설사만 캘린더를 연동할 수 있습니다")
+    if user.role != "buddy":
+        raise api_error(403, "FORBIDDEN", "버디만 캘린더를 연동할 수 있습니다")
     if not body.code:
         raise api_error(422, "VALIDATION", "code가 필요합니다")
     if not get_settings().token_encryption_key:

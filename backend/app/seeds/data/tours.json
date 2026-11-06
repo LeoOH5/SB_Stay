@@ -1,92 +1,120 @@
 [
-  {
-    "id": 3,
-    "guide_id": 21,
-    "title": "문인의 성북동 산책",
-    "title_en": "Writers' Seongbuk Walk",
-    "theme": "literature",
-    "duration_min": 120,
-    "price": 20000,
-    "operating_days": [
-      "sat",
-      "sun"
-    ],
-    "languages": [
-      "en",
-      "ko"
-    ],
-    "meeting_point": "한성대입구역 5번 출구",
-    "description": "성북근현대문학관에서 수연산방·심우장을 거쳐 길상사까지, 근대 문인들의 집과 글을 따라 걷는 코스."
-  },
-  {
-    "id": 4,
-    "guide_id": 22,
-    "title": "독립운동가의 길",
-    "title_en": "Independence Trail",
-    "theme": "independence",
-    "duration_min": 120,
-    "price": 20000,
-    "operating_days": [
-      "sun"
-    ],
-    "languages": [
-      "en"
-    ],
-    "meeting_point": "한성대입구역 6번 출구",
-    "description": "심우장과 성곽길, 독립운동의 흔적이 남은 성북동 골목."
-  },
-  {
-    "id": 5,
-    "guide_id": 23,
-    "title": "정릉과 성곽길",
-    "title_en": "Royal Tomb & Fortress Wall",
-    "theme": "royal",
-    "duration_min": 180,
-    "price": 25000,
-    "operating_days": [
-      "sat"
-    ],
-    "languages": [
-      "ko",
-      "en"
-    ],
-    "meeting_point": "정릉 매표소",
-    "description": "조선 왕릉 정릉과 한양도성 북악구간을 걷는 역사 코스."
-  },
-  {
-    "id": 6,
-    "guide_id": 21,
-    "title": "길상사와 한옥 골목",
-    "title_en": "Gilsangsa & Hanok Alleys",
-    "theme": "hanok",
-    "duration_min": 120,
-    "price": 20000,
-    "operating_days": [
-      "sat",
-      "sun"
-    ],
-    "languages": [
-      "en"
-    ],
-    "meeting_point": "한성대입구역 5번 출구",
-    "description": "길상사에서 성북동 한옥 골목, 선잠박물관까지."
-  },
-  {
-    "id": 7,
-    "guide_id": 23,
-    "title": "왕릉과 산사",
-    "title_en": "Royal Tomb and Mountain Temple",
-    "theme": "royal",
-    "duration_min": 90,
-    "price": 15000,
-    "operating_days": [
-      "sat"
-    ],
-    "languages": [
-      "ko",
-      "en"
-    ],
-    "meeting_point": "정릉 매표소 앞",
-    "description": "신덕왕후의 능 정릉과, 태조가 왕후를 위해 세운 흥천사를 잇는 코스."
-  }
+ {
+  "id": 3,
+  "guide_id": null,
+  "title": "문인의 성북동 산책",
+  "title_en": "Writers' Seongbuk Walk",
+  "theme": "literature",
+  "duration_min": 120,
+  "price": 0,
+  "operating_days": [
+   "mon",
+   "tue",
+   "wed",
+   "thu",
+   "fri",
+   "sat",
+   "sun"
+  ],
+  "languages": [
+   "en",
+   "ko"
+  ],
+  "meeting_point": "한성대입구역 5번 출구",
+  "description": "성북근현대문학관에서 수연산방·심우장을 거쳐 길상사까지, 근대 문인들의 집과 글을 따라 걷는 코스."
+ },
+ {
+  "id": 4,
+  "guide_id": null,
+  "title": "독립운동가의 길",
+  "title_en": "Independence Trail",
+  "theme": "independence",
+  "duration_min": 120,
+  "price": 0,
+  "operating_days": [
+   "mon",
+   "tue",
+   "wed",
+   "thu",
+   "fri",
+   "sat",
+   "sun"
+  ],
+  "languages": [
+   "en"
+  ],
+  "meeting_point": "한성대입구역 6번 출구",
+  "description": "심우장과 성곽길, 독립운동의 흔적이 남은 성북동 골목."
+ },
+ {
+  "id": 5,
+  "guide_id": null,
+  "title": "정릉과 성곽길",
+  "title_en": "Royal Tomb & Fortress Wall",
+  "theme": "royal",
+  "duration_min": 180,
+  "price": 0,
+  "operating_days": [
+   "mon",
+   "tue",
+   "wed",
+   "thu",
+   "fri",
+   "sat",
+   "sun"
+  ],
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "meeting_point": "정릉 매표소",
+  "description": "조선 왕릉 정릉과 한양도성 북악구간을 걷는 역사 코스."
+ },
+ {
+  "id": 6,
+  "guide_id": null,
+  "title": "길상사와 한옥 골목",
+  "title_en": "Gilsangsa & Hanok Alleys",
+  "theme": "hanok",
+  "duration_min": 120,
+  "price": 0,
+  "operating_days": [
+   "mon",
+   "tue",
+   "wed",
+   "thu",
+   "fri",
+   "sat",
+   "sun"
+  ],
+  "languages": [
+   "en"
+  ],
+  "meeting_point": "한성대입구역 5번 출구",
+  "description": "길상사에서 성북동 한옥 골목, 선잠박물관까지."
+ },
+ {
+  "id": 7,
+  "guide_id": null,
+  "title": "왕릉과 산사",
+  "title_en": "Royal Tomb and Mountain Temple",
+  "theme": "royal",
+  "duration_min": 90,
+  "price": 0,
+  "operating_days": [
+   "mon",
+   "tue",
+   "wed",
+   "thu",
+   "fri",
+   "sat",
+   "sun"
+  ],
+  "languages": [
+   "ko",
+   "en"
+  ],
+  "meeting_point": "정릉 매표소 앞",
+  "description": "신덕왕후의 능 정릉과, 태조가 왕후를 위해 세운 흥천사를 잇는 코스."
+ }
 ]

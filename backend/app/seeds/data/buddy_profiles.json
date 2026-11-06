@@ -15,10 +15,28 @@
    "walking",
    "cafe"
   ],
-  "intro": "성북동 골목이랑 캠퍼스 맛집을 같이 걸어요. 역사 해설은 해설사·AI가, 저는 친구가 되어 드려요.",
+  "intro": "성북동 골목이랑 캠퍼스 맛집을 같이 걸어요. 장소 이야기는 AI가, 저는 친구가 되어 드려요.",
   "avatar": "illust_01",
   "status": "approved",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "calm",
+   "listener"
+  ],
+  "style": [
+   "slow_walk",
+   "cafe_break"
+  ],
+  "can_help": [
+   "vegan_food",
+   "photo",
+   "subway"
+  ],
+  "school_email": "jiwoo@a-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": "신한 110-123-456482"
  },
  {
   "id": 32,
@@ -37,7 +55,24 @@
   "intro": "성북동 답사 동아리에서 활동해요.",
   "avatar": "illust_02",
   "status": "approved",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "lively",
+   "humor"
+  ],
+  "style": [
+   "explore",
+   "photo_walk"
+  ],
+  "can_help": [
+   "photo",
+   "subway"
+  ],
+  "school_email": "minho@b-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": "국민 123-45-678901"
  },
  {
   "id": 33,
@@ -57,7 +92,22 @@
   "intro": "교환학생 버디 경험 2회.",
   "avatar": "illust_03",
   "status": "pending",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "lively"
+  ],
+  "style": [
+   "cafe_break"
+  ],
+  "can_help": [
+   "halal_food",
+   "shopping"
+  ],
+  "school_email": "harin@a-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 7,
+  "bank_account": null
  },
  {
   "id": 34,
@@ -76,7 +126,22 @@
   "intro": "캠퍼스 투어와 야경 산책 담당.",
   "avatar": "illust_04",
   "status": "pending",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "humor"
+  ],
+  "style": [
+   "explore"
+  ],
+  "can_help": [
+   "subway",
+   "shopping"
+  ],
+  "school_email": "doyun@a-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": null
  },
  {
   "id": 35,
@@ -95,7 +160,22 @@
   "intro": "영어 토론 동아리.",
   "avatar": "illust_05",
   "status": "approved",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "listener"
+  ],
+  "style": [
+   "slow_walk"
+  ],
+  "can_help": [
+   "vegan_food",
+   "shopping"
+  ],
+  "school_email": "seoyeon@b-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": "우리 1002-345-678901"
  },
  {
   "id": 36,
@@ -115,6 +195,20 @@
   "intro": "근대 건축과 한옥 이야기를 좋아해요.",
   "avatar": "illust_06",
   "status": "approved",
-  "hourly_fee": 15000
+  "hourly_fee": 15000,
+  "personality": [
+   "calm"
+  ],
+  "style": [
+   "photo_walk"
+  ],
+  "can_help": [
+   "photo"
+  ],
+  "school_email": "junseo@a-univ.ac.kr",
+  "school_email_verified_at": "2026-12-01T10:00:00Z",
+  "code_agreed_at": "2026-12-01T10:05:00Z",
+  "quiz_score": 9,
+  "bank_account": "하나 391-910-123456"
  }
 ]

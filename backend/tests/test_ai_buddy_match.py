@@ -55,3 +55,20 @@ def test_match_errors_and_roles(client, tourist, buddy, monkeypatch):
     assert client.post(URL, json={"date": "2027-13-01"}, headers=tourist).status_code == 422
     assert client.post(URL, json={"language": "fr"}, headers=tourist).status_code == 422
     assert client.post(URL, json={"interests": ["DROP TABLE"]}, headers=tourist).status_code == 422
+
+
+def test_match_needs_traits_and_same_university(client, tourist, monkeypatch):
+    """비건 식당 안내 + 같은 대학(국민대) 가산점: 서연(35)이 지우(31)보다 앞선다"""
+    _no_llm(monkeypatch)
+    body = DEMO | {"needs": ["vegan_food"], "university_id": 2, "personality": ["humor"], "style": ["photo_walk"]}
+    r = client.post(URL, json=body, headers=tourist | {"Accept-Language": "ko"}).json()
+    by_id = {m["buddy_id"]: m for m in r["matches"]}
+    assert [m["buddy_id"] for m in r["matches"]] == [35, 31, 32]
+    assert by_id[35]["score"] == 0.99  # 0.80 + 도움 0.10 + 같은 대학 0.10 → 최대 0.99
+    assert by_id[31]["score"] == 0.95  # 0.85 + 도움 0.10 (고려대라 같은 대학 아님)
+    assert by_id[32]["score"] == 0.85  # 0.65 + 성향·스타일 일치 2 × 0.05 + 같은 대학 0.10 (비건 안내 없음)
+    assert "비건 식당 안내 가능" in by_id[35]["reason"] and "같은 대학 숙소" in by_id[35]["reason"]
+    assert "같은 대학 숙소" not in by_id[31]["reason"]
+    en = client.post(URL, json=body, headers=tourist | {"Accept-Language": "en"}).json()
+    assert "same university as your stay" in en["matches"][0]["reason"]
+    assert client.post(URL, json=DEMO | {"needs": ["Vegan!"]}, headers=tourist).status_code == 422

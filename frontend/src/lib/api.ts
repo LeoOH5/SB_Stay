@@ -1,13 +1,12 @@
 // API 클라이언트. NEXT_PUBLIC_USE_MOCK=true 면 src/lib/mock 데이터로 동작한다 (프론트 선개발).
 // 실제 호출 시 경로·응답 형식은 docs/api-detail/*.md 와 같다. 실패 형식: { error: { code, message } }
+import { ApiError } from "./errors";
 import { mockHandlers } from "./mock";
+
+export { ApiError };
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 export const USE_MOCK = (process.env.NEXT_PUBLIC_USE_MOCK ?? "true") === "true";
-
-export class ApiError extends Error {
-  constructor(public status: number, public code: string, message: string) { super(message); }
-}
 
 const TOKEN_KEY = "sbstay.token";
 export const token = {

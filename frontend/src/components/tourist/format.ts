@@ -5,9 +5,12 @@ import type { BookingItem, CartItem, ItemType, Role } from "@/lib/types";
 // 데모 기본 날짜 (겨울방학 개방 기간 2027-01-05 ~ 02-20)
 export const DEFAULT_FROM = "2027-01-12";
 export const DEFAULT_TO = "2027-01-15";
-export const DEFAULT_TOUR_DATE = "2027-01-13";
+/** 버디와 걷는 기본 날짜 (숙박 기간 안) */
+export const DEFAULT_BUDDY_DATE = "2027-01-13";
+/** @deprecated v3: 코스는 예약 항목이 아니다. DEFAULT_BUDDY_DATE 를 쓴다 */
+export const DEFAULT_TOUR_DATE = DEFAULT_BUDDY_DATE;
 // "예정/지난" 구분 기준일 — 데모 시나리오(2027년 1월 여행) 기준. 실제 API는 scope 쿼리로 서버가 나눈다.
-export const DEMO_TODAY = "2027-01-10";
+export const DEMO_TODAY = "2027-01-14";
 
 export const SS_PLAN = "sbstay.plan";
 export const SS_TRAVELER = "sbstay.traveler";
@@ -89,23 +92,35 @@ export const INTEREST_LABEL: Record<string, string> = {
 };
 export const interestsLabel = (ls: string[]) => ls.map((i) => INTEREST_LABEL[i] ?? i).join(", ");
 
-export const TYPE_LABEL: Record<ItemType, string> = { dorm: "숙박", tour: "투어", buddy: "버디" };
-export const ROLE_LABEL: Record<Role, string> = { tourist: "관광객", buddy: "버디", guide: "해설사", univ_admin: "대학 담당자", operator: "운영자" };
+/** 항목 유형 라벨. tour 는 v3에서 예약 항목이 아니라 무료 산책 "코스" */
+export const TYPE_LABEL: Record<ItemType | "tour" | "course", string> = { dorm: "숙박", buddy: "버디", tour: "코스", course: "코스" };
+export const ROLE_LABEL: Record<Role, string> = { tourist: "관광객", buddy: "버디", univ_admin: "대학 담당자", operator: "운영자" };
 
 /** 역할별 첫 화면 */
-export const homeFor = (r: Role): string => (r === "tourist" ? "/home" : r === "buddy" || r === "guide" ? "/buddy" : "/admin");
+export const homeFor = (r: Role): string => (r === "tourist" ? "/home" : r === "buddy" ? "/buddy" : "/admin");
 
-/** 예약 항목 상태 라벨 (버디 requested → 수락 대기, 숙박 requested → 승인 대기) */
+/** 예약 항목 상태 라벨 (버디 requested → 수락 대기 / confirmed → 수락됨, 숙박 requested → 승인 대기) */
 export function itemStatusLabel(it: Pick<BookingItem, "type" | "status">): string | undefined {
   if (it.status === "requested") return it.type === "buddy" ? "수락 대기" : "승인 대기";
+  if (it.status === "confirmed" && it.type === "buddy") return "수락됨";
   return undefined;
 }
+
+/** 예약 오류 코드 → 화면 문구 (CONTRACT §4) */
+export const BOOKING_ERROR: Record<string, string> = {
+  BUDDY_REQUIRED: "기숙사 숙박에는 버디가 1명 필요해요.",
+  BUDDY_OUT_OF_STAY: "버디 날짜가 숙박 기간 안이어야 해요.",
+  ONE_STAY: "숙박은 한 번에 한 곳만 신청할 수 있어요.",
+  COURSE_NOT_BOOKABLE: "산책 코스는 무료라 예약하지 않아도 돼요. 버디를 고를 때 같이 걸을 코스로 골라 주세요.",
+};
 
 /** 장바구니 항목 메타 한 줄 */
 export function cartMeta(i: CartItem): string {
   if (i.type === "dorm" && i.date_from && i.date_to) return `${md(i.date_from)} – ${md(i.date_to)} · ${nightsBetween(i.date_from, i.date_to)}박 · 대학 승인 필요`;
-  if (i.type === "tour") return `${md(i.date)} ${i.time ?? ""} · 즉시 확정`;
-  if (i.type === "buddy") return `${md(i.date)} ${i.time ?? ""} · 버디 수락 필요`;
+  if (i.type === "buddy") {
+    const extras = [i.meal_count ? `식사 ${i.meal_count}회` : "", i.album ? "앨범" : ""].filter(Boolean).join(" · ");
+    return `${md(i.date)} ${i.time ?? ""} · ${(i.duration_min ?? 120) / 60}시간${extras ? ` · ${extras}` : ""} · 버디 수락 필요`;
+  }
   return i.meta;
 }
 

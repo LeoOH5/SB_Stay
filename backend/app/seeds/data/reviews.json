@@ -1,0 +1,37 @@
+[
+ {
+  "id": 1,
+  "booking_item_id": 13,
+  "rating": 5,
+  "text": "Minho showed me the best photo spots on the fortress wall.",
+  "sub_scores": {
+   "kind": 5,
+   "talk": 5,
+   "punctual": 4,
+   "local": 5
+  },
+  "tags": [
+   "fun_talk",
+   "good_photos"
+  ],
+  "created_at": "2026-11-22T10:00:00Z"
+ },
+ {
+  "id": 2,
+  "booking_item_id": 32,
+  "rating": 5,
+  "text": "Jiwoo found a vegetarian-friendly tea house and walked at my pace.",
+  "sub_scores": {
+   "kind": 5,
+   "talk": 5,
+   "punctual": 5,
+   "local": 4
+  },
+  "tags": [
+   "knows_food",
+   "cares_requests",
+   "fun_talk"
+  ],
+  "created_at": "2027-01-08T10:00:00Z"
+ }
+]

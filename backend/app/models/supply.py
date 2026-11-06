@@ -1,10 +1,11 @@
-"""공급 측: 대학·객실·해설사·투어·장소·버디"""
-from datetime import date
+"""공급 측: 대학·객실·코스(tours)·장소·버디. guides 표는 v3에서 쓰지 않는다(빈 표)."""
+from datetime import date, datetime
 
 from sqlalchemy import (
     JSON,
     Boolean,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
@@ -16,6 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
+from app.models.base import TimestampMixin
 
 
 class University(Base):
@@ -29,6 +31,7 @@ class University(Base):
     open_from: Mapped[date | None] = mapped_column(Date)  # 방학 개방 시작
     open_to: Mapped[date | None] = mapped_column(Date)
     checkin_guide: Mapped[dict | None] = mapped_column(JSON)  # 위치·절차·비상연락처
+    email_domains: Mapped[list | None] = mapped_column(JSON)  # 버디 학교 메일 도메인 ["korea.ac.kr"]
 
 
 class DormRoom(Base):
@@ -47,6 +50,7 @@ class DormRoom(Base):
 
 
 class Guide(Base):
+    """v3에서 쓰지 않음 (표만 남김)"""
     __tablename__ = "guides"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
@@ -56,9 +60,10 @@ class Guide(Base):
 
 
 class Tour(Base):
+    """v3: 무료 AI 산책 코스 (예약 항목 아님)"""
     __tablename__ = "tours"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    guide_id: Mapped[int] = mapped_column(ForeignKey("guides.id"))
+    guide_id: Mapped[int | None] = mapped_column(ForeignKey("guides.id"))
     title: Mapped[str] = mapped_column(String(100))
     title_en: Mapped[str] = mapped_column(String(100))
     theme: Mapped[str] = mapped_column(String(30))  # literature | independence | royal | hanok | food | craft
@@ -109,6 +114,14 @@ class BuddyProfile(Base):
     avatar: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | approved | suspended
     hourly_fee: Mapped[int] = mapped_column(Integer, default=0)
+    personality: Mapped[list | None] = mapped_column(JSON)
+    style: Mapped[list | None] = mapped_column(JSON)
+    can_help: Mapped[list | None] = mapped_column(JSON)
+    school_email: Mapped[str | None] = mapped_column(String(255))
+    school_email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    code_agreed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    quiz_score: Mapped[int | None] = mapped_column(SmallInteger)
+    bank_account: Mapped[str | None] = mapped_column(String(100))
 
 
 class BuddyAvailability(Base):
@@ -116,3 +129,16 @@ class BuddyAvailability(Base):
     __table_args__ = (UniqueConstraint("buddy_id", "date"),)
     buddy_id: Mapped[int] = mapped_column(ForeignKey("buddy_profiles.id"), primary_key=True)
     date: Mapped[date] = mapped_column(Date, primary_key=True, index=True)
+
+
+class BuddyActivity(Base, TimestampMixin):
+    """버디 활동 기록 (장소·먹은 것·사진). 앨범 옵션 사진도 여기서 나온다."""
+    __tablename__ = "buddy_activities"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    buddy_id: Mapped[int] = mapped_column(ForeignKey("buddy_profiles.id"), index=True)
+    booking_item_id: Mapped[int | None] = mapped_column(ForeignKey("booking_items.id"))
+    date: Mapped[date] = mapped_column(Date)
+    places: Mapped[list | None] = mapped_column(JSON)
+    foods: Mapped[str | None] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
+    photos: Mapped[list | None] = mapped_column(JSON)

@@ -32,8 +32,8 @@ class DemoLoginIn(BaseModel):
 
 
 class RoleIn(BaseModel):
-    role: str  # tourist | buddy | guide
-    university_id: int | None = None  # buddy·guide는 소속 대학
+    role: str  # tourist | buddy
+    university_id: int | None = None  # buddy 소속 대학 (없으면 학교 메일 인증 때 정해짐)
 
 
 class SignupIn(BaseModel):

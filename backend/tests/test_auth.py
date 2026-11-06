@@ -26,10 +26,11 @@ def test_signup_and_role(client, reset_db):
     assert r.status_code == 201
     h = {"Authorization": f"Bearer {r.json()['access_token']}"}
     assert client.post("/api/v1/auth/signup", json={"name": "New", "email": "new@example.com", "password": "password1"}).status_code == 409
-    r = client.patch("/api/v1/auth/me/role", json={"role": "buddy"}, headers=h)
-    assert r.status_code == 422
+    assert client.patch("/api/v1/auth/me/role", json={"role": "guide", "university_id": 1}, headers=h).status_code == 422  # v3: 해설사 없음
+    r = client.patch("/api/v1/auth/me/role", json={"role": "buddy"}, headers=h)  # 대학은 학교 메일 인증에서 정해짐
+    assert r.status_code == 200 and r.json()["role"] == "buddy" and r.json()["university_id"] is None
     r = client.patch("/api/v1/auth/me/role", json={"role": "buddy", "university_id": 1}, headers=h)
-    assert r.status_code == 200 and r.json()["role"] == "buddy" and r.json()["university_id"] == 1
+    assert r.status_code == 200 and r.json()["university_id"] == 1
 
 
 def test_admin_cannot_change_role(client, univ_admin):

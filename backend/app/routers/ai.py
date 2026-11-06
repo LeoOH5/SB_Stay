@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import get_current_user, require_role
 from app.core.errors import api_error
-from app.models import AiPlan, BookingItem, BuddyProfile, Guide, Place, Tour, User
+from app.models import AiPlan, BookingItem, BuddyProfile, Place, User
 from app.schemas.ai import (
     BriefIn,
     BriefOut,
@@ -34,7 +34,8 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 @router.post("/plan", response_model=PlanOut)
 async def plan(body: PlanIn, user: User = Depends(require_role("tourist")), db: Session = Depends(get_db)) -> PlanOut:
-    """AI-01 여행 설계. 후보는 DB에서 거르고(날짜·가격·운영일), LLM은 고르기·설명만. 예약은 BK-01에서 따로."""
+    """AI-01 여행 설계. 후보는 DB에서 거르고(날짜·가격·운영일), LLM은 고르기·설명만. 예약은 BK-01에서 따로.
+    숙소가 있으면 버디(숙박 기간 안)를 반드시 넣고, 코스는 무료로 버디 항목의 course_id에 붙인다."""
     if body.check_out <= body.check_in:
         raise api_error(422, "VALIDATION", "check_out은 check_in 뒤여야 합니다")
     if (body.check_out - body.check_in).days > 14:
@@ -46,13 +47,14 @@ async def plan(body: PlanIn, user: User = Depends(require_role("tourist")), db: 
     used_ai = False
     try:
         system, prompt = planner.llm_prompt(cands, body)
-        choice = planner.validate_choice(cands, await llm.complete_json(system, prompt))
+        choice = planner.validate_choice(cands, await llm.complete_json(system, prompt), body.budget)
         used_ai = True
     except llm.LLMUnavailable:
-        choice = planner.fallback_choice(cands)
+        choice = planner.fallback_choice(cands, body.budget)
 
-    days, total, reason = planner.assemble(cands, choice, body)
-    out = PlanOut(plan_id="pl_" + secrets.token_hex(3), reason=reason, total_price=total, days=days, ai=used_ai)
+    days, total, reason, warnings = planner.assemble(cands, choice, body)
+    out = PlanOut(plan_id="pl_" + secrets.token_hex(3), reason=reason, total_price=total, days=days, ai=used_ai,
+                  warnings=warnings)
     db.add(AiPlan(id=out.plan_id, user_id=user.id, request=body.model_dump(mode="json"), result=out.model_dump(mode="json")))
     db.commit()
     return out
@@ -99,9 +101,10 @@ async def buddy_match(
     body: MatchIn, _: User = Depends(require_role("tourist")), db: Session = Depends(get_db),
     accept_language: str | None = Header(default=None),
 ) -> MatchOut:
-    """AI-03 버디 매칭. DB가 승인·가능 날짜·언어로 거르고 점수를 매긴 뒤, LLM은 3명을 고르고 이유만 쓴다."""
+    """AI-03 버디 매칭. DB가 승인·가능 날짜·언어로 거르고 점수(관심사·언어·성향·도움·같은 대학)를 매긴 뒤,
+    LLM은 3명을 고르고 이유만 쓴다."""
     ui = ui_lang(accept_language)
-    cands = matcher.candidates(db, body.language, body.date, body.interests)
+    cands = matcher.candidates(db, body)
     if not cands:
         return MatchOut(reason=matcher.overall_reason([], body.language, body.interests, ui), matches=[])
     try:
@@ -125,18 +128,14 @@ async def buddy_match(
 
 
 @router.post("/buddy-brief", response_model=BriefOut)
-async def buddy_brief(body: BriefIn, user: User = Depends(require_role("buddy", "guide")),
+async def buddy_brief(body: BriefIn, user: User = Depends(require_role("buddy")),
                       db: Session = Depends(get_db)) -> BriefOut:
-    """AI-04 동행 준비 자료. 버디는 본인에게 온 버디 항목, 해설사는 본인 투어 항목만."""
+    """AI-04 동행 준비 자료. 버디 본인에게 온 버디 항목만. 요청(식단·알레르기·속도)을 첫 문장에 넣는다."""
     item = db.get(BookingItem, body.booking_item_id)
     if not item:
         raise api_error(404, "NOT_FOUND", "예약 항목을 찾을 수 없습니다")
     profile = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
-    guide = db.scalar(select(Guide).where(Guide.user_id == user.id))
-    tour = db.get(Tour, item.ref_id) if item.type == "tour" else None
-    mine = (item.type == "buddy" and profile is not None and item.ref_id == profile.id) or (
-        tour is not None and guide is not None and tour.guide_id == guide.id)
-    if not mine:
+    if not (item.type == "buddy" and profile is not None and item.ref_id == profile.id):
         raise api_error(403, "FORBIDDEN", "본인에게 배정된 항목이 아닙니다")
 
     m = brief.gather(db, item, profile)

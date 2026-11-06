@@ -1,7 +1,7 @@
 "use client";
 // 관광객 화면 공용 컴포넌트 — 바텀시트·오류·로그인 안내·유형 뱃지·별점
 import type { ReactNode } from "react";
-import { Card, LinkButton, StatusPill, cn } from "@/components/ui";
+import { Banner, Card, LinkButton, TagChip, cn } from "@/components/ui";
 import type { ItemType } from "@/lib/types";
 import { TYPE_LABEL } from "./format";
 
@@ -23,28 +23,27 @@ export function BottomSheet({ open, onClose, title, children }: { open: boolean;
 
 export function ErrorBox({ message, className }: { message: string | null; className?: string }) {
   if (!message) return null;
-  return <div className={cn("rounded-[14px] bg-orange-bg px-4 py-3 text-[13px] text-orange", className)}>{message}</div>;
+  return <Banner variant="warn" className={className}>{message}</Banner>;
 }
 
 export function Notice({ children, className }: { children: ReactNode; className?: string }) {
-  return <p className={cn("text-[12px] text-orange", className)}>{children}</p>;
+  return <p className={cn("text-[13px] text-orange-ink", className)}>{children}</p>;
 }
 
 /** 로그인 안 된 상태의 /trips·/me 안내 (강제 리다이렉트 없음) */
 export function LoginRequired({ what }: { what: string }) {
   return (
     <Card tint className="text-center py-8">
-      <div className="text-[15px] font-semibold text-ink">{what}은 로그인 후 볼 수 있어요</div>
-      <p className="mt-1 text-[12px] text-muted">데모 계정으로 바로 로그인할 수 있어요.</p>
+      <div className="text-[16px] font-semibold text-ink">{what}은 로그인 후 볼 수 있어요</div>
+      <p className="mt-1 text-[13px] text-muted">데모 계정으로 바로 로그인할 수 있어요.</p>
       <LinkButton href="/login" className="mt-4">로그인하러 가기</LinkButton>
     </Card>
   );
 }
 
-/** 숙박/투어/버디 유형 뱃지 — 와이어프레임 장바구니 색 (숙박 info · 투어 approved · 버디 pending) */
-const TYPE_KIND: Record<ItemType, string> = { dorm: "info", tour: "approved", buddy: "pending" };
+/** 숙박/버디 유형 뱃지 — v3 장바구니의 흰 바탕 테두리 작은 태그 */
 export function TypeBadge({ type, className }: { type: ItemType; className?: string }) {
-  return <StatusPill status={TYPE_KIND[type]} label={TYPE_LABEL[type]} className={className} />;
+  return <TagChip variant="outline" className={cn("h-6 px-2 text-[12px]", className)}>{TYPE_LABEL[type]}</TagChip>;
 }
 
 export function Stars({ value, onChange, size = "text-[18px]" }: { value: number; onChange?: (v: number) => void; size?: string }) {
@@ -63,12 +62,12 @@ export function Stars({ value, onChange, size = "text-[18px]" }: { value: number
 
 export function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-1.5 text-[13px]">
+    <div className="flex items-start justify-between gap-3 py-2 text-[14px]">
       <span className="text-muted shrink-0">{label}</span>
       <span className="text-ink text-right">{children}</span>
     </div>
   );
 }
 
-export const selectCls = "w-full h-12 rounded-xl border border-line bg-white px-4 text-[14px] text-ink focus:outline-none focus:border-navy";
-export const textareaCls = "w-full min-h-[64px] rounded-xl border border-line bg-white px-4 py-3 text-[14px] text-ink placeholder:text-muted focus:outline-none focus:border-navy";
+export const selectCls = "w-full h-12 rounded-[12px] border border-line bg-white px-4 text-[14px] text-ink focus:outline-none focus:border-navy";
+export const textareaCls = "w-full min-h-[64px] rounded-[12px] border border-line bg-white px-4 py-3 text-[14px] text-ink placeholder:text-muted focus:outline-none focus:border-navy";

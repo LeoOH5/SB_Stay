@@ -23,7 +23,7 @@ def _items(db: Session, p: Package) -> list[PackageItem]:
         uni = db.get(University, room.university_id)
         items.append(PackageItem(type="dorm", ref_id=room.id, title=f"{uni.name if uni else ''} {room.building}".strip()))
     if p.tour_id and (tour := db.get(Tour, p.tour_id)):
-        items.append(PackageItem(type="tour", ref_id=tour.id, title=tour.title))
+        items.append(PackageItem(type="course", ref_id=tour.id, title=tour.title))  # 무료 추천 코스 (예약 항목 아님)
     if p.buddy_profile_id and (buddy := db.get(BuddyProfile, p.buddy_profile_id)):
         user = db.get(User, buddy.user_id)
         items.append(PackageItem(type="buddy", ref_id=buddy.id, title=f"버디 {user.name if user else ''}와 캠퍼스·동네 걷기"))

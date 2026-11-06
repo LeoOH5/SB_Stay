@@ -19,6 +19,7 @@ from app.routers import (
     dorms,
     notifications,
     payments,
+    reports,
     tours,
 )
 
@@ -56,6 +57,7 @@ app.include_router(ai.router, prefix=API)
 app.include_router(bookings.router, prefix=API)
 app.include_router(notifications.router, prefix=API)
 app.include_router(payments.router, prefix=API)
+app.include_router(reports.router, prefix=API)
 app.include_router(admin.router, prefix=API)
 
 

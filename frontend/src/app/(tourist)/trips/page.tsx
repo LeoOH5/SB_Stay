@@ -1,59 +1,74 @@
 "use client";
-// T6 내 여행 · 예약 상태 + T11 지난 예약·취소 — BK-02 GET /bookings/me, BK-07 체크인 안내, BK-09 채팅, BK-05 취소, BK-08 리뷰
-import { HeaderActions } from "@/components/tourist/header-actions";
+// T16 내 여행 — BK-02 GET /bookings/me?scope=upcoming|past, 코스 장소 수 GET /tours/{id}, 체크인 안내(BK-07), 채팅(BK-09), 취소(BK-05)
+// 버디 항목: 식사비 사용(meal_used / meal_deposit)·남은 보증금, 채팅 · 앨범 · 후기 · 버디 바꾸기, 신고(T22)
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Button, Card, Chip, Hero, LinkButton, Spinner, StatusPill } from "@/components/ui";
-import { BottomSheet, ErrorBox, LoginRequired, Notice, Row, selectCls, Stars, textareaCls, TypeBadge } from "@/components/tourist";
-import { DEMO_TODAY, errMsg, itemStatusLabel, md, okv, ymd } from "@/components/tourist/format";
-import { paymentsEnabled } from "@/lib/toss";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { BottomSheet, ErrorBox, LoginRequired, Row } from "@/components/tourist";
+import { DEMO_TODAY, errMsg, itemStatusLabel, md, okv } from "@/components/tourist/format";
 import type { ChatMessage, CheckinGuide } from "@/components/tourist/types";
+import { NotiBell } from "@/components/tourist/trips/noti-bell";
+import { Node, TimelineStep, bookingSpan, buddyNameOf, hoursLabel, iga, krDate, krRange, nightsOf, wa } from "@/components/tourist/trips/util";
+import { Button, Chip, Hero, Icon, LinkButton, Spinner, StatusPill, cn } from "@/components/ui";
 import { get, post, won } from "@/lib/api";
 import { useUser } from "@/lib/auth";
-import type { Booking, BookingItem, ListResponse } from "@/lib/types";
+import { paymentsEnabled } from "@/lib/toss";
+import type { Booking, BookingItem, ListResponse, Tour } from "@/lib/types";
 
+type Tab = "upcoming" | "past";
 const okItem = (s: BookingItem["status"]) => s === "approved" || s === "confirmed";
-const lastDate = (b: Booking) => b.items.reduce((m, i) => (i.date_to ?? i.date_from ?? "") > m ? (i.date_to ?? i.date_from ?? "") : m, "");
-const isPast = (b: Booking) => b.status === "cancelled" || (lastDate(b) !== "" && lastDate(b) < DEMO_TODAY);
-const range = (b: Booking) => { const ds = b.items.flatMap((i) => [i.date_from, i.date_to]).filter((d): d is string => !!d).sort(); return ds.length ? `${ymd(ds[0])} – ${ymd(ds[ds.length - 1]).slice(5)}` : ""; };
+const nodeOf = (s: BookingItem["status"]) => (okItem(s) ? "done" : s === "requested" ? "wait" : "off");
+/** 버디 바꾸기 가능: 신청·거절 상태이거나, 확정이지만 아직 날짜 전 */
+const canReplace = (it: BookingItem) => it.type === "buddy" && (it.status === "requested" || it.status === "rejected" || (it.status === "confirmed" && (it.date_from ?? "") > DEMO_TODAY));
+const linkCls = "text-[15px] font-semibold text-navy";
 
 export default function TripsPage() {
   const { user } = useUser();
-  const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
-  const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [tab, setTab] = useState<Tab>("upcoming");
+  const [lists, setLists] = useState<Record<Tab, Booking[] | null>>({ upcoming: null, past: null });
+  const [courses, setCourses] = useState<Record<number, Tour>>({});
   const [err, setErr] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  // 시트 상태
+  const [busy, setBusy] = useState(false);
+  // 시트
   const [guideFor, setGuideFor] = useState<Booking | null>(null);
   const [guide, setGuide] = useState<CheckinGuide | null>(null);
-  const [chatFor, setChatFor] = useState<Booking | null>(null);
+  const [chatFor, setChatFor] = useState<BookingItem | null>(null);
   const [chat, setChat] = useState<ChatMessage[] | null>(null);
+  const [chatBooking, setChatBooking] = useState<number | null>(null);
   const [translate, setTranslate] = useState(true);
   const [draft, setDraft] = useState("");
-  const [reviewFor, setReviewFor] = useState<Booking | null>(null);
-  const [reviewItem, setReviewItem] = useState<number>(0);
-  const [rating, setRating] = useState(5);
-  const [reviewText, setReviewText] = useState("");
-  const [reviewDone, setReviewDone] = useState<string | null>(null);
-  const [receiptFor, setReceiptFor] = useState<Booking | null>(null);
-  const [busy, setBusy] = useState(false);
   const [sheetErr, setSheetErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     let alive = true;
-    get<ListResponse<Booking>>("/bookings/me", { scope: tab }).then((r) => { if (alive) setBookings(r.items); }).catch((e: unknown) => { if (alive) setErr(errMsg(e)); });
+    for (const scope of ["upcoming", "past"] as const) {
+      get<ListResponse<Booking>>("/bookings/me", { scope })
+        .then((r) => { if (alive) setLists((p) => ({ ...p, [scope]: r.items })); })
+        .catch((e: unknown) => { if (alive) { setErr(errMsg(e)); setLists((p) => ({ ...p, [scope]: [] })); } });
+    }
     return () => { alive = false; };
-  }, [user, tab, reloadKey]);
+  }, [user, reloadKey]);
 
-  const reload = () => { setBookings(null); setReloadKey((k) => k + 1); };
+  // 버디 항목에 고른 코스 → 장소 수
+  const courseIds = [...new Set([...(lists.upcoming ?? []), ...(lists.past ?? [])].flatMap((b) => b.items).map((i) => i.course_id).filter((c): c is number => c != null))].sort().join(",");
+  useEffect(() => {
+    if (!courseIds) return;
+    let alive = true;
+    for (const id of courseIds.split(",").map(Number)) {
+      okv(get<Tour>(`/tours/${id}`)).then((t) => { if (alive) setCourses((c) => ({ ...c, [id]: t })); }).catch(() => { /* 장소 수는 선택 */ });
+    }
+    return () => { alive = false; };
+  }, [courseIds]);
+
+  const reload = () => { setLists({ upcoming: null, past: null }); setReloadKey((k) => k + 1); };
 
   const openGuide = (b: Booking) => {
     setGuideFor(b); setGuide(null); setSheetErr(null);
     okv(get<CheckinGuide>(`/bookings/${b.id}/checkin-guide`)).then(setGuide).catch((e: unknown) => setSheetErr(errMsg(e)));
   };
-  const openChat = (b: Booking) => {
-    setChatFor(b); setChat(null); setSheetErr(null);
+  const openChat = (b: Booking, it: BookingItem) => {
+    setChatFor(it); setChatBooking(b.id); setChat(null); setSheetErr(null);
     get<ListResponse<ChatMessage>>(`/bookings/${b.id}/chat`).then((r) => setChat(r.items)).catch((e: unknown) => setSheetErr(errMsg(e)));
   };
   const sendDraft = () => {
@@ -63,165 +78,246 @@ export default function TripsPage() {
     setDraft("");
   };
   const cancel = async (b: Booking) => {
-    if (!window.confirm(`${b.code} 예약을 취소할까요?\n숙박·투어·버디 모두 취소됩니다.\n환불: 체크인 7일 전 100% · 3일 전 50% · 이후 0%`)) return;
+    if (!window.confirm(`${b.code} 예약을 취소할까요?\n숙박과 버디가 함께 취소돼요.\n환불: 체크인 7일 전 전액 · 3일 전 절반 · 그 뒤에는 안 돼요`)) return;
     setBusy(true); setErr(null);
     try { await post(`/bookings/${b.id}/cancel`, { reason: "일정 변경" }); reload(); }
     catch (e) { setErr(errMsg(e)); }
     finally { setBusy(false); }
   };
-  const openReview = (b: Booking) => { setReviewFor(b); setReviewItem(b.items[0]?.id ?? 0); setRating(5); setReviewText(""); setReviewDone(null); setSheetErr(null); };
-  const submitReview = async () => {
-    if (!reviewFor) return;
-    setBusy(true); setSheetErr(null);
-    try { await post(`/bookings/${reviewFor.id}/reviews`, { item_id: reviewItem, rating, text: reviewText.trim() }); setReviewDone("리뷰가 등록됐어요. 고마워요!"); }
-    catch (e) { setSheetErr(errMsg(e)); }
-    finally { setBusy(false); }
-  };
-
-  const all = bookings ?? [];
-  const upcoming = all.filter((b) => !isPast(b));
-  const past = all.filter(isPast);
-  const shown = tab === "upcoming" ? upcoming : past;
 
   if (!user) {
-    return (<><Hero title="My trips" right={<HeaderActions />} /><div className="px-5 pb-6 pt-4"><LoginRequired what="내 여행" /></div></>);
+    return (<><Hero title="내 여행" right={<NotiBell />} /><div className="px-5 pb-6 pt-2"><LoginRequired what="내 여행" /></div></>);
   }
 
+  const shown = lists[tab];
   return (
     <>
-      <Hero title="My trips" sub={user.name} right={<HeaderActions />} />
-      <div className="px-5 pb-6 pt-4 space-y-3">
-        <div className="flex gap-2">
-          <Chip selected={tab === "upcoming"} onClick={() => setTab("upcoming")}>예정 ({upcoming.length})</Chip>
-          <Chip selected={tab === "past"} onClick={() => setTab("past")}>지난 ({past.length})</Chip>
+      <Hero title="내 여행" right={<NotiBell />}>
+        <div className="mt-5 flex gap-2">
+          <Chip selected={tab === "upcoming"} onClick={() => setTab("upcoming")}>다가오는 여행{lists.upcoming ? ` ${lists.upcoming.length}` : ""}</Chip>
+          <Chip selected={tab === "past"} onClick={() => setTab("past")}>지난 여행{lists.past ? ` ${lists.past.length}` : ""}</Chip>
         </div>
-        <ErrorBox message={err} />
-        {!bookings && !err && <Spinner />}
-        {bookings && shown.length === 0 && (
-          <Card tint className="text-center py-8"><div className="text-[14px] text-ink">{tab === "upcoming" ? "예정된 여행이 없어요." : "지난 예약이 없어요."}</div>{tab === "upcoming" && <LinkButton href="/plan" className="mt-4">AI로 여행 설계하기</LinkButton>}</Card>
+      </Hero>
+
+      <div className="pb-8">
+        <ErrorBox message={err} className="mx-5 mb-3" />
+        {!shown && <Spinner />}
+        {shown?.length === 0 && (
+          <div className="px-5 py-10 text-center">
+            <p className="text-[15px] text-muted">{tab === "upcoming" ? "다가오는 여행이 없어요." : "지난 여행이 없어요."}</p>
+            {tab === "upcoming" && <LinkButton href="/plan" className="mt-5">AI로 여행 설계하기</LinkButton>}
+          </div>
         )}
-
-        {tab === "upcoming" && shown.map((b) => {
-          const ok = b.items.filter((i) => okItem(i.status)).length;
-          return (
-            <Card key={b.id} className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div><div className="text-[12px] text-muted">예약번호</div><div className="text-[14px] font-semibold text-ink">{b.code}</div></div>
-                <span className="rounded-lg bg-green px-2.5 py-1 text-[12px] font-semibold text-navy">{ok}/{b.items.length} 승인</span>
-              </div>
-              <div className="h-2 rounded-full bg-gray-bg overflow-hidden"><div className="h-full rounded-full bg-green-dark" style={{ width: `${b.items.length ? (ok / b.items.length) * 100 : 0}%` }} /></div>
-              {b.items.map((it) => (
-                <div key={it.id} className={`rounded-[12px] border-l-4 ${okItem(it.status) ? "border-l-green-dark" : it.status === "requested" ? "border-l-orange" : "border-l-line"} bg-white ring-1 ring-line/60 p-3`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2"><TypeBadge type={it.type} className="px-2 py-0.5 text-[10px]" /><span className="text-[14px] font-semibold text-ink break-keep">{it.title}</span></div>
-                      <div className="mt-1 text-[12px] text-muted">{it.meta}{it.type === "buddy" && it.status === "requested" ? " · 수락되면 채팅이 열립니다" : ""}{it.status === "rejected" && it.reject_reason ? ` · 사유: ${it.reject_reason}` : ""}</div>
-                    </div>
-                    <StatusPill status={it.status} label={itemStatusLabel(it)} />
-                  </div>
-                  <div className="mt-2 flex justify-end gap-3 text-[12px]">
-                    {it.type === "dorm" && <button type="button" onClick={() => openGuide(b)} className="text-navy font-semibold">체크인 안내 보기 →</button>}
-                    {it.type === "buddy" && <button type="button" onClick={() => openChat(b)} className="text-navy font-semibold">버디 채팅 →</button>}
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-center justify-between text-[13px]"><span className="text-muted">합계 · {b.paid_at ? "결제 완료" : "미결제"}</span><span className="font-semibold text-ink">{won(b.total_price)}</span></div>
-              {!b.paid_at && paymentsEnabled() && <LinkButton href={`/pay?booking=${b.id}`}>{won(b.total_price)} 결제하기</LinkButton>}
-              <Button variant="danger" className="text-[14px]" onClick={() => cancel(b)} disabled={busy}>예약 취소하기</Button>
-              <p className="text-[12px] text-orange">취소 시 숙박·투어·버디 모두 취소 · 환불: 체크인 7일 전 100% · 3일 전 50% · 이후 0%</p>
-            </Card>
-          );
-        })}
-
-        {tab === "past" && shown.map((b) => {
-          const done = b.status !== "cancelled";
-          return (
-            <Card key={b.id} accent={done ? "green" : undefined} className={done ? "" : "border-l-4 border-l-line"}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="text-[12px] text-muted">{b.code} · {range(b)}</div>
-                <StatusPill status={done ? "confirmed" : "cancelled"} label={done ? "완료" : "취소됨"} />
-              </div>
-              <div className="mt-2 text-[14px] text-ink">{b.items.map((i) => i.title).join(" · ")}</div>
-              <div className="mt-1 flex items-center justify-between text-[12px] text-muted"><span>{done ? `리뷰 0/${b.items.length} 작성` : "환불 100% (7일 전 취소)"}</span><span className="text-[14px] font-semibold text-ink">{won(b.total_price)}</span></div>
-              <div className="mt-3 flex items-center gap-3">
-                {done && <Button full={false} variant="secondary" className="h-9 min-h-[36px] px-4 text-[13px]" onClick={() => openReview(b)}>리뷰 쓰기</Button>}
-                <button type="button" onClick={() => setReceiptFor(b)} className="text-[13px] text-navy font-semibold">영수증</button>
-                <Link href="/home" className="text-[13px] text-navy font-semibold">다시 예약</Link>
-              </div>
-            </Card>
-          );
-        })}
-
+        {shown?.map((b, i) => (
+          <Fragment key={b.id}>
+            {i > 0 && <div className="my-6 h-2 bg-gray-bg" />}
+            {tab === "upcoming"
+              ? <UpcomingTrip b={b} courses={courses} busy={busy} onGuide={() => openGuide(b)} onChat={(it) => openChat(b, it)} onCancel={() => cancel(b)} />
+              : <PastTrip b={b} />}
+          </Fragment>
+        ))}
       </div>
 
       {/* 체크인 안내 */}
-      <BottomSheet open={guideFor !== null} onClose={() => setGuideFor(null)} title={`체크인 안내 · ${guideFor?.code ?? ""}`}>
+      <BottomSheet open={guideFor !== null} onClose={() => setGuideFor(null)} title="체크인 안내">
         <ErrorBox message={sheetErr} />
         {!guide && !sheetErr && <Spinner />}
         {guide && (
-          <div className="space-y-2">
-            <Row label="건물">{guide.building}</Row>
-            <Row label="주소">{guide.address}</Row>
-            <Row label="체크인 / 아웃">{guide.checkin} / {guide.checkout}</Row>
-            <Row label="Wi-Fi">{guide.wifi}</Row>
-            <Card accent="navy"><div className="text-[14px] font-semibold text-navy">입실 절차</div><ol className="mt-1.5 space-y-1 text-[13px] text-ink">{guide.steps.map((s, i) => <li key={i}>{i + 1}. {s}</li>)}</ol></Card>
-            <Card accent="orange"><div className="text-[14px] font-semibold text-orange">긴급 연락처</div><ul className="mt-1.5 space-y-1 text-[13px] text-ink">{guide.emergency.map((s, i) => <li key={i}>· {s}</li>)}</ul></Card>
+          <div>
+            <div className="divide-y divide-line">
+              <Row label="건물">{guide.building}</Row>
+              <Row label="주소">{guide.address}</Row>
+              <Row label="체크인 · 체크아웃">{guide.checkin} · {guide.checkout}</Row>
+              <Row label="와이파이">{guide.wifi}</Row>
+            </div>
+            <h4 className="mt-5 text-[15px] font-bold text-ink">들어가는 방법</h4>
+            <ol className="mt-2 space-y-1.5 text-[15px] text-ink">{guide.steps.map((s, k) => <li key={k} className="flex gap-2"><span className="font-semibold text-navy">{k + 1}</span>{s}</li>)}</ol>
+            <h4 className="mt-5 text-[15px] font-bold text-ink">긴급 연락처</h4>
+            <ul className="mt-2 space-y-1 text-[15px] text-ink">{guide.emergency.map((s, k) => <li key={k}>{s}</li>)}</ul>
           </div>
         )}
       </BottomSheet>
 
       {/* 버디 채팅 */}
-      <BottomSheet open={chatFor !== null} onClose={() => setChatFor(null)} title="버디 채팅 · 자동 번역">
-        <div className="flex justify-end mb-2"><Chip selected={translate} onClick={() => setTranslate((v) => !v)} className="h-8 text-[12px]">자동 번역 {translate ? "ON" : "OFF"}</Chip></div>
+      <BottomSheet open={chatFor !== null} onClose={() => setChatFor(null)} title={chatFor ? `${buddyNameOf(chatFor)}${wa(buddyNameOf(chatFor))} 채팅` : "채팅"}>
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-[13px] text-muted">메시지는 자동으로 번역돼요</span>
+          <Chip selected={translate} onClick={() => setTranslate((v) => !v)} className="h-8 px-3 text-[13px]">번역 {translate ? "켜짐" : "꺼짐"}</Chip>
+        </div>
         <ErrorBox message={sheetErr} />
         {!chat && !sheetErr && <Spinner />}
-        {chat && (
-          <div className="rounded-[14px] bg-gray-bg p-3 space-y-2">
+        {chat && chatBooking && (
+          <div className="space-y-2">
             {chat.map((m) => (
-              <div key={m.id} className={`max-w-[80%] rounded-[10px] px-3 py-2 text-[12px] ${m.sender === "tourist" ? "ml-auto bg-navy text-white" : "bg-white text-ink"}`}>
-                <div className="text-[11px] opacity-70 mb-0.5">{m.sender === "tourist" ? user.name.split(" ")[0] : "버디"} · {md(m.created_at.slice(0, 10))}</div>
+              <div key={m.id} className={cn("max-w-[80%] rounded-[14px] px-3.5 py-2.5 text-[15px]", m.sender === "tourist" ? "ml-auto bg-navy text-white" : "bg-gray-bg text-ink")}>
                 <div>{translate ? m.translated_text : m.text}</div>
-                {translate && m.translated_text !== m.text && <div className="mt-0.5 text-[11px] opacity-70">원문: {m.text}</div>}
+                {translate && m.translated_text !== m.text && <div className="mt-1 text-[12px] opacity-70">원문: {m.text}</div>}
               </div>
             ))}
-            <form className="flex gap-2 pt-1" onSubmit={(e) => { e.preventDefault(); sendDraft(); }}>
-              <input className="flex-1 h-9 rounded-xl border border-line bg-white px-3 text-[12px] text-ink placeholder:text-muted focus:outline-none focus:border-navy" placeholder="Message…" value={draft} onChange={(e) => setDraft(e.target.value)} />
-              <Button type="submit" full={false} className="h-9 min-h-[36px] px-3 text-[12px]">보내기</Button>
+            <form className="flex gap-2 pt-2" onSubmit={(e) => { e.preventDefault(); sendDraft(); }}>
+              <input className="h-11 flex-1 rounded-[12px] border border-line bg-white px-3.5 text-[15px] text-ink placeholder:text-muted focus:border-navy focus:outline-none" placeholder="메시지 보내기" value={draft} onChange={(e) => setDraft(e.target.value)} />
+              <Button type="submit" full={false} className="h-11! min-h-11! px-4 text-[15px]">보내기</Button>
             </form>
           </div>
         )}
       </BottomSheet>
-
-      {/* 리뷰 작성 */}
-      <BottomSheet open={reviewFor !== null} onClose={() => setReviewFor(null)} title="리뷰 작성">
-        {reviewFor && (
-          <div className="space-y-3">
-            <select className={selectCls} value={reviewItem} onChange={(e) => setReviewItem(Number(e.target.value))}>
-              {reviewFor.items.map((it) => <option key={it.id} value={it.id}>{it.title} · {it.meta}</option>)}
-            </select>
-            <div className="flex items-center gap-3"><span className="text-[13px] text-muted">별점</span><Stars value={rating} onChange={setRating} size="text-[22px]" /></div>
-            <textarea className={textareaCls} placeholder="해설이 쉽고 코스가 걷기 좋아요…" value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
-            <ErrorBox message={sheetErr} />
-            {reviewDone ? <Card className="bg-green-bg ring-0 text-[13px] text-green-dark">{reviewDone}</Card> : <Button onClick={submitReview} disabled={busy || !reviewText.trim()}>{busy ? "등록 중…" : "리뷰 등록"}</Button>}
-          </div>
-        )}
-      </BottomSheet>
-
-      {/* 영수증 */}
-      <BottomSheet open={receiptFor !== null} onClose={() => setReceiptFor(null)} title={`영수증 · ${receiptFor?.code ?? ""}`}>
-        {receiptFor && (
-          <div className="space-y-1">
-            {receiptFor.items.map((it) => <Row key={it.id} label={it.title}>{won(it.price)}</Row>)}
-            <Row label="플랫폼 수수료 (10%, 합계에 포함)">{won(receiptFor.platform_fee)}</Row>
-            <div className="flex items-end justify-between pt-2 border-t border-line"><span className="text-[13px] text-muted">합계</span><span className="text-[22px] font-bold text-navy">{won(receiptFor.total_price)}</span></div>
-            <Row label="결제">{receiptFor.paid_at ? ymd(receiptFor.paid_at.slice(0, 10)) : "-"}</Row>
-            <Row label="상태"><StatusPill status={receiptFor.status} /></Row>
-            {receiptFor.payment?.method && <Row label="결제 수단">{receiptFor.payment.method === "mock" ? "테스트 결제" : receiptFor.payment.method}{receiptFor.payment.foreign_amount ? ` · $${receiptFor.payment.foreign_amount}` : ""}</Row>}
-            {receiptFor.status === "cancelled" && <Notice>{receiptFor.payment ? `환불 ${won(receiptFor.payment.canceled_amount)}` : "결제 전 취소 · 환불 없음"}</Notice>}
-            {receiptFor.payment?.receipt_url && <a href={receiptFor.payment.receipt_url} target="_blank" rel="noreferrer" className="block pt-2 text-center text-[13px] font-semibold text-navy">카드 영수증 보기 →</a>}
-          </div>
-        )}
-      </BottomSheet>
     </>
+  );
+}
+
+function UpcomingTrip({ b, courses, busy, onGuide, onChat, onCancel }: {
+  b: Booking; courses: Record<number, Tour>; busy: boolean; onGuide: () => void; onChat: (it: BookingItem) => void; onCancel: () => void;
+}) {
+  const span = bookingSpan(b);
+  const items = b.items.filter((i) => i.status !== "cancelled");
+  const ok = items.filter((i) => okItem(i.status)).length;
+  const status = items.length && ok === items.length ? `${items.length}개 모두 확정` : `${items.length}개 중 ${ok}개 확정`;
+  const firstBuddy = items.find((i) => i.type === "buddy");
+
+  // 타임라인: 숙박 → 버디 → (버디가 고른 코스)
+  type Step = { key: string; kind: "item" | "course"; it: BookingItem };
+  const steps: Step[] = [];
+  for (const it of items) {
+    steps.push({ key: `i${it.id}`, kind: "item", it });
+    if (it.type === "buddy" && it.course_id != null && it.status !== "rejected") steps.push({ key: `c${it.id}`, kind: "course", it });
+  }
+
+  return (
+    <section className="px-5">
+      <h2 className="text-[22px] font-bold leading-tight text-ink">{krRange(span.from, span.to)}, 성북동</h2>
+      <div className="mt-2 flex items-center justify-between text-[14px]">
+        <span className="text-muted">{b.code}</span>
+        <span className={ok === items.length ? "text-ink" : "font-semibold text-orange"}>{status}</span>
+      </div>
+      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-gray-bg"><div className="h-full rounded-full bg-navy transition-all" style={{ width: `${items.length ? (ok / items.length) * 100 : 0}%` }} /></div>
+
+      <div className="mt-6">
+        {steps.map((s, k) => (
+          <TimelineStep key={s.key} last={k === steps.length - 1} node={<Node kind={s.kind === "course" ? "open" : nodeOf(s.it.status)} />}>
+            {s.kind === "course" ? <CourseStep it={s.it} course={courses[s.it.course_id!]} /> : s.it.type === "dorm" ? <DormStep it={s.it} onGuide={onGuide} /> : <BuddyStep b={b} it={s.it} onChat={() => onChat(s.it)} />}
+          </TimelineStep>
+        ))}
+      </div>
+
+      <div className="mt-7 flex items-center justify-between border-t border-line pt-4 text-[15px]">
+        <span className="text-muted">결제</span>
+        <span className="font-bold text-ink">{won(b.total_price)} {b.paid_at ? "결제 완료" : "결제 전"}</span>
+      </div>
+      {!b.paid_at && paymentsEnabled() && <LinkButton href={`/pay?booking=${b.id}`} className="mt-4">{won(b.total_price)} 결제하기</LinkButton>}
+
+      {firstBuddy && (
+        <LinkButton href={`/trips/${b.id}/report?item=${firstBuddy.id}`} variant="danger-outline" className="mt-5">
+          <Icon name="shield" className="h-5 w-5" />도움이 필요해요 · 신고
+        </LinkButton>
+      )}
+      <p className="mt-4 text-[13px] leading-relaxed text-muted">
+        예약을 취소하면 숙박과 버디가 함께 취소돼요. 체크인 7일 전까지 전액 환불돼요.{" "}
+        <button type="button" onClick={onCancel} disabled={busy} className="font-semibold text-ink underline underline-offset-2 disabled:opacity-40">예약 취소하기</button>
+      </p>
+    </section>
+  );
+}
+
+function StepHead({ title, pill }: { title: string; pill: ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-[17px] font-semibold leading-snug text-ink">{title}</span>
+      <span className="mt-0.5">{pill}</span>
+    </div>
+  );
+}
+
+function DormStep({ it, onGuide }: { it: BookingItem; onGuide: () => void }) {
+  return (
+    <>
+      <StepHead title={it.title} pill={<StatusPill status={it.status} label={itemStatusLabel(it)} />} />
+      <div className="mt-1 text-[15px] text-muted">{krRange(it.date_from, it.date_to)}{it.date_from && it.date_to ? `, ${nightsOf(it.date_from, it.date_to)}박` : ""}</div>
+      {it.status === "requested" && <div className="mt-1 text-[14px] text-orange-ink">대학이 확인하고 있어요</div>}
+      {it.status === "rejected" && <div className="mt-1 text-[14px] text-muted">대학이 거절했어요{it.reject_reason ? ` · ${it.reject_reason}` : ""}</div>}
+      {okItem(it.status) && <button type="button" onClick={onGuide} className={cn(linkCls, "mt-2.5")}>체크인 안내 보기</button>}
+    </>
+  );
+}
+
+function BuddyStep({ b, it, onChat }: { b: Booking; it: BookingItem; onChat: () => void }) {
+  const deposit = it.meal_deposit ?? 0, used = it.meal_used ?? 0;
+  const left = Math.max(0, deposit - used);
+  const name = buddyNameOf(it);
+  return (
+    <>
+      <StepHead title={it.title} pill={<StatusPill status={it.status} label={itemStatusLabel(it)} />} />
+      <div className="mt-1 text-[15px] text-muted">{krDate(it.date_from)} {it.time}, {hoursLabel(it.duration_min)}</div>
+      {it.status === "requested" && <div className="mt-1 text-[14px] text-orange-ink">{name}{iga(name)} 수락하면 채팅이 열려요</div>}
+      {it.status === "rejected" && <div className="mt-1 text-[14px] text-muted">{name}{iga(name)} 이날 갈 수 없대요{it.reject_reason ? ` · ${it.reject_reason}` : ""}. 숙박 기간 안에서 다른 버디를 골라 주세요.</div>}
+
+      {deposit > 0 && it.status !== "rejected" && (
+        <div className="mt-3.5 rounded-[14px] border border-line px-4 py-3.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[15px] text-muted">식사비</span>
+            <span className="text-[16px] font-bold text-ink">{won(used)} / {won(deposit)}</span>
+          </div>
+          <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-gray-bg"><div className={cn("h-full rounded-full", used > deposit ? "bg-orange" : "bg-navy")} style={{ width: `${Math.min(100, deposit ? (used / deposit) * 100 : 0)}%` }} /></div>
+          <p className="mt-2.5 text-[13px] leading-relaxed text-muted">
+            {used === 0 ? `식사 ${it.meal_count}회분 보증금이에요. 쓰지 않은 금액은 여행이 끝나면 돌려드려요.` : `식사 ${it.meal_count}회분 중 ${won(used)} 사용 · 남은 ${won(left)}은 여행이 끝나면 돌려드려요.`}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+        {it.status === "confirmed" && <button type="button" onClick={onChat} className={linkCls}>채팅</button>}
+        {it.album && it.status !== "rejected" && <Link href={`/trips/${b.id}/album`} className={linkCls}>앨범 {it.album_photos ?? 0}장</Link>}
+        {it.can_review && <Link href={`/trips/${b.id}/review?item=${it.id}`} className={linkCls}>후기 쓰기</Link>}
+        {canReplace(it) && <Link href={`/trips/${b.id}/replace?item=${it.id}`} className={cn(linkCls, it.status === "rejected" && "text-orange")}>{it.status === "rejected" ? "다른 버디 고르기" : "버디 바꾸기"}</Link>}
+      </div>
+    </>
+  );
+}
+
+function CourseStep({ it, course }: { it: BookingItem; course?: Tour }) {
+  const title = it.course_title ?? course?.title ?? "산책 코스";
+  const name = buddyNameOf(it);
+  return (
+    <>
+      <StepHead title={title.endsWith("코스") ? title : `${title} 코스`} pill={<StatusPill status="none" tone="gray" label="무료 코스" />} />
+      <div className="mt-1 text-[15px] text-muted">{krDate(it.date_from)} {name}{wa(name)} 함께{course ? ` · 장소 ${course.places.length}곳` : ""}</div>
+      <Link href={`/tours/${it.course_id}`} className={cn(linkCls, "mt-2.5 inline-block")}>AI 이야기 듣기</Link>
+    </>
+  );
+}
+
+function PastTrip({ b }: { b: Booking }) {
+  const span = bookingSpan(b);
+  const cancelled = b.status === "cancelled";
+  const items = cancelled ? b.items : b.items.filter((i) => i.status !== "cancelled");
+  return (
+    <section className="px-5">
+      <h2 className="text-[20px] font-bold leading-tight text-ink">{krRange(span.from, span.to)}, 성북동</h2>
+      <div className="mt-2 flex items-center justify-between text-[14px]">
+        <span className="text-muted">{span.from.slice(0, 4)} · {b.code}</span>
+        <StatusPill status={cancelled ? "cancelled" : "confirmed"} label={cancelled ? "취소됨" : "다녀왔어요"} />
+      </div>
+      <div className="mt-2 divide-y divide-line">
+        {items.map((it) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 py-4">
+            <div className="min-w-0">
+              <div className={cn("text-[16px] font-semibold", cancelled ? "text-muted" : "text-ink")}>{it.title}</div>
+              <div className="mt-0.5 text-[14px] text-muted">
+                {it.type === "dorm" ? `${krRange(it.date_from, it.date_to)}${it.date_from && it.date_to ? `, ${nightsOf(it.date_from, it.date_to)}박` : ""}` : `${krDate(it.date_from)} ${it.time ?? ""}`}
+                {it.type === "buddy" && (it.meal_deposit ?? 0) > 0 && !cancelled ? ` · 식사비 ${won(it.meal_used ?? 0)} 사용, ${won(it.meal_refund ?? 0)} 환불` : ""}
+              </div>
+              {it.album && !cancelled && <Link href={`/trips/${b.id}/album`} className="mt-1.5 inline-block text-[14px] font-semibold text-navy">앨범 {it.album_photos ?? 0}장</Link>}
+            </div>
+            <div className="shrink-0">
+              {it.can_review ? <Link href={`/trips/${b.id}/review?item=${it.id}`} className="text-[15px] font-semibold text-navy">후기 쓰기</Link>
+                : it.reviewed ? <span className="text-[14px] text-muted">후기 남김</span> : null}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between border-t border-line pt-4 text-[15px]">
+        <span className="text-muted">{cancelled ? "환불" : "결제"}</span>
+        <span className="font-semibold text-ink">{won(b.total_price)} {cancelled ? (b.cancelled_at ? `${md(b.cancelled_at.slice(0, 10))} 취소` : "취소") : "결제 완료"}</span>
+      </div>
+    </section>
   );
 }

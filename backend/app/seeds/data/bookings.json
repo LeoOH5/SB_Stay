@@ -3,15 +3,15 @@
   "id": 501,
   "code": "SB-2027-0112",
   "tourist_id": 1,
-  "status": "partially_approved",
-  "total_price": 155000,
-  "platform_fee": 15500,
+  "status": "confirmed",
+  "total_price": 180000,
+  "platform_fee": 18500,
   "traveler": {
    "name": "Emma Clark",
    "nationality": "US",
    "email": "emma@example.com",
-   "emergency_contact": "+1 555 0100",
-   "guests": 1
+   "guests": 1,
+   "emergency_contact": "+1 555 0100"
   },
   "paid_at": "2027-01-05T10:05:00Z",
   "created_at": "2027-01-05T10:00:00Z"
@@ -21,8 +21,8 @@
   "code": "SB-2026-1120",
   "tourist_id": 1,
   "status": "confirmed",
-  "total_price": 95000,
-  "platform_fee": 9500,
+  "total_price": 90000,
+  "platform_fee": 9000,
   "traveler": {
    "name": "Emma Clark",
    "nationality": "US",
@@ -37,8 +37,8 @@
   "code": "SB-2026-0812",
   "tourist_id": 1,
   "status": "cancelled",
-  "total_price": 70000,
-  "platform_fee": 7000,
+  "total_price": 90000,
+  "platform_fee": 9000,
   "traveler": {
    "name": "Emma Clark",
    "nationality": "US",
@@ -53,8 +53,8 @@
   "code": "SB-2027-0114",
   "tourist_id": 2,
   "status": "requested",
-  "total_price": 80000,
-  "platform_fee": 8000,
+  "total_price": 110000,
+  "platform_fee": 11000,
   "traveler": {
    "name": "Yuki Sato",
    "nationality": "JP",
@@ -63,5 +63,69 @@
   },
   "paid_at": "2027-01-06T08:00:00Z",
   "created_at": "2027-01-06T08:00:00Z"
+ },
+ {
+  "id": 490,
+  "code": "SB-2027-0103",
+  "tourist_id": 14,
+  "status": "confirmed",
+  "total_price": 164000,
+  "platform_fee": 14400,
+  "traveler": {
+   "name": "Lena Weber",
+   "nationality": "DE",
+   "email": "lena@example.com",
+   "guests": 1
+  },
+  "paid_at": "2027-01-02T09:05:00Z",
+  "created_at": "2027-01-02T09:00:00Z"
+ },
+ {
+  "id": 503,
+  "code": "SB-2027-0108",
+  "tourist_id": 2,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 3000,
+  "traveler": {
+   "name": "Yuki Sato",
+   "nationality": "JP",
+   "email": "yuki@example.com",
+   "guests": 1
+  },
+  "paid_at": "2027-01-04T08:00:00Z",
+  "created_at": "2027-01-04T08:00:00Z"
+ },
+ {
+  "id": 504,
+  "code": "SB-2027-0110",
+  "tourist_id": 15,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 3000,
+  "traveler": {
+   "name": "Mia Chen",
+   "nationality": "TW",
+   "email": "mia@example.com",
+   "guests": 1
+  },
+  "paid_at": "2027-01-03T11:05:00Z",
+  "created_at": "2027-01-03T11:00:00Z"
+ },
+ {
+  "id": 505,
+  "code": "SB-2027-0120",
+  "tourist_id": 16,
+  "status": "confirmed",
+  "total_price": 30000,
+  "platform_fee": 3000,
+  "traveler": {
+   "name": "Lucas Martin",
+   "nationality": "FR",
+   "email": "lucas@example.com",
+   "guests": 1
+  },
+  "paid_at": "2027-01-08T15:05:00Z",
+  "created_at": "2027-01-08T15:00:00Z"
  }
 ]

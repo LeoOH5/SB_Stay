@@ -1,119 +1,113 @@
 "use client";
-// 버디 마이페이지 — 프로필(BD-05 GET·PUT /buddy/profile), 고객센터·약관(CM-01), 로그아웃
-import { HeaderActions } from "@/components/tourist/header-actions";
+// 버디 마이페이지 — BD-05 GET·PUT /buddy/profile (전공·학년·성격·스타일·도와줄 수 있는 것·쓰는 말·소개), CM-01 GET /contents/{key}, 로그아웃
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Card, Chip, Field, Hero, SectionTitle, Spinner, inputCls } from "@/components/ui";
 import { BottomSheet } from "@/components/tourist";
+import { LoginGate } from "@/components/buddy/login-gate";
+import { ProfileFields, draftOf, type ProfileDraft } from "@/components/buddy/profile-fields";
+import { useToast } from "@/components/buddy/toast";
+import { Avatar } from "@/components/buddy/ui";
+import { Button, Hero, Icon, Spinner, cn, inputCls } from "@/components/ui";
 import { get, put } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
-import { useLang } from "@/lib/i18n";
-import type { Buddy, ContentDoc } from "@/lib/types";
-import { INTEREST_LABEL, LANG_LABEL, interestsLabel, langsLabel, roleLabel } from "@/components/buddy/format";
-import { LoginGate } from "@/components/buddy/login-gate";
-import { useToast } from "@/components/buddy/toast";
+import type { BuddyProfile, ContentDoc } from "@/lib/types";
 
 const DOCS: { key: string; label: string }[] = [
-  { key: "support", label: "고객센터 · 긴급연락처" },
+  { key: "support", label: "고객센터와 긴급 연락처" },
   { key: "terms", label: "이용약관" },
   { key: "privacy", label: "개인정보 처리방침" },
 ];
+const PRIVACY: ContentDoc = { key: "privacy", language: "ko", title: "개인정보 처리방침", body: "버디에게는 여행자의 이름·국적·인원과 내 동행의 요청 사항만 보여요. 여권번호와 연락처는 보이지 않아요. 여행자 정보를 앱 밖에 올리거나 나누면 안 돼요." };
+const STATUS_TEXT: Record<string, string> = { approved: "활동 중", pending: "승인 대기", suspended: "활동 멈춤" };
 
 export default function Page() {
   const { user } = useUser();
-  const { lang } = useLang();
   const router = useRouter();
   const { show, toast } = useToast();
-  const [profile, setProfile] = useState<Buddy | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Pick<Buddy, "major" | "year" | "languages" | "interests" | "intro"> | null>(null);
+  const [profile, setProfile] = useState<BuddyProfile | null>(null);
+  const [draft, setDraft] = useState<ProfileDraft | null>(null);
+  const [basic, setBasic] = useState({ major: "", year: 1 });
   const [saving, setSaving] = useState(false);
   const [docKey, setDocKey] = useState<string | null>(null);
   const [doc, setDoc] = useState<ContentDoc | null>(null);
   const [docErr, setDocErr] = useState<string | null>(null);
 
   useEffect(() => {
-    get<Buddy>("/buddy/profile").then(setProfile).catch(() => setProfile(null));
+    get<BuddyProfile>("/buddy/profile").then((p) => { setProfile(p); setDraft(draftOf(p)); setBasic({ major: p.major, year: p.year }); }).catch(() => setProfile(null));
   }, []);
 
-  const name = user?.name ?? profile?.name ?? "지우";
-  const email = user?.email ?? "jiwoo@a-univ.ac.kr";
-
-  const startEdit = () => { if (!profile) return; setDraft({ major: profile.major, year: profile.year, languages: profile.languages, interests: profile.interests, intro: profile.intro }); setEditing(true); };
-  const toggleIn = (arr: string[], k: string) => (arr.includes(k) ? arr.filter((x) => x !== k) : [...arr, k]);
-  const saveProfile = async () => {
-    if (!draft || !profile) return;
+  const dirty = !!profile && !!draft && (JSON.stringify(draftOf(profile)) !== JSON.stringify(draft) || basic.major !== profile.major || basic.year !== profile.year);
+  const save = async () => {
+    if (!draft) return;
     setSaving(true);
     try {
-      const r = await put<Buddy>("/buddy/profile", { ...draft, avatar: profile.avatar, hourly_fee: profile.hourly_fee, school_email: email });
-      setProfile({ ...profile, ...r }); setEditing(false); show("프로필을 저장했어요");
-    } catch (e) { show(e instanceof Error ? e.message : "저장에 실패했어요"); }
+      const p = await put<BuddyProfile>("/buddy/profile", { ...draft, intro: draft.intro.trim(), major: basic.major.trim(), year: basic.year });
+      setProfile(p); setDraft(draftOf(p)); show("프로필을 저장했어요");
+    } catch (e) { show(e instanceof Error ? e.message : "저장하지 못했어요"); }
     finally { setSaving(false); }
   };
   const openDoc = (key: string) => {
     setDocKey(key); setDoc(null); setDocErr(null);
-    get<ContentDoc>(`/contents/${key}`, { lang }).then(setDoc).catch((e: unknown) => setDocErr(e instanceof Error ? e.message : "불러오지 못했어요"));
+    get<ContentDoc>(`/contents/${key}`, { lang: "ko" }).then(setDoc).catch((e: unknown) => { if (key === "privacy") setDoc(PRIVACY); else setDocErr(e instanceof Error ? e.message : "불러오지 못했어요"); });
   };
-  const logout = () => { session.clear(); show("로그아웃했어요"); router.push("/buddy/login"); };
+  const logout = () => { session.clear(); router.push("/buddy/login"); };
 
+  const name = user?.name ?? profile?.name ?? "";
   return (
-    <div className="pb-6">
-      <Hero title="마이페이지" sub={`${roleLabel(user?.role)} · ${name}`} right={<HeaderActions />} />
+    <div className="pb-8">
+      <Hero back="/buddy/activity" backLabel="내 활동" title="내 프로필" sub="여행자가 버디를 고를 때 보고, AI 추천에도 쓰여요." />
       <LoginGate />
 
       <div className="px-5">
-        <SectionTitle right={profile && !editing && <button type="button" className="text-[13px] font-semibold text-navy" onClick={startEdit}>수정</button>}>프로필</SectionTitle>
-        {profile === null ? <Spinner /> : !editing ? (
-          <Card>
-            <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-navy-bg text-[16px] font-semibold text-navy">{name.slice(0, 1)}</div>
+        {!profile || !draft ? <Spinner /> : (
+          <>
+            <div className="flex items-center gap-4">
+              <Avatar name={name || profile.name} large />
               <div className="min-w-0">
-                <div className="text-[14px] font-semibold text-ink">{name} · {profile.university} {profile.major} {profile.year}학년</div>
-                <div className="mt-0.5 text-[12px] text-muted">{langsLabel(profile.languages)} · {interestsLabel(profile.interests)} · 승인됨</div>
-                <div className="mt-0.5 text-[12px] text-green-dark">{email} ✓ 학교 이메일 인증</div>
-                {profile.intro && <div className="mt-2 text-[12px] leading-relaxed text-ink/80">{profile.intro}</div>}
+                <div className="text-[18px] font-bold text-ink">{name || profile.name}</div>
+                <div className="mt-0.5 text-[14px] text-muted">{profile.university} · {STATUS_TEXT[profile.status ?? "approved"] ?? "활동 중"}</div>
+                {(profile.school_email ?? user?.email) && <div className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-navy"><Icon name="check" className="h-4 w-4" strokeWidth={2.4} />{profile.school_email ?? user?.email} 학교 인증</div>}
               </div>
             </div>
-          </Card>
-        ) : draft && (
-          <Card className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="전공"><input className={inputCls} value={draft.major} onChange={(e) => setDraft({ ...draft, major: e.target.value })} /></Field>
-              <Field label="학년"><input className={inputCls} type="number" min={1} max={6} value={draft.year} onChange={(e) => setDraft({ ...draft, year: Number(e.target.value) || 1 })} /></Field>
+
+            <div className="mt-8 grid grid-cols-[1fr_96px] gap-3">
+              <label className="block">
+                <span className="mb-2 block text-[14px] font-semibold text-ink">전공</span>
+                <input className={cn(inputCls, "text-[16px]")} value={basic.major} maxLength={40} onChange={(e) => setBasic((b) => ({ ...b, major: e.target.value }))} />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-[14px] font-semibold text-ink">학년</span>
+                <select className={cn(inputCls, "text-[16px]")} value={basic.year} onChange={(e) => setBasic((b) => ({ ...b, year: Number(e.target.value) }))}>
+                  {[1, 2, 3, 4, 5, 6].map((y) => <option key={y} value={y}>{y}학년</option>)}
+                </select>
+              </label>
             </div>
-            <div>
-              <div className="mb-1.5 text-[12px] text-muted">언어</div>
-              <div className="flex flex-wrap gap-2">{Object.entries(LANG_LABEL).map(([k, v]) => <Chip key={k} selected={draft.languages.includes(k)} onClick={() => setDraft({ ...draft, languages: toggleIn(draft.languages, k) })}>{v}</Chip>)}</div>
-            </div>
-            <div>
-              <div className="mb-1.5 text-[12px] text-muted">관심사</div>
-              <div className="flex flex-wrap gap-2">{Object.entries(INTEREST_LABEL).map(([k, v]) => <Chip key={k} selected={draft.interests.includes(k)} onClick={() => setDraft({ ...draft, interests: toggleIn(draft.interests, k) })}>{v}</Chip>)}</div>
-            </div>
-            <Field label="소개"><textarea className={`${inputCls} h-24 py-3`} value={draft.intro} onChange={(e) => setDraft({ ...draft, intro: e.target.value })} /></Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Button className="h-11! min-h-11!" onClick={saveProfile} disabled={saving}>{saving ? "저장 중…" : "저장"}</Button>
-              <Button variant="ghost" className="h-11! min-h-11!" onClick={() => setEditing(false)} disabled={saving}>취소</Button>
-            </div>
-          </Card>
+
+            <div className="mt-6"><ProfileFields value={draft} onChange={setDraft} /></div>
+            <Button className="mt-6" onClick={save} disabled={saving || !dirty || !draft.intro.trim()}>{saving ? "저장하는 중…" : dirty ? "프로필 저장" : "저장됨"}</Button>
+          </>
         )}
 
-
-        <SectionTitle>고객센터 · 약관</SectionTitle>
-        <div className="space-y-2">
+        <h2 className="mb-1 mt-10 text-[18px] font-bold text-ink">정산과 도움말</h2>
+        <div className="divide-y divide-line">
+          <Link href="/buddy/settlement" className="flex items-center justify-between py-4 text-[16px] text-ink">
+            <span>정산 계좌와 내역</span>
+            <span className="flex items-center gap-2 text-[14px] text-muted">{profile?.bank_account ?? ""}<Icon name="chevron-right" className="h-5 w-5 text-ink" /></span>
+          </Link>
           {DOCS.map((d) => (
-            <Card key={d.key} className="flex items-center justify-between py-3" onClick={() => openDoc(d.key)}>
-              <span className="text-[13px] text-ink">{d.label}</span><span className="text-muted">›</span>
-            </Card>
+            <button key={d.key} type="button" onClick={() => openDoc(d.key)} className="flex w-full items-center justify-between py-4 text-left text-[16px] text-ink">
+              {d.label}<Icon name="chevron-right" className="h-5 w-5" />
+            </button>
           ))}
         </div>
-
-        <Button variant="ghost" className="mt-4" onClick={logout}>로그아웃</Button>
+        <button type="button" onClick={logout} className="mt-2 py-3 text-[15px] text-muted">로그아웃</button>
       </div>
 
       <BottomSheet open={docKey !== null} onClose={() => setDocKey(null)} title={doc?.title ?? DOCS.find((d) => d.key === docKey)?.label ?? ""}>
-        {docErr && <p className="text-[13px] text-orange">{docErr}</p>}
+        {docErr && <p className="text-[14px] text-orange-ink">{docErr}</p>}
         {!doc && !docErr && <Spinner />}
-        {doc && <div className="whitespace-pre-line text-[14px] leading-relaxed text-ink">{doc.body}</div>}
+        {doc && <div className="whitespace-pre-line text-[15px] leading-relaxed text-ink">{doc.body}</div>}
       </BottomSheet>
       {toast}
     </div>

@@ -1,35 +1,53 @@
-"""버디·해설사 본인용 — BD-03 프로필 · BD-04 가능 일정 · BD-05 요청함 · BD-06 확정 일정 · BD-07 활동 내역 (B 담당)
+"""버디 본인용 — BD-03 프로필 · BD-04 가능 일정 · BD-05 요청함 · BD-06 확정 일정 · BD-07 활동 내역 (B 담당)
 
-해설사(guide)는 같은 엔드포인트를 쓰고 type=tour 항목만 본다.
+v3: 버디(role=buddy)만. 식비 청구 · 활동 기록 · 월 정산 · 지원 5단계(학교 메일 → 인증번호 → 약속 동의 → 퀴즈 → 승인 대기).
 """
-from datetime import date
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from app.core import rules
+from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_role
 from app.core.errors import api_error
-from app.models.booking import Booking, BookingItem
-from app.models.supply import BuddyAvailability, BuddyProfile, Guide, Tour, University
+from app.models.booking import Booking, BookingItem, MealClaim
+from app.models.supply import BuddyActivity, BuddyAvailability, BuddyProfile, Tour, University
 from app.models.user import User
 from app.schemas.buddy import (
+    ActivityIn,
+    ActivityOut,
+    ApplyEmailIn,
+    ApplyStatusOut,
+    ApplyVerifyIn,
     AvailabilityIn,
     AvailabilityOut,
     BuddyProfileIn,
     BuddyProfileOut,
     BuddyRequestOut,
+    BuddySettlementOut,
     EarningItem,
     EarningsOut,
+    MealClaimIn,
+    MealClaimOut,
+    QuizAnswersIn,
+    QuizOut,
+    QuizQuestion,
+    QuizResultOut,
+    SettlementItem,
     TouristSummary,
 )
 from app.schemas.common import ListResponse
+from app.services import buddy_quiz, meals
 from app.services.booking_state import describe
+from app.services.reviews import average, item_reviews
 
 router = APIRouter(prefix="/buddy", tags=["buddy"])
-SUPPLIER = require_role("buddy", "guide")
+SUPPLIER = require_role("buddy")
 MONTH = "2027-01"  # 데모 기간
+CODE_SETS = {"personality": rules.PERSONALITY, "style": rules.STYLE, "can_help": rules.CAN_HELP}
 
 
 def _profile(db: Session, user: User) -> BuddyProfile:
@@ -40,33 +58,54 @@ def _profile(db: Session, user: User) -> BuddyProfile:
 
 
 def _my_items(db: Session, user: User, statuses: list[str] | None = None) -> list[BookingItem]:
-    if user.role == "guide":
-        guide = db.scalar(select(Guide).where(Guide.user_id == user.id))
-        tour_ids = db.scalars(select(Tour.id).where(Tour.guide_id == guide.id)).all() if guide else []
-        q = select(BookingItem).where(BookingItem.type == "tour", BookingItem.ref_id.in_(tour_ids))
-    else:
-        prof = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
-        q = select(BookingItem).where(BookingItem.type == "buddy", BookingItem.ref_id == (prof.id if prof else -1))
+    prof = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
+    q = select(BookingItem).where(BookingItem.type == "buddy", BookingItem.ref_id == (prof.id if prof else -1))
     if statuses:
         q = q.where(BookingItem.status.in_(statuses))
     return db.scalars(q.order_by(BookingItem.date_from, BookingItem.time)).all()
 
 
+def _my_item(db: Session, user: User, item_id: int) -> BookingItem:
+    prof = _profile(db, user)
+    it = db.get(BookingItem, item_id)
+    if not it or it.type != "buddy":
+        raise api_error(404, "NOT_FOUND", "예약 항목을 찾을 수 없습니다")
+    if it.ref_id != prof.id:
+        raise api_error(403, "FORBIDDEN", "본인에게 온 항목이 아닙니다")
+    return it
+
+
 def _req_out(db: Session, it: BookingItem) -> BuddyRequestOut:
+    """버디에게 보이는 여행자 정보는 이름·국적(+대화 언어)만. 본인 항목이라 요청은 보인다."""
     booking = db.get(Booking, it.booking_id)
     tourist = db.get(User, booking.tourist_id)
     trav = booking.traveler or {}
     title, _ = describe(db, it)
-    meeting = None
-    if it.type == "tour":
-        tour = db.get(Tour, it.ref_id)
-        meeting = tour.meeting_point if tour else None
+    course = db.get(Tour, it.course_id) if it.course_id else None
     return BuddyRequestOut(
         item_id=it.id, id=it.id, booking_id=booking.id, booking_code=booking.code, type=it.type,
         tourist=TouristSummary(id=tourist.id, name=trav.get("name") or tourist.name, nationality=trav.get("nationality"), language=tourist.language),
         date=it.date_from.isoformat(), time=it.time, duration_min=it.duration_min, price=it.price,
         interests=trav.get("interests") or [], status=it.status, reject_reason=it.reject_reason,
-        google_event_id=it.google_event_id, meeting_point=meeting, title=title,
+        google_event_id=it.google_event_id, meeting_point=course.meeting_point if course else None, title=title,
+        request=it.request, course_id=it.course_id, course_title=course.title if course else None,
+        meal_count=it.meal_count or 0, album=bool(it.album),
+    )
+
+
+# ---------- BD-03 프로필
+def _profile_out(db: Session, user: User, prof: BuddyProfile) -> BuddyProfileOut:
+    uni = db.get(University, prof.university_id)
+    dates = db.scalars(select(BuddyAvailability.date).where(BuddyAvailability.buddy_id == prof.id).order_by(BuddyAvailability.date)).all()
+    reviews, _ = item_reviews(db, "buddy", prof.id)
+    return BuddyProfileOut(
+        id=prof.id, user_id=user.id, name=user.name, university=uni.name if uni else "", university_id=prof.university_id,
+        major=prof.major, year=prof.year, languages=prof.languages or [], interests=prof.interests or [], intro=prof.intro,
+        avatar=prof.avatar, status=prof.status, hourly_fee=prof.hourly_fee, available_dates=[d.isoformat() for d in dates],
+        school_email=prof.school_email, school_email_verified=prof.school_email_verified_at is not None,
+        code_agreed=prof.code_agreed_at is not None, quiz_score=prof.quiz_score,
+        rating=average(reviews) or 0, review_count=len(reviews),
+        personality=prof.personality or [], style=prof.style or [], can_help=prof.can_help or [], bank_account=prof.bank_account,
     )
 
 
@@ -76,32 +115,27 @@ def get_profile(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -
     return _profile_out(db, user, _profile(db, user))
 
 
-def _profile_out(db: Session, user: User, prof: BuddyProfile) -> BuddyProfileOut:
-    uni = db.get(University, prof.university_id)
-    dates = db.scalars(select(BuddyAvailability.date).where(BuddyAvailability.buddy_id == prof.id).order_by(BuddyAvailability.date)).all()
-    return BuddyProfileOut(
-        id=prof.id, user_id=user.id, name=user.name, university=uni.name if uni else "", university_id=prof.university_id,
-        major=prof.major, year=prof.year, languages=prof.languages or [], interests=prof.interests or [], intro=prof.intro,
-        avatar=prof.avatar, status=prof.status, hourly_fee=prof.hourly_fee, available_dates=[d.isoformat() for d in dates],
-    )
-
-
 @router.put("/profile", response_model=BuddyProfileOut)
 def upsert_profile(body: BuddyProfileIn, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> BuddyProfileOut:
-    """BD-03 등록·수정. 처음 만들면 status=pending(대학 담당자 승인 전)."""
+    """BD-03 등록·수정. 처음 만들면 status=pending(운영팀 승인 전). 성향·스타일·도움은 코드값만."""
+    data = body.model_dump(exclude_unset=True)
+    for k, allowed in CODE_SETS.items():
+        if data.get(k) is not None and any(v not in allowed for v in data[k]):
+            raise api_error(422, "VALIDATION", f"{k}는 {', '.join(allowed)} 중에서")
     prof = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
     if not prof:
         if not user.university_id:
-            raise api_error(422, "VALIDATION", "소속 대학(university_id)이 먼저 필요합니다 (역할 선택 단계)")
+            raise api_error(422, "VALIDATION", "소속 대학이 먼저 필요합니다 (학교 메일 인증)")
         prof = BuddyProfile(user_id=user.id, university_id=user.university_id, status="pending", hourly_fee=15000)
         db.add(prof)
-    for k, v in body.model_dump(exclude_unset=True).items():
+    for k, v in data.items():
         setattr(prof, k, v)
     db.commit()
     db.refresh(prof)
     return _profile_out(db, user, prof)
 
 
+# ---------- BD-04 가능 일정
 @router.get("/availability", response_model=AvailabilityOut)
 def get_availability(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> AvailabilityOut:
     prof = _profile(db, user)
@@ -120,6 +154,7 @@ def set_availability(body: AvailabilityIn, user: User = Depends(SUPPLIER), db: S
     return AvailabilityOut(dates=[d.isoformat() for d in sorted(set(body.dates))])
 
 
+# ---------- BD-05·06 요청함·일정
 @router.get("/requests", response_model=ListResponse[BuddyRequestOut])
 def requests(status: str | None = None, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> ListResponse[BuddyRequestOut]:
     """BD-05: 내게 온 요청. status 미지정이면 전체"""
@@ -136,19 +171,187 @@ def schedule(date_from: date | None = None, date_to: date | None = None, user: U
     return ListResponse(items=[_req_out(db, i) for i in items])
 
 
+# ---------- BD-07 활동 내역·정산
 @router.get("/earnings", response_model=EarningsOut)
 def earnings(month: str = MONTH, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> EarningsOut:
-    """BD-07: 활동 내역·정산 (정산 지급은 목업: 지난달 이전 확정분은 paid, 이번 달은 pending)"""
-    items = _my_items(db, user, ["approved", "confirmed"])
+    """BD-07: 활동 내역 (금액은 수수료 뺀 net, 식사 보증금·앨범 제외). 지난달 이전 확정분은 paid, 이번 달은 pending (목업)"""
     rows: list[EarningItem] = []
-    for it in items:
+    for it in _my_items(db, user, ["approved", "confirmed"]):
         booking = db.get(Booking, it.booking_id)
         trav = booking.traveler or {}
         title, _ = describe(db, it)
         status = "paid" if it.date_from.isoformat()[:7] < month else "pending"
-        rows.append(EarningItem(booking_item_id=it.id, date=it.date_from.isoformat(), tourist=f"{trav.get('name', '')} · {trav.get('nationality', '')}", activity=title, amount=it.price, status=status))
+        rows.append(EarningItem(booking_item_id=it.id, date=it.date_from.isoformat(), tourist=f"{trav.get('name', '')} · {trav.get('nationality', '')}",
+                                activity=title, amount=meals.gross_fee_net(it)[2], status=status))
     rows.sort(key=lambda r: r.date, reverse=True)
     this_month = [r for r in rows if r.date[:7] == month]
     paid = sum(r.amount for r in rows if r.status == "paid")
     pending = sum(r.amount for r in rows if r.status == "pending")
     return EarningsOut(month=month, period=month, activities=len(this_month), total_fee=sum(r.amount for r in this_month), paid=paid, pending=pending, items=rows)
+
+
+@router.get("/settlement", response_model=BuddySettlementOut)
+def settlement(month: str = MONTH, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> BuddySettlementOut:
+    """월 정산: 확정 동행의 활동비 − 수수료 10% + 승인된 식비 (앨범은 플랫폼 수입). 다음 달 말일 지급."""
+    if not meals.MONTH_RE.match(month):
+        raise api_error(422, "VALIDATION", "month는 YYYY-MM")
+    prof = _profile(db, user)
+    start, end = meals.month_range(month)
+    rows: list[SettlementItem] = []
+    for it in _my_items(db, user, ["confirmed"]):
+        if not start <= it.date_from <= end:
+            continue
+        gross, fee, net = meals.gross_fee_net(it)
+        claims = meals.claims_for_item(db, it.id)
+        approved = sum(c.amount for c in claims if c.status == "approved")
+        pending = sum(c.amount for c in claims if c.status == "requested")
+        rows.append(SettlementItem(item_id=it.id, date=it.date_from.isoformat(), tourist=meals.traveler_name(db, db.get(Booking, it.booking_id)),
+                                   gross=gross, fee=fee, meal_approved=approved, meal_pending=pending, net=net,
+                                   status="meal_pending" if pending else "confirmed"))
+    net_sum, meals_ok = sum(r.net for r in rows), sum(r.meal_approved for r in rows)
+    return BuddySettlementOut(
+        month=month, pay_date=meals.pay_date(month).isoformat(), account=meals.mask_account(prof.bank_account), walks=len(rows),
+        gross=sum(r.gross for r in rows), fee=sum(r.fee for r in rows), net=net_sum, meals_approved=meals_ok,
+        meals_pending=sum(r.meal_pending for r in rows), payout=net_sum + meals_ok, items=rows,
+    )
+
+
+# ---------- 식비 청구
+@router.post("/meal-claims", response_model=MealClaimOut, status_code=201)
+def create_meal_claim(body: MealClaimIn, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> MealClaimOut:
+    """식비 청구: 본인 확정 항목, meal_count > 0, 청구 수(반려 제외) < meal_count. 한도 초과도 접수(운영자가 확인)."""
+    it = _my_item(db, user, body.item_id)
+    if it.status != "confirmed":
+        raise api_error(409, "CONFLICT", "확정된 동행만 식비를 청구할 수 있어요")
+    live = [c for c in meals.claims_for_item(db, it.id) if c.status != "rejected"]
+    if not it.meal_count or len(live) >= it.meal_count:
+        raise api_error(409, "MEAL_LIMIT", f"이 동행의 식사 횟수({it.meal_count or 0}회)만큼 이미 청구했어요")
+    c = MealClaim(booking_item_id=it.id, buddy_id=it.ref_id, date=it.date_from, place=body.place, items=body.items,
+                  amount=body.amount, receipt_url=body.receipt_url, status="requested")
+    db.add(c)
+    db.commit()
+    db.refresh(c)
+    return meals.claim_out(db, c)
+
+
+@router.get("/meal-claims", response_model=ListResponse[MealClaimOut])
+def my_meal_claims(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> ListResponse[MealClaimOut]:
+    prof = _profile(db, user)
+    rows = db.scalars(select(MealClaim).where(MealClaim.buddy_id == prof.id).order_by(MealClaim.id.desc())).all()
+    return ListResponse(items=[meals.claim_out(db, c) for c in rows])
+
+
+# ---------- 활동 기록
+def _activity_out(db: Session, a: BuddyActivity) -> ActivityOut:
+    it = db.get(BookingItem, a.booking_item_id) if a.booking_item_id else None
+    b = db.get(Booking, it.booking_id) if it else None
+    return ActivityOut(id=a.id, item_id=a.booking_item_id, booking_code=b.code if b else None,
+                       tourist=meals.traveler_name(db, b) if b else None, date=a.date, places=a.places or [],
+                       foods=a.foods, note=a.note, photos=a.photos or [], created_at=a.created_at)
+
+
+@router.post("/activities", response_model=ActivityOut, status_code=201)
+def create_activity(body: ActivityIn, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> ActivityOut:
+    """활동 기록: 간 곳·먹은 것·메모·사진. 앨범 옵션 동행이면 사진이 여행자 앨범에 보인다."""
+    prof = _profile(db, user)
+    if body.item_id is not None:
+        _my_item(db, user, body.item_id)
+    a = BuddyActivity(buddy_id=prof.id, booking_item_id=body.item_id, date=body.date, places=body.places, foods=body.foods,
+                      note=body.note, photos=body.photos)
+    db.add(a)
+    db.commit()
+    db.refresh(a)
+    return _activity_out(db, a)
+
+
+@router.get("/activities", response_model=ListResponse[ActivityOut])
+def my_activities(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> ListResponse[ActivityOut]:
+    prof = _profile(db, user)
+    rows = db.scalars(select(BuddyActivity).where(BuddyActivity.buddy_id == prof.id)
+                      .order_by(BuddyActivity.date.desc(), BuddyActivity.id.desc())).all()
+    return ListResponse(items=[_activity_out(db, a) for a in rows])
+
+
+# ---------- 지원 5단계
+def _university_for(db: Session, email: str) -> University:
+    domain = email.rsplit("@", 1)[-1].strip().lower() if "@" in email else ""
+    for uni in db.scalars(select(University).order_by(University.id)).all():
+        if domain and domain in [d.lower() for d in uni.email_domains or []]:
+            return uni
+    raise api_error(422, "NOT_SEONGBUK_SCHOOL", "성북구 대학 메일이 아니에요")
+
+
+def _age_ok(user: User) -> bool:
+    return bool(user.birth_date) and rules.age_on(user.birth_date, get_settings().today()) >= rules.BUDDY_MIN_AGE
+
+
+def _need_profile(db: Session, user: User) -> BuddyProfile:
+    prof = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
+    if not prof or not prof.school_email_verified_at:
+        raise api_error(409, "CONFLICT", "학교 메일 인증을 먼저 해 주세요")
+    return prof
+
+
+@router.get("/apply", response_model=ApplyStatusOut)
+def apply_status(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> ApplyStatusOut:
+    """지원 진행 상황"""
+    prof = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
+    uni = db.get(University, prof.university_id if prof else user.university_id) if (prof or user.university_id) else None
+    return ApplyStatusOut(
+        email_verified=bool(prof and prof.school_email_verified_at), school_email=prof.school_email if prof else None,
+        university=uni.name if uni else None, age_ok=_age_ok(user), code_agreed=bool(prof and prof.code_agreed_at),
+        quiz_score=prof.quiz_score if prof else None, quiz_passed=bool(prof and (prof.quiz_score or 0) >= rules.QUIZ_PASS),
+        profile_done=bool(prof and prof.major and prof.intro and prof.languages), status=prof.status if prof else "none",
+    )
+
+
+@router.post("/apply/email")
+def apply_email(body: ApplyEmailIn, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> dict:
+    """1단계: 학교 메일 도메인 확인 후 인증번호 발송 (데모는 발송 없이 고정값)"""
+    uni = _university_for(db, body.email)
+    s = get_settings()
+    return {"sent": True, "university": uni.name, "dev_code": s.buddy_otp_code if s.debug else None}
+
+
+@router.post("/apply/verify", response_model=ApplyStatusOut)
+def apply_verify(body: ApplyVerifyIn, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> ApplyStatusOut:
+    """2단계: 인증번호 + 생년월일(만 19세 이상). 대학·생년월일 저장, 프로필이 없으면 pending으로 만든다."""
+    uni = _university_for(db, body.email)
+    if body.code.strip() != get_settings().buddy_otp_code:
+        raise api_error(422, "BAD_CODE", "인증번호가 맞지 않아요")
+    if rules.age_on(body.birth_date, get_settings().today()) < rules.BUDDY_MIN_AGE:
+        raise api_error(422, "TOO_YOUNG", f"만 {rules.BUDDY_MIN_AGE}세 이상만 버디로 활동할 수 있어요")
+    user.university_id, user.birth_date = uni.id, body.birth_date
+    prof = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
+    if not prof:
+        prof = BuddyProfile(user_id=user.id, university_id=uni.id, status="pending", hourly_fee=15000)
+        db.add(prof)
+    prof.university_id = uni.id
+    prof.school_email, prof.school_email_verified_at = body.email.strip().lower(), datetime.now(UTC)
+    db.commit()
+    return apply_status(user, db)
+
+
+@router.post("/apply/agree", response_model=ApplyStatusOut)
+def apply_agree(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> ApplyStatusOut:
+    """3단계: 버디 약속 동의"""
+    prof = _need_profile(db, user)
+    prof.code_agreed_at = prof.code_agreed_at or datetime.now(UTC)
+    db.commit()
+    return apply_status(user, db)
+
+
+@router.get("/apply/quiz", response_model=QuizOut)
+def apply_quiz(user: User = Depends(SUPPLIER)) -> QuizOut:
+    """4단계: 교육 퀴즈 10문제 (정답 미포함)"""
+    return QuizOut(questions=[QuizQuestion(**q) for q in buddy_quiz.public()])
+
+
+@router.post("/apply/quiz", response_model=QuizResultOut)
+def submit_quiz(body: QuizAnswersIn, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> QuizResultOut:
+    """채점: 8/10 이상 통과. 가장 높은 점수를 저장한다."""
+    prof = _need_profile(db, user)
+    score = buddy_quiz.grade(body.answers)
+    prof.quiz_score = max(prof.quiz_score or 0, score)
+    db.commit()
+    return QuizResultOut(score=score, total=rules.QUIZ_TOTAL, passed=score >= rules.QUIZ_PASS, best_score=prof.quiz_score)
