@@ -5,6 +5,7 @@ booking_items.status: requested → approved | rejected → confirmed → cancel
 bookings.status:      requested → partially_approved → confirmed | cancelled
 """
 import logging
+import unicodedata
 from datetime import UTC, date, datetime
 
 from sqlalchemy import func, select
@@ -159,6 +160,23 @@ def _subset(values, allowed: dict, name: str) -> list[str]:
     return list(dict.fromkeys(values))
 
 
+OTHER_KEYS = ("diet_other", "allergy_other")
+
+
+def clean_other(key: str, value) -> str | None:
+    """'기타' 직접 입력 한 줄: 앞뒤 공백 제거, 40자 이하, 제어 문자(줄바꿈 포함) 안 됨, 비었으면 None"""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise BookingError(422, "VALIDATION", f"{key}는 글자여야 합니다")
+    text = value.strip()
+    if any(unicodedata.category(c) == "Cc" for c in text):
+        raise BookingError(422, "VALIDATION", f"{key}에는 줄바꿈·제어 문자를 쓸 수 없어요")
+    if len(text) > rules.REQUEST_OTHER_MAX:
+        raise BookingError(422, "VALIDATION", f"{key}는 {rules.REQUEST_OTHER_MAX}자 이하")
+    return text or None
+
+
 def clean_request(db: Session, item_type: str, req: dict | None) -> dict | None:
     """요청 JSON을 코드값으로만 남긴다. 모르는 키·값이면 422 VALIDATION."""
     if req is None:
@@ -169,8 +187,8 @@ def clean_request(db: Session, item_type: str, req: dict | None) -> dict | None:
         if set(req) - set(rules.DORM_REQUESTS) or any(not isinstance(v, bool) for v in req.values()):
             raise BookingError(422, "VALIDATION", "숙박 요청은 late_checkin·quiet_room·low_floor (true/false)")
         return {k: bool(req.get(k, False)) for k in rules.DORM_REQUESTS}
-    if set(req) - {"diet", "allergies", "pace", "places", "note"}:
-        raise BookingError(422, "VALIDATION", "버디 요청은 diet·allergies·pace·places·note")
+    if set(req) - {"diet", "allergies", "pace", "places", "note", *OTHER_KEYS}:
+        raise BookingError(422, "VALIDATION", "버디 요청은 diet·allergies·pace·places·note·diet_other·allergy_other")
     pace = req.get("pace") or "normal"
     if pace not in rules.PACE:
         raise BookingError(422, "VALIDATION", "pace는 slow | normal")
@@ -180,8 +198,13 @@ def clean_request(db: Session, item_type: str, req: dict | None) -> dict | None:
     note = req.get("note") or ""
     if not isinstance(note, str) or len(note) > 300:
         raise BookingError(422, "VALIDATION", "note는 300자 이하")
-    return {"diet": _subset(req.get("diet"), rules.DIET, "diet"), "allergies": _subset(req.get("allergies"), rules.ALLERGIES, "allergies"),
-            "pace": pace, "places": places, "note": note}
+    out = {"diet": _subset(req.get("diet"), rules.DIET, "diet"), "allergies": _subset(req.get("allergies"), rules.ALLERGIES, "allergies"),
+           "pace": pace, "places": places, "note": note}
+    for key in OTHER_KEYS:  # '기타' 직접 입력: 비었으면 키를 남기지 않는다 (예전 요청과 모양 같음)
+        other = clean_other(key, req.get(key))
+        if other:
+            out[key] = other
+    return out
 
 
 def buddy_price(prof: BuddyProfile, duration_min: int, album: bool, meal_count: int) -> tuple[int, int]:

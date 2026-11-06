@@ -139,7 +139,7 @@ def fallback_phrases(m: Material) -> list[str]:
 def request_sentence(m: Material) -> str:
     """요청을 첫 문장으로: 식단·알레르기는 식당 확인, 천천히는 쉬어 가기"""
     req = m.item.request or {}
-    food = rules.request_summary({"diet": req.get("diet"), "allergies": req.get("allergies")})
+    food = rules.request_summary({k: req.get(k) for k in ("diet", "diet_other", "allergies", "allergy_other")})
     parts = []
     if food:
         parts.append(f"{food} 요청이 있어요. 식당에서 꼭 확인해 주세요.")
@@ -180,7 +180,8 @@ def llm_prompt(m: Material) -> tuple[str, str]:
         "Rules:\n"
         "- Use only the facts in MATERIAL. Never add dates, prices, hours or history that are not there.\n"
         "- brief: 2 or 3 short sentences in Korean for the buddy. If there are traveler requests, the FIRST sentence must\n"
-        "  restate them (diet, allergies, pace) and remind the buddy to check at restaurants. Then what to talk about.\n"
+        "  restate them (diet, allergies, pace, including any free-text 'other' items such as\n"
+        "  '기타: 고수' or '복숭아 알레르기') and remind the buddy to check at restaurants. Then what to talk about.\n"
         "- The buddy does not give history talks; the app's AI tells place stories.\n"
         "- phrases: 3 to 5 short, friendly English sentences the buddy can say to the traveler at these places.\n"
         '- Reply with JSON only: {"brief": "...", "phrases": ["...", "..."]}'
