@@ -1,9 +1,10 @@
 "use client";
 // 관광객 화면 공용 컴포넌트 — 바텀시트·오류·로그인 안내·유형 뱃지·별점
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Banner, Card, LinkButton, TagChip, cn } from "@/components/ui";
 import type { ItemType } from "@/lib/types";
-import { TYPE_LABEL } from "./format";
+import { TYPE_LABEL, loginHref } from "./format";
 
 export function BottomSheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title?: string; children: ReactNode }) {
   if (!open) return null;
@@ -32,11 +33,12 @@ export function Notice({ children, className }: { children: ReactNode; className
 
 /** 로그인 안 된 상태의 /trips·/me 안내 (강제 리다이렉트 없음) */
 export function LoginRequired({ what }: { what: string }) {
+  const path = usePathname();
   return (
     <Card tint className="text-center py-8">
       <div className="text-[16px] font-semibold text-ink">{what}은 로그인 후 볼 수 있어요</div>
       <p className="mt-1 text-[13px] text-muted">데모 계정으로 바로 로그인할 수 있어요.</p>
-      <LinkButton href="/login" className="mt-4">로그인하러 가기</LinkButton>
+      <LinkButton href={loginHref(path)} className="mt-4">로그인하러 가기</LinkButton>
     </Card>
   );
 }

@@ -99,6 +99,25 @@ export const ROLE_LABEL: Record<Role, string> = { tourist: "관광객", buddy: "
 /** 역할별 첫 화면 */
 export const homeFor = (r: Role): string => (r === "tourist" ? "/home" : r === "buddy" ? "/buddy" : "/admin");
 
+/** v3.9 로그인 화면 주소 — 로그인 뒤 돌아올 곳(지금 주소)을 ?next= 로 넘긴다 */
+export const loginHref = (next?: string | null, base = "/login"): string => (next ? `${base}?next=${encodeURIComponent(next)}` : base);
+/** 지금 보고 있는 주소 (경로 + 쿼리). 클릭 순간에 읽는다 */
+export const herePath = (): string => (typeof window === "undefined" ? "" : window.location.pathname + window.location.search);
+
+/**
+ * v3.9 로그인·가입·역할 선택 뒤 갈 곳.
+ * ?next= 가 이 사이트 안의 상대 경로("/"로 시작, "//"·"\" 없음)이고 역할 영역에 맞으면 그곳, 아니면 fallback(역할별 첫 화면).
+ * 관광객은 /admin·/buddy 밖, 버디는 /buddy 안, 대학 담당자·운영자는 /admin 안만. 로그인·가입 화면으로는 돌려보내지 않는다.
+ */
+export function afterLogin(role: Role, next: string | null | undefined, fallback: string = homeFor(role)): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return fallback;
+  const path = next.split(/[?#]/)[0];
+  const under = (p: string) => path === p || path.startsWith(`${p}/`);
+  if (under("/login") || under("/signup")) return fallback;
+  const ok = role === "tourist" ? !under("/admin") && !under("/buddy") : role === "buddy" ? under("/buddy") : under("/admin");
+  return ok ? next : fallback;
+}
+
 /** 예약 항목 상태 라벨 (버디 requested → 수락 대기 / confirmed → 수락됨, 숙박 requested → 승인 대기) */
 export function itemStatusLabel(it: Pick<BookingItem, "type" | "status">): string | undefined {
   if (it.status === "requested") return it.type === "buddy" ? "수락 대기" : "승인 대기";

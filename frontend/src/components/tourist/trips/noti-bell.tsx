@@ -1,8 +1,9 @@
 "use client";
-// 내 여행 머리 오른쪽 — 알림 종(BK-10 GET /notifications) + 마이페이지 동그라미
+// 내 여행 머리 오른쪽 — 장바구니(담은 게 있을 때) + 알림 종(BK-10 GET /notifications) + 마이페이지 동그라미
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BottomSheet } from "@/components/tourist";
+import { CartButton } from "@/components/tourist/header-actions";
 import { dateTime } from "@/components/tourist/format";
 import { Icon } from "@/components/ui";
 import { get } from "@/lib/api";
@@ -24,6 +25,7 @@ export function NotiBell() {
   const unread = (notis ?? []).filter((n) => !n.read_at).length;
   return (
     <div className="-mr-1.5 flex items-center gap-1">
+      <CartButton className="h-10 w-10" />
       <button type="button" onClick={() => setOpen(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-gray-bg" aria-label={`알림${unread ? ` ${unread}개` : ""}`}>
         <Icon name="bell" className="h-[22px] w-[22px]" />
         {unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-orange" />}

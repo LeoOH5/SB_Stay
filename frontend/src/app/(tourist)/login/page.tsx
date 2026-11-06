@@ -1,12 +1,13 @@
 "use client";
 // T02 로그인 — AU-01 이메일 · AU-03 구글, 화면 언어, 심사용 데모 계정
+// v3.9 ?next=<경로> 가 있으면 로그인 뒤 그 화면으로 (안전한 같은 사이트 경로 + 역할 영역일 때만, afterLogin)
 import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Brand, Button, Icon, inputCls } from "@/components/ui";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { Brand, Button, Icon, Spinner, inputCls } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
-import { errMsg, homeFor } from "@/components/tourist/format";
+import { afterLogin, errMsg, loginHref } from "@/components/tourist/format";
 import { FieldLabel, Segmented } from "@/components/tourist/v3";
 import { post } from "@/lib/api";
 import { session } from "@/lib/auth";
@@ -34,8 +35,9 @@ function GoogleG() {
   );
 }
 
-export default function LoginPage() {
+function LoginPage() {
   const router = useRouter();
+  const next = useSearchParams().get("next");
   const { lang, set: setLang } = useLang();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,7 +46,7 @@ export default function LoginPage() {
 
   const finish = (r: TokenOut) => {
     session.set(r.user, r.access_token);
-    router.push(r.needs_role_setup ? "/login/role" : homeFor(r.user.role));
+    router.push(r.needs_role_setup ? loginHref(next, "/login/role") : afterLogin(r.user.role, next));
   };
   const loginWith = async (em: string, pw: string, key: string) => {
     setErr(null); setBusy(key);
@@ -88,7 +90,7 @@ export default function LoginPage() {
         <ErrorBox message={err} />
         <Button type="submit" disabled={busy !== null}>{busy === "email" ? "로그인 중…" : "로그인"}</Button>
       </form>
-      <p className="mt-4 text-center text-[14px] text-muted">처음이에요? <Link href="/signup" className="font-semibold text-ink">이메일로 가입하기</Link></p>
+      <p className="mt-4 text-center text-[14px] text-muted">처음이에요? <Link href={loginHref(next, "/signup")} className="font-semibold text-ink">이메일로 가입하기</Link></p>
 
       <div className="mt-9 flex items-center justify-between">
         <h2 className="text-[18px] font-bold text-ink">심사용 데모 계정</h2>
@@ -108,4 +110,8 @@ export default function LoginPage() {
       </p>
     </div>
   );
+}
+
+export default function Page() {
+  return <Suspense fallback={<Spinner />}><LoginPage /></Suspense>;
 }

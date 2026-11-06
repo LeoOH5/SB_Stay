@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import create_engine, inspect, text
 
 from app.models import BookingItem, Place, WalkRoute
-from app.seeds.__main__ import walk_rows
+from app.seeds.__main__ import load, walk_rows
 from app.services import courses, llm, planner
 from app.services.courses import Route, Stop
 
@@ -121,6 +121,30 @@ def test_seed_routes_used_by_tour(client):
     t = client.get("/api/v1/tours/3").json()
     assert t["route_source"] == "route" and all(x["source"] == "route" and x["path"] for x in t["legs"])
     assert t["walk_m_total"] == sum(x["walk_m"] for x in t["legs"])
+
+
+def test_seed_course_times_match_real_routes(client):
+    """시드 상태: 모든 코스 시간이 walk_routes.json(실제 경로)으로 계산한 값과 같다.
+    TR-01 v3.9 코스 5 '정릉과 성곽길'은 정릉(105) → 한양도성(107) → 선잠박물관(106): 실제 도보 3,910 m → 3,558 m"""
+    places = {p["id"]: p for p in load("places.json")}
+    routes = {(r["from_place_id"], r["to_place_id"]): Route(r["distance_m"], r["path"]) for r in walk_rows(load("walk_routes.json"), set(places))}
+    rows = load("tour_places.json")
+    items = {t["id"]: t for t in client.get("/api/v1/tours").json()["items"]}
+    assert {t["title"]: t["duration_min"] for t in items.values()} == {
+        "문인의 성북동 산책": 170, "독립운동가의 길": 110, "정릉과 성곽길": 210, "길상사와 한옥 골목": 100, "왕릉과 산사": 100}
+    for tid, t in items.items():
+        stops = [Stop(r["place_id"], places[r["place_id"]]["lat"], places[r["place_id"]]["lng"], r["stay_min"])
+                 for r in sorted((r for r in rows if r["tour_id"] == tid), key=lambda r: r["seq"])]
+        want = courses.summarize(stops, routes)
+        assert [p["id"] for p in t["places"]] == [s.place_id for s in stops]
+        assert (t["walk_m_total"], t["walk_min_total"], t["duration_min"], t["route_source"]) == (want.walk_m_total, want.walk_min_total, want.duration_min, "route")
+
+    t5 = items[5]
+    assert t5["title"] == "정릉과 성곽길" and [p["id"] for p in t5["places"]] == [105, 107, 106]
+    by = {s: Stop(s, places[s]["lat"], places[s]["lng"], 0) for s in (105, 106, 107)}
+    assert courses.path_m([by[105], by[107], by[106]], routes) == 3558 < courses.path_m([by[105], by[106], by[107]], routes) == 3910
+    assert (t5["walk_m_total"], t5["walk_min_total"], t5["stay_min_total"]) == (3560, 54, 150)
+    assert [(x["from_place_id"], x["to_place_id"]) for x in t5["legs"]] == [(105, 107), (107, 106)]
 
 
 def test_tour_api_uses_stored_route(client, db, operator, no_routes):

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Banner, Button, Chip, Icon, TopBar, inputCls } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { submitBooking } from "@/components/tourist/booking";
-import { SS_TRAVELER } from "@/components/tourist/format";
+import { loginHref, SS_TRAVELER } from "@/components/tourist/format";
 import { readSS, writeSS } from "@/components/tourist/session";
 import { BottomBar, FieldLabel, Headline, TotalLine } from "@/components/tourist/v3";
 import { bookingErr, isBuddyRequest, isDormRequest } from "@/components/tourist/v3/flow";
@@ -50,7 +50,7 @@ export default function CheckoutPage() {
     const traveler: Traveler = { ...form, name: form.name.trim(), email: form.email.trim(), passport_no: form.passport_no?.trim() || undefined, emergency_contact: form.emergency_contact?.trim() || undefined, note: undefined };
     writeSS(SS_TRAVELER, traveler);
     if (cart.items.length === 0) { router.push("/cart"); return; }
-    if (!user) { router.push("/login"); return; }
+    if (!user) { router.push(loginHref("/checkout")); return; }
     setBusy(true);
     try {
       const { booking, needsPayment } = await submitBooking(traveler, cart.items);
