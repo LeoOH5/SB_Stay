@@ -11,7 +11,7 @@ export const googleConfigured = () => GOOGLE_CLIENT_ID.length > 0;
 type CodeResponse = { code?: string; error?: string; error_description?: string };
 type CodeClient = { requestCode: () => void };
 type GoogleAccounts = {
-  accounts: { oauth2: { initCodeClient: (cfg: { client_id: string; scope: string; ux_mode: "popup"; access_type?: "offline"; prompt?: string; hint?: string; callback: (r: CodeResponse) => void; error_callback?: (e: { type: string }) => void }) => CodeClient } };
+  accounts: { oauth2: { initCodeClient: (cfg: { client_id: string; scope: string; ux_mode: "popup"; access_type?: "offline"; prompt?: string; include_granted_scopes?: boolean; hint?: string; callback: (r: CodeResponse) => void; error_callback?: (e: { type: string }) => void }) => CodeClient } };
 };
 declare global { interface Window { google?: GoogleAccounts } }
 
@@ -46,6 +46,8 @@ export async function requestGoogleCode(kind: "login" | "calendar", hint?: strin
       ux_mode: "popup",
       access_type: "offline",
       prompt: kind === "calendar" ? "consent" : "select_account",
+      // 로그인은 기본 정보만. 예전에 캘린더를 허용한 계정이라도 캘린더(민감 권한)를 다시 끌어오지 않게 한다
+      include_granted_scopes: kind === "calendar",
       ...(hint ? { hint } : {}),
       callback: (r) => { if (r.code) resolve(r.code); else if (r.error === "access_denied") resolve(null); else reject(new Error(r.error_description ?? r.error ?? "구글 인증 실패")); },
       error_callback: (e) => { if (e.type === "popup_closed") resolve(null); else reject(new Error(`구글 팝업 오류: ${e.type}`)); },
