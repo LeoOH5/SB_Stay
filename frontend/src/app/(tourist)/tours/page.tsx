@@ -2,7 +2,8 @@
 // T07 무료 AI 산책 코스 — TR-01 GET /tours (테마 거르기, 지도)
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Banner, Chip, Hero, Icon, MapEmbed, Spinner } from "@/components/ui";
+import { KakaoMap } from "@/components/kakao-map";
+import { Banner, Chip, Hero, Icon, Spinner } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { errMsg, THEME_LABEL, THEMES } from "@/components/tourist/format";
 import { CourseDots, Headline } from "@/components/tourist/v3";
@@ -42,7 +43,7 @@ export default function ToursPage() {
           <Chip selected={theme === ""} onClick={() => pick("")}>전체</Chip>
           {THEMES.map((t) => <Chip key={t.key} selected={theme === t.key} onClick={() => pick(t.key)}>{t.label}</Chip>)}
         </div>
-        {showMap && tours && <MapEmbed className="mt-4" points={tours.flatMap((t) => t.places.map((p) => ({ lat: p.lat, lng: p.lng })))} />}
+        {showMap && tours && <KakaoMap className="mt-4" points={tours.flatMap((t) => t.places.slice(0, 1).map((p) => ({ lat: p.lat, lng: p.lng, label: lang === "en" ? t.title_en : t.title })))} />}
 
         <ErrorBox message={err} className="mt-4" />
         {!tours && !err && <Spinner />}

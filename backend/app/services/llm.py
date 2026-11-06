@@ -35,6 +35,12 @@ def _extract_json(text: str) -> dict:
     return json.loads(text[start : end + 1])
 
 
+def _supports_temperature(model: str) -> bool:
+    """gpt-5·o 계열 추론 모델은 temperature를 받지 않는다 (보내면 400/500)"""
+    m = model.lower()
+    return not (m.startswith("gpt-5") or (len(m) > 1 and m[0] == "o" and m[1].isdigit()))
+
+
 async def _call(client: httpx.AsyncClient, system: str, user: str) -> str:
     s = get_settings()
     if s.llm_model.startswith("claude"):
@@ -46,11 +52,14 @@ async def _call(client: httpx.AsyncClient, system: str, user: str) -> str:
         )
         r.raise_for_status()
         return "".join(b.get("text", "") for b in r.json().get("content", []))
+    body: dict = {"model": s.llm_model,
+                  "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+    if _supports_temperature(s.llm_model):
+        body["temperature"] = 0.3
     r = await client.post(
         (s.llm_base_url or "https://api.openai.com/v1").rstrip("/") + "/chat/completions",
         headers={"Authorization": f"Bearer {s.llm_api_key}"},
-        json={"model": s.llm_model, "temperature": 0.3,
-              "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
+        json=body,
     )
     r.raise_for_status()
     return r.json()["choices"][0]["message"]["content"]

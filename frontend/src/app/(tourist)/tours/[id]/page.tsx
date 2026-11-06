@@ -2,6 +2,7 @@
 // T08 무료 산책 코스 상세 — TR-02 GET /tours/{id}, PL GET /places (운영 정보), AI-02 POST /ai/story (장소 이야기 · 질문)
 // 코스는 예약 항목이 아니다 (COURSE_NOT_BOOKABLE). 버디와 걸으면 버디 항목의 course_id 로 들어간다.
 import { useParams, useRouter } from "next/navigation";
+import { KakaoMap } from "@/components/kakao-map";
 import { useEffect, useRef, useState } from "react";
 import { Button, Spinner, TopBar, cn } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
@@ -50,6 +51,7 @@ export default function CourseDetailPage() {
     return () => { alive = false; };
   }, [placeId, lang]);
 
+  const orderedPlaces = tour ? [...tour.places].sort((a, b) => a.order - b.order) : [];
   const select = (pid: number) => {
     if (pid === placeId) { setPlaceId(null); return; }
     setStory(null); setQa([]); setQuestion(""); setPlaceId(pid);
@@ -91,6 +93,11 @@ export default function CourseDetailPage() {
             <InfoRow label="가격"><span className="text-navy">{tour.price === 0 ? `무료${anyFee ? " (입장료는 장소마다)" : ""}` : won(tour.price)}</span></InfoRow>
             <InfoRow label="시작">{tour.meeting_point}</InfoRow>
           </div>
+
+          <KakaoMap className="mt-5" route numbered
+            points={orderedPlaces.map((pl) => ({ lat: pl.lat, lng: pl.lng, label: lang === "en" ? pl.name_en : pl.name }))}
+            active={placeId === null ? undefined : Math.max(0, orderedPlaces.findIndex((pl) => pl.id === placeId))}
+            onSelect={(i) => { const pid = orderedPlaces[i]?.id; if (pid !== undefined && pid !== placeId) select(pid); }} />
 
           <div ref={stopsRef} className="scroll-mt-4">
             <SectionHead className="mt-8" title="코스" right="눌러서 AI 이야기 듣기" />
