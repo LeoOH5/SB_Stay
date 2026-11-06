@@ -36,6 +36,25 @@ def test_brief_places_from_request_without_course(client, buddy, db, monkeypatch
     assert [p["name"] for p in b["places"]] == ["길상사", "수연산방(이태준 가옥)"]
 
 
+def test_brief_mentions_other_text(client, buddy, db, monkeypatch, reset_db):
+    """'기타' 직접 입력도 첫 문장(대체 문구)과 LLM 자료에 들어간다"""
+    from app.models import BookingItem
+    _no_llm(monkeypatch)
+    it = db.get(BookingItem, 3)
+    it.request = (it.request or {}) | {"diet_other": "고수", "allergy_other": "복숭아"}
+    db.commit()
+    b = client.post(BRIEF, json={"booking_item_id": 3}, headers=buddy).json()
+    assert b["ai"] is False
+    assert b["brief"].startswith("비건, 기타: 고수, 버섯 알레르기, 복숭아 알레르기 요청이 있어요.")
+
+    async def fake(system, user):
+        assert "Traveler requests: 비건, 기타: 고수, 버섯 알레르기, 복숭아 알레르기" in user
+        return {"brief": "고수와 복숭아를 피하는 식당을 골라 주세요.", "phrases": ["Hi!"]}
+
+    monkeypatch.setattr(llm, "complete_json", fake)
+    assert client.post(BRIEF, json={"booking_item_id": 3}, headers=buddy).json()["ai"] is True
+
+
 def test_brief_llm_and_number_guard(client, buddy, monkeypatch):
     replies = [
         {"brief": "Emma 님은 오전에 문학 투어를 들었어요. 심우장 이야기로 시작해 보세요.", "phrases": ["Did you enjoy the tour?"]},

@@ -57,10 +57,31 @@ def test_create_rules(client, tourist, reset_db):
 @pytest.mark.parametrize("bad", [
     {"meal_count": 5}, {"course_id": 999}, {"request": {"diet": ["keto"]}}, {"request": {"pace": "fast"}},
     {"request": {"places": [101, 102, 103, 104]}}, {"request": {"note": "x" * 301}}, {"request": {"foo": 1}},
+    {"request": {"diet_other": "x" * 41}}, {"request": {"allergy_other": "복숭아\n키위"}},
+    {"request": {"diet_other": 3}}, {"request": {"allergy_other": ["복숭아"]}},
 ])
 def test_buddy_item_validation(client, tourist, bad, reset_db):
     r = _post(client, tourist, [BUDDY | bad])
     assert r.status_code == 422 and _code(r) == "VALIDATION"
+
+
+def test_buddy_request_other_text(client, tourist, reset_db):
+    """'기타' 직접 입력: 앞뒤 공백 제거, 40자까지, 비었으면 키 없음. 예전 요청(키 없음)도 그대로"""
+    req = BUDDY["request"] | {"diet_other": "  고수, 참깨 ", "allergy_other": "복" * 40}
+    b = _post(client, tourist, [DORM, BUDDY | {"request": req}]).json()
+    got = next(i for i in b["items"] if i["type"] == "buddy")["request"]
+    assert got["diet_other"] == "고수, 참깨" and got["allergy_other"] == "복" * 40
+    empty = BUDDY["request"] | {"diet_other": "   ", "allergy_other": None}
+    b = _post(client, tourist, [DORM, BUDDY | {"request": empty}]).json()
+    got = next(i for i in b["items"] if i["type"] == "buddy")["request"]
+    assert "diet_other" not in got and "allergy_other" not in got and got["diet"] == ["vegan"]
+
+
+def test_request_summary_with_other_text():
+    from app.core import rules
+    req = {"diet": ["vegan"], "diet_other": "고수", "allergies": ["mushroom"], "allergy_other": "복숭아", "pace": "slow"}
+    assert rules.request_summary(req) == "비건, 기타: 고수, 버섯 알레르기, 복숭아 알레르기, 천천히"
+    assert rules.request_summary({"diet": [], "diet_other": "  "}) == ""
 
 
 def test_other_validation(client, tourist, reset_db):

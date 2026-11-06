@@ -136,7 +136,11 @@ export interface BuddyMatch { reason: string; matches: { buddy_id: number; score
 
 // ---- 요청 사항
 /** 버디 항목 요청: places 는 place_id 최대 3개, note 는 300자 이내 */
-export interface BuddyRequestBody { diet: Diet[]; allergies: Allergy[]; pace: Pace; places: number[]; note: string }
+export interface BuddyRequestBody {
+  diet: Diet[]; allergies: Allergy[]; pace: Pace; places: number[]; note: string;
+  /** '기타' 직접 입력 (≤40자, 한 줄). 비었으면 없음. 매칭(AI-03)에는 쓰지 않는다 */
+  diet_other?: string | null; allergy_other?: string | null;
+}
 export type DormRequest = Record<DormRequestKey, boolean>;
 export type ItemRequest = BuddyRequestBody | DormRequest;
 

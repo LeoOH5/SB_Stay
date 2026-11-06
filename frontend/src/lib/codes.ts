@@ -40,6 +40,13 @@ export const BUDDY_PROMISES = [
 /** 버디 요청: 더 보고 싶은 곳 최대 개수, 메모 최대 길이 */
 export const REQUEST_PLACES_MAX = 3;
 export const REQUEST_NOTE_MAX = 300;
+/** 버디 요청 '기타' 직접 입력(diet_other·allergy_other) 최대 글자 수 */
+export const REQUEST_OTHER_MAX = 40;
+/** '기타' 입력 정리: 앞뒤 공백 제거·제어 문자 제거·40자까지, 비었으면 null (백엔드 clean_other 와 같은 결과) */
+export function cleanOther(s: string | null | undefined): string | null {
+  const t = (s ?? "").replace(/[\u0000-\u001f\u007f-\u009f]/g, " ").trim().slice(0, REQUEST_OTHER_MAX).trim();
+  return t || null;
+}
 
 /** 버디 항목 가격 = hourly_fee × 시간 + (album ? 5000 : 0) + meal_count × 20000 */
 export function buddyItemPrice(hourlyFee: number, durationMin: number, mealCount = 0, album = false): number {
@@ -184,11 +191,15 @@ export function labels<K extends string>(labels_: Labels<K>, keys: readonly (K |
   return (keys ?? []).map((k) => label(labels_, k, lang));
 }
 
-/** 버디 요청 요약 칩: 식단 → 알레르기("버섯 알레르기") → 속도 */
-export function requestChips(r: { diet?: readonly string[]; allergies?: readonly string[]; pace?: string } | null | undefined, lang: "ko" | "en" = "ko"): string[] {
+/** 버디 요청 요약 칩: 식단 → 기타("기타: 고수") → 알레르기("버섯 알레르기") → 기타 알레르기("복숭아 알레르기") → 속도 */
+export function requestChips(r: { diet?: readonly string[]; allergies?: readonly string[]; pace?: string; diet_other?: string | null; allergy_other?: string | null } | null | undefined, lang: "ko" | "en" = "ko"): string[] {
   if (!r) return [];
+  const allergy = (a: string) => (lang === "ko" ? `${a} 알레르기` : `${a} allergy`);
   const out = labels(DIET, r.diet, lang);
-  out.push(...labels(ALLERGIES, r.allergies, lang).map((a) => (lang === "ko" ? `${a} 알레르기` : `${a} allergy`)));
+  const dietOther = cleanOther(r.diet_other), allergyOther = cleanOther(r.allergy_other);
+  if (dietOther) out.push(lang === "ko" ? `기타: ${dietOther}` : `Other: ${dietOther}`);
+  out.push(...labels(ALLERGIES, r.allergies, lang).map(allergy));
+  if (allergyOther) out.push(allergy(allergyOther));
   if (r.pace === "slow") out.push(label(PACE, "slow", lang));
   return out;
 }

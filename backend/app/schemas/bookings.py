@@ -23,7 +23,8 @@ class BookingItemIn(BaseModel):
     time: str | None = None
     duration_min: int | None = None
     guests: int | None = None
-    # buddy: {diet:[], allergies:[], pace, places:[place_id ≤3], note ≤300자} / dorm: {late_checkin, quiet_room, low_floor}
+    # buddy: {diet:[], allergies:[], pace, places:[place_id ≤3], note ≤300자, diet_other?, allergy_other? (≤40자)}
+    # dorm: {late_checkin, quiet_room, low_floor}
     request: dict | None = None
     course_id: int | None = None  # buddy: 같이 걸을 코스 (tours.id)
     meal_count: int = 0  # buddy: 0~4
