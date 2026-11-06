@@ -135,7 +135,7 @@ function ReplacePage() {
               {sorted?.map((c) => {
                 const on = chosen?.b.id === c.b.id;
                 const help = needs.find((n) => c.b.can_help.includes(n));
-                const tags = [label(PERSONALITY, c.b.personality[0] ?? ""), label(CAN_HELP, help ?? c.b.can_help[0] ?? "")].filter(Boolean);
+                const tags = [label(PERSONALITY, c.b.personality[0] ?? ""), label(CAN_HELP, help ?? c.b.can_help[0] ?? ""), c.b.can_drive ? "운전 가능" : ""].filter(Boolean);
                 const same = c.dates.includes(orig);
                 const first = same ? orig : c.dates[0];
                 const langs = c.b.languages.filter((l) => l !== "ko").map((l) => LANG_KO[l] ?? l).join("·");

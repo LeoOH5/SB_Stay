@@ -29,7 +29,7 @@ const OPEN_FROM = "2027-01-05", OPEN_TO = "2027-02-20";
 
 function BuddyRow({ b, reason, href, needs }: { b: Buddy; reason?: string; href: string; needs: CanHelp[] }) {
   const help = b.can_help.find((h) => needs.includes(h)) ?? b.can_help[0];
-  const tags = [b.personality[0] && label(PERSONALITY, b.personality[0]), b.interests[0] && (INTEREST_LABEL[b.interests[0]] ?? b.interests[0]), help && label(CAN_HELP, help)].filter(Boolean) as string[];
+  const tags = [b.personality[0] && label(PERSONALITY, b.personality[0]), b.interests[0] && (INTEREST_LABEL[b.interests[0]] ?? b.interests[0]), help && label(CAN_HELP, help)].concat(b.can_drive ? ["운전 가능"] : []).filter(Boolean) as string[];
   return (
     <Link href={href} className="flex gap-4 py-5">
       <Avatar name={b.name} />
