@@ -1,17 +1,15 @@
 "use client";
-// T17 마이페이지 — AU-03 세션, AU-04 PATCH /auth/me(이름·언어), AU-07 구글 캘린더, BK-10 알림, CM-01 GET /contents/{key}
-import { useEffect, useState, type ReactNode } from "react";
+// T17 마이페이지 — AU-03 세션, AU-04 PATCH /auth/me(이름), BK-10 알림, CM-01 GET /contents/{key}
+import { useEffect, useState } from "react";
 import { BottomSheet, ErrorBox, LoginRequired } from "@/components/tourist";
 import { CartButton } from "@/components/tourist/header-actions";
 import { dateTime, errMsg, okv, ROLE_LABEL } from "@/components/tourist/format";
 import { Avatar } from "@/components/tourist/trips/util";
-import { Button, Hero, Icon, ListRow, Spinner, cn, inputCls } from "@/components/ui";
-import { del, get, patch, post } from "@/lib/api";
+import { Button, Hero, Icon, ListRow, Spinner, inputCls } from "@/components/ui";
+import { get, patch } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
-import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
-import { CURRENCY_KEY, tr, useLang } from "@/lib/i18n";
-import { writeLS } from "@/lib/store";
-import type { ContentDoc, Lang, ListResponse, Notification, User } from "@/lib/types";
+import { tr, useLang } from "@/lib/i18n";
+import type { ContentDoc, ListResponse, Notification, User } from "@/lib/types";
 
 const DOCS: { key: string; label: string; en: string }[] = [
   { key: "support", label: "고객센터와 긴급 연락처", en: "Help center & emergency contacts" },
@@ -27,46 +25,10 @@ function BuddyEntry({ className }: { className?: string }) {
   return <ListRow href="/buddy/login" icon="users" title={tr("버디로 활동하기", "Become a buddy")} meta={tr("성북구 대학생이라면 버디로 지원할 수 있어요", "University students in Seongbuk-gu can apply as buddies")} className={className} />;
 }
 
-/** 두 칸 고르기 (선택 = 쪽빛 채움) */
-function Segmented<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
-  return (
-    <div className="flex shrink-0 gap-2">
-      {options.map(([v, label]) => (
-        <button key={v} type="button" onClick={() => onChange(v)} aria-pressed={value === v}
-          className={cn("h-10 rounded-full border px-4 text-[15px] transition", value === v ? "border-navy bg-navy font-bold text-white" : "border-line bg-white text-ink hover:border-navy/50")}>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Toggle({ on, onClick, disabled, label }: { on: boolean; onClick: () => void; disabled?: boolean; label: string }) {
-  return (
-    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onClick} disabled={disabled}
-      className={cn("relative h-8 w-[52px] shrink-0 rounded-full transition disabled:opacity-40", on ? "bg-navy" : "bg-[#C9CED3]")}>
-      <span className={cn("absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-all", on ? "left-[24px]" : "left-1")} />
-    </button>
-  );
-}
-
-function SettingRow({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
-  return (
-    <div className="flex min-h-[68px] items-center justify-between gap-4 py-3">
-      <div className="min-w-0">
-        <div className="text-[16px] text-ink">{title}</div>
-        {sub && <div className="mt-0.5 text-[13px] text-muted">{sub}</div>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export default function MePage() {
   const { user } = useUser();
-  const { lang, set: setLang, currency } = useLang();
+  const { lang } = useLang();
   const [notis, setNotis] = useState<Notification[] | null>(null);
-  const [calBusy, setCalBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [doc, setDoc] = useState<ContentDoc | null>(null);
   const [docKey, setDocKey] = useState<string | null>(null);
@@ -81,23 +43,6 @@ export default function MePage() {
     return () => { alive = false; };
   }, [user]);
 
-  const changeLang = async (l: Lang) => {
-    setLang(l);
-    try { const u = await patch<User | null>("/auth/me", { language: l }); session.update({ language: u?.language ?? l }); } catch { /* 화면 언어는 이미 바뀜 */ }
-  };
-  const toggleCalendar = async () => {
-    if (!user) return;
-    setCalBusy(true); setMsg(null);
-    try {
-      if (user.calendar_connected) { await del("/auth/google/calendar"); session.update({ calendar_connected: false }); }
-      else {
-        let body: { code: string; redirect_uri?: string } = { code: "mock" };
-        if (googleConfigured()) { const code = await requestGoogleCode("calendar", user.email); if (!code) return; body = googleBody(code); }
-        await post("/auth/google/calendar", body); session.update({ calendar_connected: true });
-      }
-    } catch (e) { setMsg(errMsg(e)); }
-    finally { setCalBusy(false); }
-  };
   const saveName = async () => {
     const n = name.trim();
     if (!n) return;
@@ -127,12 +72,6 @@ export default function MePage() {
           <button type="button" className="shrink-0 text-[15px] font-semibold text-ink" onClick={() => { setName(user.name); setEditing(true); }}>{tr("수정", "Edit")}</button>
         </div>
 
-        <h2 className="mb-1 mt-9 text-[18px] font-bold text-ink">{tr("설정", "Settings")}</h2>
-        <div className="divide-y divide-line">
-          <SettingRow title={tr("언어", "Language")}><Segmented value={lang} options={[["en", "English"], ["ko", "한국어"]]} onChange={(v) => void changeLang(v)} /></SettingRow>
-          <SettingRow title={tr("통화 표시", "Currency")} sub={tr("가격을 이 통화로 보여 드려요. 결제는 수단에 따라 토스는 원화, PayPal은 달러로 돼요", "Prices are shown in this currency. You pay in KRW with Toss or in USD with PayPal")}><Segmented value={currency} options={[["KRW", "KRW"], ["USD", "USD"]]} onChange={(v) => writeLS(CURRENCY_KEY, v)} /></SettingRow>
-          <SettingRow title={tr("구글 캘린더에 일정 넣기", "Add trips to Google Calendar")}><Toggle on={!!user.calendar_connected} onClick={toggleCalendar} disabled={calBusy} label={tr("구글 캘린더에 일정 넣기", "Add trips to Google Calendar")} /></SettingRow>
-        </div>
         <ErrorBox message={msg} className="mt-2" />
 
         <h2 className="mt-9 text-[18px] font-bold text-ink">{tr("알림", "Notifications")}</h2>
