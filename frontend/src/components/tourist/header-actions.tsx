@@ -1,7 +1,7 @@
 "use client";
 // 탭 화면 제목 줄 오른쪽 — 언어 선택 + 장바구니(담은 게 있을 때) + 알림 + 내 정보 (BK-10 GET /notifications, AU-04 PATCH /auth/me)
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { get, patch } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
@@ -36,7 +36,9 @@ export function CartButton({ className }: { className?: string }) {
 
 export function HeaderActions() {
   const path = usePathname();
+  const router = useRouter();
   const { user } = useUser();
+  const [meOpen, setMeOpen] = useState(false);
   const { lang, set: setLang } = useLang();
   const [notis, setNotis] = useState<Notification[] | null>(null);
   const [open, setOpen] = useState(false);
@@ -68,11 +70,12 @@ export function HeaderActions() {
   };
 
   const meHref = user?.role === "buddy" ? "/buddy/me" : user && user.role !== "tourist" ? "/admin" : user ? "/me" : loginHref(path);
+  const logout = () => { setMeOpen(false); session.clear(); router.push("/"); };
   return (
     <>
       <div className="-mr-1 flex shrink-0 items-center gap-1.5 text-ink">
         <div className="relative">
-          <button type="button" onClick={() => setLangOpen((v) => !v)} className="flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-[13px] font-semibold text-ink hover:bg-gray-bg" aria-label={tr("언어 선택", "Language")}>
+          <button type="button" onClick={() => { setLangOpen((v) => !v); setMeOpen(false); }} className="flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-[13px] font-semibold text-ink hover:bg-gray-bg" aria-label={tr("언어 선택", "Language")}>
             <Icon name="globe" className="h-[18px] w-[18px]" />
             {lang === "en" ? "EN" : "KO"}
           </button>
@@ -92,9 +95,32 @@ export function HeaderActions() {
             {unread > 0 && <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold leading-none text-white">{unread}</span>}
           </button>
         )}
-        <Link href={meHref} aria-label={user ? tr("마이페이지", "My page") : tr("로그인", "Log in")} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-bg text-[15px] font-bold text-navy">
-          {user ? user.name.trim().charAt(0).toUpperCase() : <Icon name="user" className="h-[18px] w-[18px]" />}
-        </Link>
+        {user ? (
+          <div className="relative">
+            <button type="button" onClick={() => { setMeOpen((v) => !v); setLangOpen(false); }} aria-haspopup="menu" aria-expanded={meOpen} aria-label={tr("내 정보", "My account")} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-bg text-[15px] font-bold text-navy">
+              {user.name.trim().charAt(0).toUpperCase()}
+            </button>
+            {meOpen && <button type="button" aria-label={tr("닫기", "Close")} className="fixed inset-0 z-20 cursor-default" onClick={() => setMeOpen(false)} />}
+            {meOpen && (
+              <div role="menu" className="absolute right-0 top-11 z-30 w-56 overflow-hidden rounded-xl bg-white text-ink shadow-lg ring-1 ring-line">
+                <div className="border-b border-line px-4 py-3">
+                  <div className="truncate text-[15px] font-bold">{user.name}</div>
+                  <div className="truncate text-[12.5px] text-muted">{user.email}</div>
+                </div>
+                <Link role="menuitem" href={meHref} onClick={() => setMeOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[14.5px] hover:bg-gray-bg">
+                  <Icon name="user" className="h-[18px] w-[18px]" />{tr("내 프로필", "My profile")}
+                </Link>
+                <button role="menuitem" type="button" onClick={logout} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-left text-[14.5px] font-semibold text-red hover:bg-gray-bg">
+                  {tr("로그아웃", "Log out")}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link href={meHref} aria-label={tr("로그인", "Log in")} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-bg text-navy">
+            <Icon name="user" className="h-[18px] w-[18px]" />
+          </Link>
+        )}
       </div>
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title={tr("알림", "Notifications")}>

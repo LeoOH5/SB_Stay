@@ -3,7 +3,6 @@
 // GET /buddy/settlement?month= (동행 수·정산율 적용 활동비·식비·받을 돈), GET /buddy/meal-claims,
 // BD-05 GET /buddy/profile, GET /buddy/apply (학교 인증·교육 퀴즈)
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DEMO_TODAY, krDate } from "@/components/buddy/format";
 import { LoginGate } from "@/components/buddy/login-gate";
@@ -11,14 +10,13 @@ import { InfoRow, MonthSelect } from "@/components/buddy/ui";
 import { Banner, Button, GoalBar, Hero, LinkButton, Spinner, StatusPill, TagChip } from "@/components/ui";
 import { CAN_HELP, GRADE, PERSONALITY, label, pct } from "@/lib/codes";
 import { get, post, won } from "@/lib/api";
-import { session, useUser } from "@/lib/auth";
+import { useUser } from "@/lib/auth";
 import type { BuddyApplyStatus, BuddyGradeInfo, BuddyProfile, BuddySettlement, ListResponse, MealClaim } from "@/lib/types";
 
 const MONTHS = ["2026-12", "2027-01", "2027-02"];
 const CLAIM_LABEL: Record<string, string> = { approved: "승인", requested: "확인 중", rejected: "반려" };
 
 export default function Page() {
-  const router = useRouter();
   const { user } = useUser();
   const [month, setMonth] = useState(DEMO_TODAY.slice(0, 7));
   const [stByMonth, setStByMonth] = useState<Record<string, BuddySettlement>>({});
@@ -44,7 +42,6 @@ export default function Page() {
   const monthClaims = claims?.filter((c) => c.date.startsWith(month)) ?? null;
   const name = user?.name ?? profile?.name ?? "";
   const tags = profile ? [...profile.personality.slice(0, 1).map((p) => label(PERSONALITY, p)), ...profile.can_help.slice(0, 2).map((c) => label(CAN_HELP, c))] : [];
-  const logout = () => { session.clear(); router.push("/"); };
 
   return (
     <div className="pb-8">
@@ -105,7 +102,6 @@ export default function Page() {
             </div>
           </div>
         )}
-        <button type="button" onClick={logout} className="mt-6 py-2 text-[15px] text-muted">로그아웃</button>
       </div>
     </div>
   );

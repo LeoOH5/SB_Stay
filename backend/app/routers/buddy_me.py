@@ -50,7 +50,7 @@ from app.schemas.buddy import (
     TouristSummary,
 )
 from app.schemas.common import ListResponse
-from app.services import buddy_quiz, eligibility, grades, meals, storage
+from app.services import buddy_quiz, eligibility, email_otp, grades, mail, meals, storage
 from app.services.booking_state import album_fee, describe
 from app.services.reviews import average, item_reviews
 
@@ -387,8 +387,11 @@ def apply_status(user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) 
 
 @router.post("/apply/email")
 def apply_email(body: ApplyEmailIn, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> dict:
-    """1단계(대학 메일 경로): 학교 메일 도메인 확인 후 인증번호 발송 (데모는 발송 없이 고정값)"""
+    """1단계(대학 메일 경로): 학교 메일 도메인 확인 후 인증번호 발송. 메일 키가 없으면 발송 없이 고정값(데모)"""
     uni = _university_for(db, body.email)
+    if mail.enabled():
+        email_otp.issue(db, user, body.email, uni.name)
+        return {"sent": True, "university": uni.name, "dev_code": None}
     s = get_settings()
     return {"sent": True, "university": uni.name, "dev_code": s.buddy_otp_code if s.debug else None}
 
@@ -398,7 +401,9 @@ def apply_verify(body: ApplyVerifyIn, user: User = Depends(SUPPLIER), db: Sessio
     """1단계(대학 메일 경로): 인증번호 + 생년월일(만 19세 이상) + 한국 국적 확인. 대학·생년월일 저장, 프로필이 없으면 pending으로 만든다.
     외국인 유학생은 시간제 취업 허가 문제로 버디(유급 활동)를 할 수 없다."""
     uni = _university_for(db, body.email)
-    if body.code.strip() != get_settings().buddy_otp_code:
+    if mail.enabled():
+        email_otp.check(db, user, body.email, body.code)
+    elif body.code.strip() != get_settings().buddy_otp_code:
         raise api_error(422, "BAD_CODE", "인증번호가 맞지 않아요")
     _check_person(body)
     user.university_id, user.birth_date = uni.id, body.birth_date

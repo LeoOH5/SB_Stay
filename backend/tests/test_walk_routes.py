@@ -8,6 +8,8 @@ from itertools import permutations
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 
 from app.models import BookingItem, Place, WalkRoute
@@ -265,15 +267,16 @@ def test_migration_upgrade_downgrade():
         r = subprocess.run([sys.executable, "-m", "alembic", *args], check=False, cwd=cwd, env=env, capture_output=True, text=True, timeout=180)
         assert r.returncode == 0, r.stderr[-2000:]
 
+    head = ScriptDirectory.from_config(Config(str(cwd / "alembic.ini"))).get_current_head()
     eng = create_engine(f"{base}/{name}")
     try:
         alembic("upgrade", "head")
         with eng.connect() as c:
-            assert c.scalar(text("SELECT version_num FROM alembic_version")) == "v3h_walk_routes"
+            assert c.scalar(text("SELECT version_num FROM alembic_version")) == head  # 뒤에 마이그레이션이 늘어도 최신
         ins = inspect(eng)
         assert {c["name"] for c in ins.get_columns("walk_routes")} == {"from_place_id", "to_place_id", "distance_m", "path"}
         assert ins.get_pk_constraint("walk_routes")["constrained_columns"] == ["from_place_id", "to_place_id"]
-        alembic("downgrade", "-1")
+        alembic("downgrade", "v3g_monthly_grade")  # walk_routes 바로 앞까지 내리기
         with eng.connect() as c:
             assert c.scalar(text("SELECT version_num FROM alembic_version")) == "v3g_monthly_grade"
         assert not inspect(eng).has_table("walk_routes")

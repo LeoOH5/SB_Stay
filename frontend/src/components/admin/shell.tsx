@@ -135,8 +135,7 @@ export function Pager({ page, pages, total, setPage, size = PAGE_SIZE, className
   const nums = Array.from({ length: pages }, (_, i) => i + 1).filter((n) => n === 1 || n === pages || Math.abs(n - page) <= 2);
   const btn = "flex h-9 min-w-9 items-center justify-center rounded-[10px] px-2.5 text-[14px] disabled:opacity-40";
   return (
-    <nav className={cn("mt-4 flex flex-wrap items-center justify-between gap-3", className)} aria-label="쪽 이동">
-      <span className="text-[13px] text-muted">전체 {total}건 중 {(page - 1) * size + 1}–{Math.min(page * size, total)}</span>
+    <nav className={cn("mt-5 flex flex-col items-center gap-2", className)} aria-label="쪽 이동">
       <div className="flex items-center gap-1">
         <button type="button" className={cn(btn, "text-ink hover:bg-gray-bg")} disabled={page === 1} onClick={() => setPage(page - 1)} aria-label="이전 쪽"><Icon name="chevron-left" className="h-4 w-4" /></button>
         {nums.map((n, i) => (
@@ -147,6 +146,7 @@ export function Pager({ page, pages, total, setPage, size = PAGE_SIZE, className
         ))}
         <button type="button" className={cn(btn, "text-ink hover:bg-gray-bg")} disabled={page === pages} onClick={() => setPage(page + 1)} aria-label="다음 쪽"><Icon name="chevron-right" className="h-4 w-4" /></button>
       </div>
+      <span className="text-[13px] text-muted">전체 {total}건 중 {(page - 1) * size + 1}–{Math.min(page * size, total)}</span>
     </nav>
   );
 }
