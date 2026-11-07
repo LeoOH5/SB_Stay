@@ -682,6 +682,11 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
 
   // ---- 버디 본인 (/buddy/*)
   if (method === "GET" && path === "/buddy/apply") return applyOut(applyStateFor(myEmail()));
+  if (method === "POST" && path === "/buddy/apply/email/check") {
+    const b = (body ?? {}) as { code?: string };
+    if (String(b.code ?? "") !== D.OTP_CODE) fail(422, "BAD_CODE", "인증번호가 맞지 않아요");
+    return { verified: true };
+  }
   if (method === "POST" && path === "/buddy/apply/email") {
     const email = String(b.email ?? "").trim().toLowerCase();
     const u = univByEmail(email) ?? fail(422, "NOT_SEONGBUK_SCHOOL", "성북구 대학 메일이 아니에요. 학교 메일(ac.kr)로 다시 입력해 주세요");
