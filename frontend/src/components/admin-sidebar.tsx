@@ -1,10 +1,10 @@
 "use client";
 // 어드민 왼쪽 메뉴 — v3: 흰 바탕 + 로고 "관리" 배지. 대학 담당자는 대시보드·객실·예약·정산(자기 학교)만, 나머지는 운영팀(operator)만.
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { get } from "@/lib/api";
-import { useUser } from "@/lib/auth";
+import { session, useUser } from "@/lib/auth";
 import type { AdminReportRow, ListResponse } from "@/lib/types";
 import { Brand, Icon, cn, type IconName } from "./ui";
 
@@ -21,6 +21,7 @@ const MENU: { href: string; label: string; icon: IconName; operatorOnly?: boolea
 
 export function AdminSidebar() {
   const path = usePathname();
+  const router = useRouter();
   const { user } = useUser();
   const isOperator = user?.role === "operator";
   const [openReports, setOpenReports] = useState(0);
@@ -34,26 +35,34 @@ export function AdminSidebar() {
 
   const who = user ? (user.role === "operator" ? "성북스테이 운영팀" : user.name) : "성북스테이 관리";
   const menu = MENU.filter((m) => !m.operatorOnly || isOperator);
+  const logout = () => { session.clear(); router.push("/"); };
+  const logoutBtn = (cls: string) => <button type="button" onClick={logout} className={cn("rounded-[10px] text-[14px] font-semibold text-muted hover:bg-gray-bg hover:text-ink", cls)}>로그아웃</button>;
   return (
-    <aside className="sticky top-0 flex h-dvh w-[248px] shrink-0 flex-col border-r border-line bg-white">
-      <div className="px-8 pb-7 pt-7">
-        <Brand badge="관리" href="/admin" />
-        <div className="mt-3 truncate text-[13px] text-muted">{who}</div>
+    <aside className="sticky top-0 z-20 flex shrink-0 flex-col border-b border-line bg-white xl:h-dvh xl:w-[248px] xl:border-b-0 xl:border-r">
+      <div className="flex items-center justify-between gap-4 px-5 pb-3 pt-4 xl:block xl:px-8 xl:pb-7 xl:pt-7">
+        <div className="flex min-w-0 items-center gap-3 xl:block">
+          <Brand badge="관리" href="/admin" />
+          <div className="truncate text-[13px] text-muted xl:mt-3">{who}</div>
+        </div>
+        {logoutBtn("h-9 shrink-0 px-3 xl:hidden")}
       </div>
-      <nav className="flex-1 space-y-1.5 px-5" aria-label="관리 메뉴">
+      <nav className="flex gap-1 overflow-x-auto px-3 pb-2 xl:flex-1 xl:flex-col xl:gap-0 xl:space-y-1.5 xl:overflow-visible xl:px-5 xl:pb-0" aria-label="관리 메뉴">
         {menu.map((m) => {
           const active = m.href === "/admin" ? path === "/admin" : path.startsWith(m.href);
           const badge = m.href === "/admin/reports" && isOperator ? openReports : 0;
           return (
-            <Link key={m.href} href={m.href} aria-current={active ? "page" : undefined} className={cn("flex h-11 items-center gap-3 rounded-[10px] px-3.5 text-[15px]", active ? "bg-navy-bg font-bold text-navy" : "text-ink hover:bg-gray-bg")}>
+            <Link key={m.href} href={m.href} aria-current={active ? "page" : undefined} className={cn("flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] px-3 text-[14px] xl:h-11 xl:gap-3 xl:px-3.5 xl:text-[15px]", active ? "bg-navy-bg font-bold text-navy" : "text-ink hover:bg-gray-bg")}>
               <Icon name={m.icon} className="h-5 w-5" />
-              <span className="flex-1">{m.label}</span>
+              <span className="xl:flex-1">{m.label}</span>
               {badge > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1.5 text-[11px] font-bold text-white" aria-label={`처리 전 신고 ${badge}건`}>{badge}</span>}
             </Link>
           );
         })}
       </nav>
-      <p className="px-5 pb-6 text-[13px] leading-relaxed text-muted">버디 승인·산책 코스·식비·신고는 운영팀 계정에서만 보여요</p>
+      <div className="hidden px-5 pb-6 xl:block">
+        {!isOperator && <p className="mb-3 px-3.5 text-[13px] leading-relaxed text-muted">버디 승인·산책 코스·식비·신고는 운영팀 계정에서만 보여요</p>}
+        {logoutBtn("flex h-11 w-full items-center px-3.5 text-left")}
+      </div>
     </aside>
   );
 }

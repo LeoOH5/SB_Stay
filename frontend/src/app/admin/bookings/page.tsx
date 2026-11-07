@@ -7,8 +7,7 @@ import { useUser } from "@/lib/auth";
 import type { AdminBookingRow, ItemStatus, ItemType, ListResponse } from "@/lib/types";
 import { Chip, Spinner, StatusPill } from "@/components/ui";
 import {
-  AdminGate, AdminHeader, BoxTag, EmptyRow, ErrorText, Note, SearchInput, Select, TYPE_LABEL, Table, Td, Tr, errMsg, linkCls, scheduleKo, univShort,
-} from "@/components/admin/shell";
+  AdminGate, AdminHeader, BoxTag, EmptyRow, ErrorText, Note, SearchInput, Select, TYPE_LABEL, Table, Td, Tr, errMsg, linkCls, scheduleKo, univShort, Pager, usePaged } from "@/components/admin/shell";
 
 const TYPES: { key: ItemType | ""; label: string }[] = [{ key: "", label: "전체" }, { key: "dorm", label: "숙박" }, { key: "buddy", label: "버디" }];
 const STATUSES: { key: ItemStatus | ""; label: string }[] = [{ key: "", label: "전체" }, { key: "requested", label: "신청" }, { key: "approved", label: "승인" }, { key: "confirmed", label: "확정" }, { key: "cancelled", label: "취소" }];
@@ -59,6 +58,7 @@ function BookingsBody() {
 
   const term = q.trim().toLowerCase();
   const visible = (rows ?? []).filter((r) => !term || r.code.toLowerCase().includes(term) || r.tourist.toLowerCase().includes(term));
+  const pgVisible = usePaged(visible);
 
   async function cancel(row: AdminBookingRow) {
     if (!window.confirm(`${row.code} (${row.tourist}) 예약 전체를 취소할까요?\n모든 항목이 취소돼요.`)) return;
@@ -97,9 +97,9 @@ function BookingsBody() {
       </div>
 
       {!rows ? <Spinner /> : (
-        <Table cols={[{ label: "예약번호" }, { label: "신청자" }, { label: "종류" }, { label: "항목" }, { label: "일정" }, { label: "금액" }, { label: "상태" }, { label: "", className: "w-[90px]" }]}>
+        <><Table cols={[{ label: "예약번호" }, { label: "신청자" }, { label: "종류" }, { label: "항목" }, { label: "일정" }, { label: "금액" }, { label: "상태" }, { label: "", className: "w-[90px]" }]}>
           {visible.length === 0 && <EmptyRow cols={8}>조건에 맞는 예약이 없어요.</EmptyRow>}
-          {visible.map((r) => {
+          {pgVisible.items.map((r) => {
             const open = detail === r.item_id;
             return (
               <Fragment key={r.item_id}>
@@ -135,6 +135,7 @@ function BookingsBody() {
             );
           })}
         </Table>
+        <Pager {...pgVisible} /></>
       )}
       <Note className="mt-9">숙박은 대학 담당자가 승인하고, 버디 항목은 버디가 직접 수락해요.</Note>
     </>

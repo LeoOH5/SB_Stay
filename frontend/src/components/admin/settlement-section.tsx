@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { get, won } from "@/lib/api";
 import type { AdminMealClaimRow, ListResponse, SettlementProfit, SettlementRow, Settlements } from "@/lib/types";
 import { Spinner, StatusPill } from "@/components/ui";
-import { EmptyRow, ErrorText, KpiStrip, Note, SectionLabel, Table, Td, Tr, errMsg } from "./shell";
+import { EmptyRow, ErrorText, KpiStrip, Note, Pager, SectionLabel, Table, Td, Tr, errMsg, usePaged } from "./shell";
 import { useUser } from "@/lib/auth";
 
 const sumBy = (rows: SettlementRow[], t: SettlementRow["party_type"], k: "payout" | "revenue" | "meals" | "fee") => rows.filter((r) => r.party_type === t).reduce((s, r) => s + r[k], 0);
@@ -87,6 +87,7 @@ export function SettlementSection({ month }: { month: string }) {
   }, [month, univ]);
 
   const items = data?.items ?? [];
+  const pgItems = usePaged(items);
   const buddyMeals = sumBy(items, "buddy", "meals");
   const buddyPayout = sumBy(items, "buddy", "payout");
 
@@ -114,9 +115,9 @@ export function SettlementSection({ month }: { month: string }) {
       ]} />
 
       {!data && !error ? <Spinner /> : (
-        <Table cols={[{ label: "지급 대상" }, { label: "건수" }, { label: "매출" }, { label: "지급률" }, { label: "플랫폼 몫" }, { label: "식비 환급" }, { label: "지급액" }, { label: "상태" }]}>
+        <><Table cols={[{ label: "지급 대상" }, { label: "건수" }, { label: "매출" }, { label: "지급률" }, { label: "플랫폼 몫" }, { label: "식비 환급" }, { label: "지급액" }, { label: "상태" }]}>
           {items.length === 0 && <EmptyRow cols={8}>정산할 내역이 없어요.</EmptyRow>}
-          {items.map((r) => (
+          {pgItems.items.map((r) => (
             <Tr key={`${r.party_type}-${r.party_id}`}>
               <Td className="font-semibold">{r.target}</Td>
               <Td>{r.count}</Td>
@@ -129,6 +130,7 @@ export function SettlementSection({ month }: { month: string }) {
             </Tr>
           ))}
         </Table>
+        <Pager {...pgItems} /></>
       )}
       {data?.profit && <ProfitTable p={data.profit} />}
       {univ ? <Note className="mt-9">대학은 확정된 숙박비의 90%를 받아요. 버디 활동비·식비·수익 구조는 성북스테이 운영팀이 관리해요.</Note> : <Note className="mt-9">식사 보증금과 승인 식비는 여행자 돈을 대신 전하는 금액이라 판매가·원가에 넣지 않아요. 대학은 숙박비의 90%, 버디는 활동비와 앨범(사진 기록) 요금에 동행마다 예약 확정 때 고정한 정산율(기본 70% · 성장 75% · 우수 80%)을 곱한 금액에 승인된 식비를 더해 받아요. 앨범 요금도 사진을 찍은 버디와 같은 비율로 나눠요. 외국인 숙박 신고용 내보내기는 운영 단계에서 열려요.</Note>}

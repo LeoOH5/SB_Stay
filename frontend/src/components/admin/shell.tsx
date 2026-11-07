@@ -1,6 +1,6 @@
 "use client";
 // 어드민 공통 셸 (v3 화면 A01–A08) — 큰 제목 + 회색 부제, 얇은 구분선 KPI 줄, 선만 있는 표, 오른쪽 상세 패널
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { useUser } from "@/lib/auth";
 import type { Role } from "@/lib/types";
 import { Icon, LinkButton, cn } from "@/components/ui";
@@ -11,12 +11,12 @@ export const ROLE_LABEL: Record<Role, string> = { tourist: "관광객", buddy: "
 /** 페이지 제목(30px 700) + 회색 부제. right 에 기간 select·버튼 등을 둔다. */
 export function AdminHeader({ title, sub, right }: { title: ReactNode; sub?: ReactNode; right?: ReactNode }) {
   return (
-    <div className="mb-7 flex items-start justify-between gap-6">
+    <div className="mb-7 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
         <h1 className="text-[30px] font-bold leading-[1.25] tracking-[-0.02em] text-ink">{title}</h1>
         {sub && <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{sub}</p>}
       </div>
-      {right && <div className="mt-5 flex shrink-0 items-center gap-3">{right}</div>}
+      {right && <div className="flex shrink-0 flex-wrap items-center gap-3 sm:mt-5">{right}</div>}
     </div>
   );
 }
@@ -73,9 +73,9 @@ export function OperatorOnly({ title, children }: { title: string; children: Rea
 /** 회색 카드 대신 위아래 선 + 칸 사이 얇은 세로선 */
 export function KpiStrip({ items }: { items: { label: string; value: ReactNode; sub?: ReactNode }[] }) {
   return (
-    <div className="mb-10 grid border-y border-line" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+    <div className="mb-10 grid grid-cols-2 border-y border-line lg:grid-cols-[repeat(var(--kpi-n),minmax(0,1fr))]" style={{ "--kpi-n": items.length } as CSSProperties}>
       {items.map((k, i) => (
-        <div key={k.label} className={cn("py-6", i > 0 && "border-l border-line pl-6", i < items.length - 1 && "pr-6")}>
+        <div key={k.label} className={cn("py-6 pr-6", i % 2 === 1 && "border-l border-line pl-6", i >= 2 && "border-t border-line lg:border-t-0", i > 0 && "lg:border-l lg:pl-6", i === items.length - 1 && "lg:pr-0")}>
           <div className="text-[14px] text-muted">{k.label}</div>
           <div className="mt-2 whitespace-nowrap text-[22px] font-bold leading-tight tracking-[-0.01em] text-ink">{k.value}</div>
           <div className="mt-2.5 min-h-[18px] text-[13px] text-muted">{k.sub}</div>
@@ -115,6 +115,42 @@ export function EmptyRow({ cols, children }: { cols: number; children: ReactNode
   return <tr className="border-b border-line"><td colSpan={cols} className="h-20 text-center text-[14px] text-muted">{children}</td></tr>;
 }
 
+/* ------------------------------------------------------------------ 페이지 나누기 */
+export const PAGE_SIZE = 10;
+/** 목록을 PAGE_SIZE 씩 나눈다. 목록 길이가 바뀌면(필터·검색) 첫 쪽으로 */
+export function usePaged<T>(items: T[] | null | undefined, size = PAGE_SIZE) {
+  const list = items ?? [];
+  // 쪽 번호를 목록 길이와 함께 기억해서, 길이가 바뀌면(필터·검색) 렌더 중에 첫 쪽으로 되돌린다
+  const [state, setState] = useState({ page: 1, len: list.length });
+  const page = state.len === list.length ? state.page : 1;
+  const setPage = (p: number) => setState({ page: p, len: list.length });
+  const pages = Math.max(1, Math.ceil(list.length / size));
+  const cur = Math.min(page, pages);
+  return { page: cur, pages, total: list.length, setPage, items: list.slice((cur - 1) * size, cur * size) };
+}
+
+/** 표 아래 쪽 번호 — 한 쪽뿐이면 그리지 않는다 */
+export function Pager({ page, pages, total, setPage, size = PAGE_SIZE, className }: { page: number; pages: number; total: number; setPage: (p: number) => void; size?: number; className?: string }) {
+  if (pages <= 1) return null;
+  const nums = Array.from({ length: pages }, (_, i) => i + 1).filter((n) => n === 1 || n === pages || Math.abs(n - page) <= 2);
+  const btn = "flex h-9 min-w-9 items-center justify-center rounded-[10px] px-2.5 text-[14px] disabled:opacity-40";
+  return (
+    <nav className={cn("mt-4 flex flex-wrap items-center justify-between gap-3", className)} aria-label="쪽 이동">
+      <span className="text-[13px] text-muted">전체 {total}건 중 {(page - 1) * size + 1}–{Math.min(page * size, total)}</span>
+      <div className="flex items-center gap-1">
+        <button type="button" className={cn(btn, "text-ink hover:bg-gray-bg")} disabled={page === 1} onClick={() => setPage(page - 1)} aria-label="이전 쪽"><Icon name="chevron-left" className="h-4 w-4" /></button>
+        {nums.map((n, i) => (
+          <span key={n} className="flex items-center">
+            {i > 0 && n - nums[i - 1] > 1 && <span className="px-1 text-muted">…</span>}
+            <button type="button" aria-current={n === page ? "page" : undefined} className={cn(btn, n === page ? "bg-navy font-bold text-white" : "text-ink hover:bg-gray-bg")} onClick={() => setPage(n)}>{n}</button>
+          </span>
+        ))}
+        <button type="button" className={cn(btn, "text-ink hover:bg-gray-bg")} disabled={page === pages} onClick={() => setPage(page + 1)} aria-label="다음 쪽"><Icon name="chevron-right" className="h-4 w-4" /></button>
+      </div>
+    </nav>
+  );
+}
+
 /* ------------------------------------------------------------------ 조각 */
 export function SectionLabel({ children, right, className }: { children: ReactNode; right?: ReactNode; className?: string }) {
   return (
@@ -143,7 +179,7 @@ export function KeyValues({ rows, className }: { rows: { label: string; value: R
 /** 오른쪽 상세 패널이 붙는 2단 배치 (A01·A07·A08: 오른쪽 352px) */
 export function SplitLayout({ children, aside, asideWidth = 352 }: { children: ReactNode; aside: ReactNode; asideWidth?: number }) {
   return (
-    <div className="grid items-start gap-10" style={{ gridTemplateColumns: `minmax(0,1fr) ${asideWidth}px` }}>
+    <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1fr)_var(--aside-w)]" style={{ "--aside-w": `${asideWidth}px` } as CSSProperties}>
       <div className="min-w-0">{children}</div>
       <aside className="min-w-0">{aside}</aside>
     </div>
