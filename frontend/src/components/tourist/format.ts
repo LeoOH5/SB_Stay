@@ -1,6 +1,7 @@
 // 관광객 화면 공용 상수·포맷 함수 (날짜·라벨·오류 메시지)
 import { ApiError } from "@/lib/api";
 import { curLang, tr } from "@/lib/i18n";
+import { personName } from "@/lib/i18n-data";
 import type { BookingItem, CartItem, ItemType, Role } from "@/lib/types";
 
 // 데모 기본 날짜 (겨울방학 개방 기간 2027-01-05 ~ 02-20)
@@ -239,7 +240,7 @@ export const univLabel = (u?: string | null): string => (curLang() === "en" ? UN
 export function itemTitle(title: string): string {
   if (curLang() !== "en") return title;
   const walk = title.match(/^(.+?)(와|과) 동네 걷기$/);
-  if (walk) return `Neighborhood walk with ${walk[1]}`;
+  if (walk) return `Neighborhood walk with ${personName(walk[1])}`;
   return title.split(" ").map((w) => UNIV_EN[w] ?? BUILDING_EN[w] ?? ROOM_KO_EN[w] ?? w).join(" ");
 }
 const STATUS_EN: Record<string, string> = {

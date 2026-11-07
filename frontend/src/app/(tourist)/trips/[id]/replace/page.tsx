@@ -11,6 +11,7 @@ import { Button, Icon, Hero, LinkButton, Spinner, TagChip } from "@/components/u
 import { CAN_HELP, DIET_TO_HELP, PERSONALITY, buddyItemPrice, label, requestChips } from "@/lib/codes";
 import { get, post } from "@/lib/api";
 import { curLang, money, tr, useLang } from "@/lib/i18n";
+import { personName, majorText } from "@/lib/i18n-data";
 import type { Booking, BookingItem, Buddy, BuddyRequestBody, CanHelp, DormRoom, ListResponse } from "@/lib/types";
 
 interface Cand { b: Buddy; dates: string[] }
@@ -106,7 +107,7 @@ function ReplacePage() {
   if (done && chosen) {
     return (
       <>
-        <Hero back="/trips" backLabel={tr("내 여행", "My trips")} title={lang === "en" ? <>Request sent<br />to {chosen.b.name}</> : <>{chosen.b.name}에게<br />요청했어요</>} sub={tr(`${krDate(chosenDate)} ${item?.time ?? ""} · ${chosen.b.name}${iga(chosen.b.name)} 수락하면 내 여행에 확정으로 보여요.`, `${krDate(chosenDate)} ${item?.time ?? ""} · Once ${chosen.b.name} accepts, it shows as confirmed in My trips.`)} />
+        <Hero back="/trips" backLabel={tr("내 여행", "My trips")} title={lang === "en" ? <>Request sent<br />to {personName(chosen.b.name)}</> : <>{personName(chosen.b.name)}에게<br />요청했어요</>} sub={tr(`${krDate(chosenDate)} ${item?.time ?? ""} · ${personName(chosen.b.name)}${iga(chosen.b.name)} 수락하면 내 여행에 확정으로 보여요.`, `${krDate(chosenDate)} ${item?.time ?? ""} · Once ${personName(chosen.b.name)} accepts, it shows as confirmed in My trips.`)} />
         <ActionBar><LinkButton href="/trips">{tr("내 여행으로", "Go to My trips")}</LinkButton></ActionBar>
       </>
     );
@@ -150,11 +151,11 @@ function ReplacePage() {
                 return (
                   <div key={c.b.id} role="radio" aria-checked={on} tabIndex={0} onClick={() => setSel(c.b.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel(c.b.id); } }}
                     className="flex cursor-pointer gap-4 py-5 outline-none focus-visible:bg-navy-bg/50">
-                    <Avatar name={c.b.name} active={on} />
+                    <Avatar name={personName(c.b.name)} active={on} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 text-[16px]"><span className="font-bold text-ink">{c.b.name}</span> <span className="text-[14px] text-muted">{shortUniv(c.b.university)} {c.b.major} {tr(`${c.b.year}학년`, `Year ${c.b.year}`)}</span></div>
-                        <Link href={`/buddies/${c.b.id}`} onClick={(e) => e.stopPropagation()} aria-label={tr(`${c.b.name} 프로필`, `${c.b.name} profile`)} className="-mr-1 -mt-0.5 p-1 text-ink"><Icon name="chevron-right" className="h-5 w-5" /></Link>
+                        <div className="min-w-0 text-[16px]"><span className="font-bold text-ink">{personName(c.b.name)}</span> <span className="text-[14px] text-muted">{shortUniv(c.b.university)} {majorText(c.b.major)} {tr(`${c.b.year}학년`, `Year ${c.b.year}`)}</span></div>
+                        <Link href={`/buddies/${c.b.id}`} onClick={(e) => e.stopPropagation()} aria-label={tr(`${personName(c.b.name)} 프로필`, `${personName(c.b.name)} profile`)} className="-mr-1 -mt-0.5 p-1 text-ink"><Icon name="chevron-right" className="h-5 w-5" /></Link>
                       </div>
                       <div className="mt-1 flex items-center gap-1 text-[14px] text-muted">
                         {langs && <>{langs} · </>}
@@ -177,7 +178,7 @@ function ReplacePage() {
 
       {item && chosen && (
         <ActionBar note={`${tr("새 버디가 수락하면 확정돼요.", "Confirmed once the new buddy accepts.")} ${newPrice === item.price ? tr("금액은 같아요.", "The price stays the same.") : tr(`금액이 ${money(newPrice)}로 바뀌어요.`, `The price changes to ${money(newPrice)}.`)}`}>
-          <Button onClick={submit} disabled={busy || !canReplace(item)}>{busy ? tr("요청하는 중…", "Sending…") : tr(`${chosen.b.name}${euro(chosen.b.name)} 바꾸기`, `Switch to ${chosen.b.name}`)}</Button>
+          <Button onClick={submit} disabled={busy || !canReplace(item)}>{busy ? tr("요청하는 중…", "Sending…") : tr(`${personName(chosen.b.name)}${euro(chosen.b.name)} 바꾸기`, `Switch to ${personName(chosen.b.name)}`)}</Button>
         </ActionBar>
       )}
     </>

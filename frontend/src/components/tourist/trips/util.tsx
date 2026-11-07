@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Icon, cn } from "@/components/ui";
 import { biRecord, dowEn, monEn, okv, errMsg } from "@/components/tourist/format";
 import { curLang, tr } from "@/lib/i18n";
+import { personName } from "@/lib/i18n-data";
 import { get } from "@/lib/api";
 import type { Booking, BookingItem } from "@/lib/types";
 
@@ -49,7 +50,7 @@ export function bookingSpan(b: Booking): { from: string; to: string } {
 
 /** "지우와 동네 걷기" → "지우" (버디 이름) */
 export function buddyNameOf(it: Pick<BookingItem, "title">): string {
-  return it.title.replace(/\s*[와과]\s*동네 걷기.*$/, "").replace(/\s*동네 걷기.*$/, "").replace(/^Walk with\s+/i, "").replace(/\s+neighborhood walk.*$/i, "").trim() || tr("버디", "Buddy");
+  return personName(it.title.replace(/\s*[와과]\s*동네 걷기.*$/, "").replace(/\s*동네 걷기.*$/, "").replace(/^Walk with\s+/i, "").replace(/\s+neighborhood walk.*$/i, "").trim()) || tr("버디", "Buddy");
 }
 const batchim = (name: string) => { const c = name.charCodeAt(name.length - 1); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0; };
 /** 받침 있으면 "과", 없으면 "와" */

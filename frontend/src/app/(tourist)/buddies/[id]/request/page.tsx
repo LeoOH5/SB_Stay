@@ -13,6 +13,7 @@ import { SS_BUDDY_DRAFT, koMD, saveDraft, wa, type BuddyDraft } from "@/componen
 import { get } from "@/lib/api";
 import { ALLERGIES, DIET, PACE, REQUEST_NOTE_MAX, REQUEST_OTHER_MAX, REQUEST_PLACES_MAX, keysOf, label } from "@/lib/codes";
 import { tr, useLang } from "@/lib/i18n";
+import { personName } from "@/lib/i18n-data";
 import type { Allergy, Buddy, BuddyRequestBody, Diet, ListResponse, Pace, Place, Tour } from "@/lib/types";
 
 const toggle = <T,>(xs: T[], x: T) => (xs.includes(x) ? xs.filter((v) => v !== x) : [...xs, x]);
@@ -76,8 +77,8 @@ export default function BuddyRequestPage() {
 
   return (
     <>
-      <TopBar back={`/buddies/${id}`} right={buddy ? <span className="text-muted">{tr(`${buddy.name}${wa(buddy.name)} ${koMD(draft.date)}`, `${buddy.name} · ${koMD(draft.date)}`)}</span> : undefined} />
-      <Headline className="pt-2" title={buddy ? tr(`${buddy.name}에게\n미리 알려 주세요`, `Tell ${buddy.name}\nin advance`) : tr("버디에게\n미리 알려 주세요", "Tell your buddy\nin advance")} sub={tr("버디와 운영팀만 봐요. 식당과 길을 고를 때 써요.", "Only your buddy and our team see this. It helps them pick places to eat and routes.")} />
+      <TopBar back={`/buddies/${id}`} right={buddy ? <span className="text-muted">{tr(`${personName(buddy.name)}${wa(buddy.name)} ${koMD(draft.date)}`, `${personName(buddy.name)} · ${koMD(draft.date)}`)}</span> : undefined} />
+      <Headline className="pt-2" title={buddy ? tr(`${personName(buddy.name)}에게\n미리 알려 주세요`, `Tell ${personName(buddy.name)}\nin advance`) : tr("버디에게\n미리 알려 주세요", "Tell your buddy\nin advance")} sub={tr("버디와 운영팀만 봐요. 식당과 길을 고를 때 써요.", "Only your buddy and our team see this. It helps them pick places to eat and routes.")} />
       <div className="px-5 pb-6 pt-6">
         <ErrorBox message={err} />
         {!buddy && !err && <Spinner />}
