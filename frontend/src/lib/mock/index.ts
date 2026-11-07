@@ -496,7 +496,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   if (method === "GET" && path === "/auth/me/plan") { if (!me()) fail(401, "UNAUTHORIZED", "로그인이 필요합니다"); return myPlan(); }
   if (method === "GET" && path === "/auth/me") { const u = me(); if (!u) fail(401, "UNAUTHORIZED", "로그인이 필요합니다"); return u; }
   if (method === "PATCH" && (path === "/auth/me" || path === "/users/me")) { const u = me(); if (u) { state.currentUser = { ...u, ...(b as Partial<User>) }; } return state.currentUser; }
-  if (method === "PATCH" && path === "/users/me/role") {
+  if (method === "PATCH" && path === "/auth/me/role") {
     const r = String(b.role);
     if (!["tourist", "buddy", "univ_admin", "operator"].includes(r)) fail(422, "VALIDATION", "역할은 tourist | buddy | univ_admin | operator 중 하나예요");
     const u = me(); if (u) state.currentUser = { ...u, role: r as User["role"] }; return state.currentUser;

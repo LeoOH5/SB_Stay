@@ -63,7 +63,7 @@ function ApplyPage() {
   const becomeBuddy = async () => {
     setSwitching(true); setGateErr(null);
     try {
-      const u = await patch<User>("/users/me/role", { role: "buddy" });
+      const u = await patch<User>("/auth/me/role", { role: "buddy" });
       session.update({ role: u?.role ?? "buddy" });
     } catch (e) { setGateErr(errText(e)); }
     finally { setSwitching(false); }
