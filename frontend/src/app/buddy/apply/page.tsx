@@ -5,7 +5,7 @@
 // 2 버디 약속: POST /buddy/apply/agree   3 사전 교육 영상 5개: GET /buddy/apply/education · POST /buddy/apply/education/{id}
 // 4 교육 퀴즈 10문제: GET/POST /buddy/apply/quiz (영상을 다 봐야 열림, 8개 이상 통과)   5 성향·소개: PUT /buddy/profile   6 운영팀 확인 중
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ProfileFields, draftOf, type ProfileDraft } from "@/components/buddy/profile-fields";
 import { BottomBar } from "@/components/buddy/ui";
 import { UploadThumb, usePhotoUploads } from "@/components/photo-upload";
@@ -53,9 +53,11 @@ function ApplyPage() {
   const [gateErr, setGateErr] = useState<string | null>(null);
   const needsRole = !!user && user.role === "tourist";
   const isAdmin = !!user && (user.role === "univ_admin" || user.role === "operator");
+  // 첫 렌더(하이드레이션 전)에는 저장된 로그인 정보를 아직 못 읽어 user 가 비어 보인다 → 다 읽은 뒤에만 판단
+  const hydrated = useSyncExternalStore(() => () => {}, () => true, () => false);
   useEffect(() => {
-    if (!user) router.replace("/signup?next=/buddy/apply");
-  }, [user, router]);
+    if (hydrated && !user) router.replace("/signup?next=/buddy/apply");
+  }, [hydrated, user, router]);
   useEffect(() => {
     if (!user || user.role === "tourist") return;
     const forced = Number(sp.get("step"));
@@ -90,7 +92,7 @@ function ApplyPage() {
   const back = () => {
     if (step === 4 && quizIdx > 0) { setQuizIdx((i) => i - 1); return; }
     if (step && step > 1 && step < STEPS) go(step - 1);
-    else router.push("/buddy/login");
+    else router.push("/"); // 1단계·지원 완료 화면에서 뒤로 → 첫 화면 (버디 신청하기 버튼이 있는 곳)
   };
   const next = (n: number) => async () => { await refresh().catch(() => null); go(n); };
 
