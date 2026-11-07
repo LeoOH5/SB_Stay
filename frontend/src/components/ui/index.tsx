@@ -363,12 +363,12 @@ export function SectionTitle({ children, right, className }: { children: ReactNo
 
 /* ------------------------------------------------------------------ 탭바 */
 /** hideOn: "/cart" 는 그 경로와 하위 경로, "^/stay/\\d+$" 처럼 ^로 시작하면 정규식. tab.also: 이 탭을 켜는 다른 경로(예: /me → 내 여행) */
-export function TabBar({ tabs, hideOn = [] }: { tabs: { href: string; label: string; icon?: IconName | ReactNode; also?: string[] }[]; hideOn?: string[] }) {
+export function TabBar({ tabs, hideOn = [] }: { tabs: { href: string; label: string; icon?: IconName | ReactNode; also?: string[]; exact?: boolean }[]; hideOn?: string[] }) {
   const path = usePathname();
   const hit = (h: string) => (h.startsWith("^") ? new RegExp(h).test(path) : path === h || path.startsWith(h + "/"));
   if (hideOn.some(hit)) return null;
-  // 가장 긴 prefix가 일치하는 탭 하나만 활성 (예: /buddy 와 /buddy/requests 중 후자). also 경로도 같은 규칙
-  const best = tabs.flatMap((x) => [x.href, ...(x.also ?? [])].filter((h) => path === h || path.startsWith(h + "/")).map((h) => ({ tab: x, len: h.length })))
+  // 가장 긴 prefix가 일치하는 탭 하나만 활성 (예: /buddy 와 /buddy/requests 중 후자). also 경로도 같은 규칙. exact 탭은 자기 주소에서만
+  const best = tabs.flatMap((x) => [x.href, ...(x.also ?? [])].filter((h) => path === h || (!(x.exact && h === x.href) && path.startsWith(h + "/"))).map((h) => ({ tab: x, len: h.length })))
     .sort((a, b) => b.len - a.len)[0]?.tab;
   return (
     <nav className="sticky bottom-0 z-20 mt-auto border-t border-line bg-white px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5">
