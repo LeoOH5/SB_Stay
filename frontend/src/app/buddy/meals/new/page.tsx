@@ -74,7 +74,7 @@ function MealClaimPage() {
 
         {item && (
           <>
-            <input ref={fileRef} type="file" accept={UPLOAD_ACCEPT} capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { upload.clear(); upload.add([f]); } e.target.value = ""; }} />
+            <input ref={fileRef} type="file" accept={UPLOAD_ACCEPT} className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { upload.clear(); upload.add([f]); } e.target.value = ""; }} />
             {slot ? (
               <div className="flex items-center gap-4 rounded-[16px] border-[1.5px] border-navy/40 p-3">
                 <UploadThumb slot={slot} onRemove={upload.clear} onRetry={() => upload.retry(slot.key)} className="h-[120px] w-[96px] shrink-0 rounded-[10px]" />
