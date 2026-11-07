@@ -12,7 +12,7 @@ import { BottomBar, FieldLabel, Headline, Segmented, useHydrated } from "@/compo
 import { SS_BUDDY_DRAFT, koMD, saveDraft, wa, type BuddyDraft } from "@/components/tourist/v3/flow";
 import { get } from "@/lib/api";
 import { ALLERGIES, DIET, PACE, REQUEST_NOTE_MAX, REQUEST_OTHER_MAX, REQUEST_PLACES_MAX, keysOf, label } from "@/lib/codes";
-import { useLang } from "@/lib/i18n";
+import { tr, useLang } from "@/lib/i18n";
 import type { Allergy, Buddy, BuddyRequestBody, Diet, ListResponse, Pace, Place, Tour } from "@/lib/types";
 
 const toggle = <T,>(xs: T[], x: T) => (xs.includes(x) ? xs.filter((v) => v !== x) : [...xs, x]);
@@ -52,8 +52,8 @@ export default function BuddyRequestPage() {
       <>
         <TopBar back={`/buddies/${id}`} />
         <div className="px-5 py-10 text-center">
-          <p className="text-[15px] text-muted">버디와 만날 날짜를 먼저 골라 주세요.</p>
-          <Link href={`/buddies/${id}`} className="mt-3 inline-block text-[15px] font-semibold text-navy">버디 보러 가기</Link>
+          <p className="text-[15px] text-muted">{tr("버디와 만날 날짜를 먼저 골라 주세요.", "Please pick a date with your buddy first.")}</p>
+          <Link href={`/buddies/${id}`} className="mt-3 inline-block text-[15px] font-semibold text-navy">{tr("버디 보러 가기", "Go to buddy")}</Link>
         </div>
       </>
     );
@@ -76,60 +76,60 @@ export default function BuddyRequestPage() {
 
   return (
     <>
-      <TopBar back={`/buddies/${id}`} right={buddy ? <span className="text-muted">{buddy.name}{wa(buddy.name)} {koMD(draft.date)}</span> : undefined} />
-      <Headline className="pt-2" title={buddy ? `${buddy.name}에게\n미리 알려 주세요` : "버디에게\n미리 알려 주세요"} sub="버디와 운영팀만 봐요. 식당과 길을 고를 때 써요." />
+      <TopBar back={`/buddies/${id}`} right={buddy ? <span className="text-muted">{tr(`${buddy.name}${wa(buddy.name)} ${koMD(draft.date)}`, `${buddy.name} · ${koMD(draft.date)}`)}</span> : undefined} />
+      <Headline className="pt-2" title={buddy ? tr(`${buddy.name}에게\n미리 알려 주세요`, `Tell ${buddy.name}\nin advance`) : tr("버디에게\n미리 알려 주세요", "Tell your buddy\nin advance")} sub={tr("버디와 운영팀만 봐요. 식당과 길을 고를 때 써요.", "Only your buddy and our team see this. It helps them pick places to eat and routes.")} />
       <div className="px-5 pb-6 pt-6">
         <ErrorBox message={err} />
         {!buddy && !err && <Spinner />}
 
-        <FieldLabel>먹지 않는 것</FieldLabel>
+        <FieldLabel>{tr("먹지 않는 것", "Foods I don't eat")}</FieldLabel>
         <div className="flex flex-wrap gap-2">
           {keysOf(DIET).map((k) => <Chip key={k} selected={r.diet.includes(k)} onClick={() => setReq({ diet: toggle<Diet>(r.diet, k) })}>{label(DIET, k, lang)}</Chip>)}
           <Chip selected={dietOtherOpen} onClick={() => setReq({ diet_other: dietOtherOpen ? null : "" })}>{otherLabel}</Chip>
         </div>
         {dietOtherOpen && <OtherInput value={r.diet_other ?? ""} onChange={(v) => setReq({ diet_other: v })} placeholder={lang === "en" ? "e.g. cilantro, sesame" : "예: 고수, 참깨"} label={lang === "en" ? "Other foods to avoid" : "먹지 않는 것 기타"} />}
 
-        <FieldLabel className="mt-6">알레르기</FieldLabel>
+        <FieldLabel className="mt-6">{tr("알레르기", "Allergies")}</FieldLabel>
         <div className="flex flex-wrap gap-2">
           {keysOf(ALLERGIES).map((k) => <Chip key={k} selected={r.allergies.includes(k)} onClick={() => setReq({ allergies: toggle<Allergy>(r.allergies, k) })}>{label(ALLERGIES, k, lang)}</Chip>)}
           <Chip selected={allergyOtherOpen} onClick={() => setReq({ allergy_other: allergyOtherOpen ? null : "" })}>{otherLabel}</Chip>
         </div>
         {allergyOtherOpen && <OtherInput value={r.allergy_other ?? ""} onChange={(v) => setReq({ allergy_other: v })} placeholder={lang === "en" ? "e.g. peach" : "예: 복숭아"} label={lang === "en" ? "Other allergies" : "알레르기 기타"} />}
 
-        <FieldLabel className="mt-6">걷는 속도</FieldLabel>
+        <FieldLabel className="mt-6">{tr("걷는 속도", "Walking pace")}</FieldLabel>
         <Segmented<Pace> value={r.pace} onChange={(pace) => setReq({ pace })} options={keysOf(PACE).map((k) => ({ value: k, label: label(PACE, k, lang) }))} />
 
-        <FieldLabel className="mt-6" extra="선택">같이 걸을 코스</FieldLabel>
+        <FieldLabel className="mt-6" extra={tr("선택", "Optional")}>{tr("같이 걸을 코스", "Walk to do together")}</FieldLabel>
         <div className="flex flex-wrap gap-2">
           {courseChips.map((c) => <Chip key={c.id} selected={draft.course_id === c.id} onClick={() => setCourse(draft.course_id === c.id ? null : c.id)}>{lang === "en" ? c.title_en : c.title}</Chip>)}
-          <Chip selected={draft.course_id === null} onClick={() => setCourse(null)}>코스 없이</Chip>
+          <Chip selected={draft.course_id === null} onClick={() => setCourse(null)}>{tr("코스 없이", "No walk")}</Chip>
         </div>
 
-        <FieldLabel className="mt-6" extra={`${REQUEST_PLACES_MAX}곳까지`}>더 가 보고 싶은 곳</FieldLabel>
+        <FieldLabel className="mt-6" extra={tr(`${REQUEST_PLACES_MAX}곳까지`, `Up to ${REQUEST_PLACES_MAX}`)}>{tr("더 가 보고 싶은 곳", "Other places I'd like to visit")}</FieldLabel>
         <div className="flex flex-wrap gap-2">
           {r.places.map((pid) => <Chip key={pid} selected onClick={() => setReq({ places: r.places.filter((x) => x !== pid) })}>{placeName(pid)}</Chip>)}
           {suggest.map((p) => <Chip key={p.id} onClick={() => setReq({ places: [...r.places, p.id] })}>{lang === "en" ? p.name_en : p.name}</Chip>)}
-          {!full && <Chip onClick={() => setPlaceSheet(true)}>+ 추가</Chip>}
+          {!full && <Chip onClick={() => setPlaceSheet(true)}>{tr("+ 추가", "+ Add")}</Chip>}
         </div>
 
-        <FieldLabel className="mt-6" extra="선택">더 알려 줄 것</FieldLabel>
-        <textarea className={`${textareaCls} min-h-[88px] text-[15px]`} maxLength={REQUEST_NOTE_MAX} value={r.note} placeholder="예: 무릎이 안 좋아서 언덕은 천천히 가고 싶어요."
+        <FieldLabel className="mt-6" extra={tr("선택", "Optional")}>{tr("더 알려 줄 것", "Anything else")}</FieldLabel>
+        <textarea className={`${textareaCls} min-h-[88px] text-[15px]`} maxLength={REQUEST_NOTE_MAX} value={r.note} placeholder={tr("예: 무릎이 안 좋아서 언덕은 천천히 가고 싶어요.", "e.g. My knees are weak, so I'd like to take hills slowly.")}
           onChange={(e) => setReq({ note: e.target.value.slice(0, REQUEST_NOTE_MAX) })} />
         <div className="mt-1 text-right text-[13px] text-muted">{r.note.length} / {REQUEST_NOTE_MAX}</div>
       </div>
 
       <BottomBar>
-        <Button onClick={() => router.push(`/buddies/${id}/options`)}>다음: 식사·사진 옵션</Button>
+        <Button onClick={() => router.push(`/buddies/${id}/options`)}>{tr("다음: 식사·사진 옵션", "Next: meal & photo options")}</Button>
       </BottomBar>
 
-      <BottomSheet open={placeSheet} onClose={() => setPlaceSheet(false)} title={`더 가 보고 싶은 곳 (${r.places.length}/${REQUEST_PLACES_MAX})`}>
+      <BottomSheet open={placeSheet} onClose={() => setPlaceSheet(false)} title={`${tr("더 가 보고 싶은 곳", "Places to visit")} (${r.places.length}/${REQUEST_PLACES_MAX})`}>
         <div className="flex flex-wrap gap-2">
           {places.map((p) => {
             const on = r.places.includes(p.id);
             return <Chip key={p.id} selected={on} disabled={!on && full} onClick={() => setReq({ places: on ? r.places.filter((x) => x !== p.id) : [...r.places, p.id] })}>{lang === "en" ? p.name_en : p.name}</Chip>;
           })}
         </div>
-        <Button className="mt-5" onClick={() => setPlaceSheet(false)}>다 골랐어요</Button>
+        <Button className="mt-5" onClick={() => setPlaceSheet(false)}>{tr("다 골랐어요", "Done")}</Button>
       </BottomSheet>
     </>
   );

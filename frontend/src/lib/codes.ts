@@ -1,5 +1,6 @@
 // v3 코드값 라벨 + 숫자 규칙 — docs/v3/CONTRACT.md §1·§3
 // 화면은 ko/en 라벨을 고르고, API 에는 key 만 보낸다.
+import { tr } from "./i18n";
 import type {
   Allergy, BuddyGrade, CanHelp, CourseLeg, Diet, DormRequestKey, Eligibility, Pace, Personality, ReportCategory, ReviewTag, RouteSource, SubScoreKey, SurveyPain, WalkStyle,
 } from "./types";
@@ -171,10 +172,16 @@ export const SURVEY_PAIN: Labels<SurveyPain> = {
   none: { ko: "딱히 없었어요", en: "Nothing really" },
 };
 /** 무료 코스 광고 자리 — 모두 지어낸 예시 광고(실제 가게·행사 아님) */
+const ad = (ko: { title: string; body: string; place: string }, en: { title: string; body: string; place: string }) => ({
+  get title() { return tr(ko.title, en.title); }, get body() { return tr(ko.body, en.body); }, get place() { return tr(ko.place, en.place); },
+});
 export const SAMPLE_ADS: { title: string; body: string; place: string }[] = [
-  { title: "골목 끝 찻집 '한모금'", body: "대추차 한 잔에 쑥떡 하나를 같이 드려요. 산책하다 쉬어 가세요.", place: "성북동 골목 · 예시 광고" },
-  { title: "겨울 한옥 손뜨개 모임", body: "토요일 오후, 한옥 마루에서 목도리를 같이 떠요. 처음이어도 괜찮아요.", place: "성북동 한옥 · 예시 광고" },
-  { title: "성곽길 아래 빵집 '돌담제과'", body: "아침 8시에 갓 구운 단팥빵이 나와요. 코스 출발 전에 들러 보세요.", place: "성곽길 입구 · 예시 광고" },
+  ad({ title: "골목 끝 찻집 '한모금'", body: "대추차 한 잔에 쑥떡 하나를 같이 드려요. 산책하다 쉬어 가세요.", place: "성북동 골목 · 예시 광고" },
+    { title: "Hanmogeum, a tea house at the alley's end", body: "Get a mugwort rice cake with every jujube tea. Take a break from your walk.", place: "Seongbuk-dong alley · sample ad" }),
+  ad({ title: "겨울 한옥 손뜨개 모임", body: "토요일 오후, 한옥 마루에서 목도리를 같이 떠요. 처음이어도 괜찮아요.", place: "성북동 한옥 · 예시 광고" },
+    { title: "Winter knitting in a hanok", body: "Knit a scarf together on a hanok floor on Saturday afternoons. Beginners welcome.", place: "Seongbuk-dong hanok · sample ad" }),
+  ad({ title: "성곽길 아래 빵집 '돌담제과'", body: "아침 8시에 갓 구운 단팥빵이 나와요. 코스 출발 전에 들러 보세요.", place: "성곽길 입구 · 예시 광고" },
+    { title: "Doldam Bakery below the fortress wall", body: "Fresh red-bean buns come out at 8 a.m. Stop by before your walk.", place: "Fortress trail entrance · sample ad" }),
 ];
 
 /** 요청 → 도움 매핑 (매칭용): vegan/vegetarian → vegan_food, halal → halal_food */

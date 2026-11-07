@@ -8,10 +8,12 @@ import { errMsg, okv } from "@/components/tourist/format";
 import { ActionBar, Node, Photo, TimelineStep, iga, krDate, wa } from "@/components/tourist/trips/util";
 import { Button, Hero, LinkButton, Spinner } from "@/components/ui";
 import { get } from "@/lib/api";
+import { money, tr, useLang } from "@/lib/i18n";
 import type { Album, AlbumItem } from "@/lib/types";
 import { mediaSrc } from "@/lib/uploads";
 
 export default function AlbumPage() {
+  const { lang } = useLang();
   const { id } = useParams<{ id: string }>();
   const [album, setAlbum] = useState<Album | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -34,25 +36,25 @@ export default function AlbumPage() {
 
   return (
     <>
-      <Hero back="/trips" backLabel="내 여행"
-        title={first ? <>{krDate(first.date)}<br />{first.buddy_name}{wa(first.buddy_name)} 걸은 날</> : "여행 앨범"}
-        sub={first ? `${first.buddy_name}${iga(first.buddy_name)} 올린 사진 ${first.photos.length}장 · 앨범 옵션` : undefined} />
+      <Hero back="/trips" backLabel={tr("내 여행", "My trips")}
+        title={first ? (lang === "en" ? <>{krDate(first.date)}<br />Walking with {first.buddy_name}</> : <>{krDate(first.date)}<br />{first.buddy_name}{wa(first.buddy_name)} 걸은 날</>) : tr("여행 앨범", "Photo record")}
+        sub={first ? tr(`${first.buddy_name}${iga(first.buddy_name)} 올린 사진 ${first.photos.length}장 · 앨범 옵션`, `${first.photos.length} photo${first.photos.length === 1 ? "" : "s"} from ${first.buddy_name} · photo record option`) : undefined} />
 
       <div className="px-5">
         <ErrorBox message={err} />
         {!album && !err && <Spinner />}
         {album && album.items.length === 0 && (
           <div className="py-10 text-center">
-            <p className="text-[15px] leading-relaxed text-muted">앨범 옵션을 고른 동행이 없어요.<br />다음 버디 예약 때 앨범(₩5,000)을 더하면 버디가 찍은 사진이 여기에 모여요.</p>
-            <LinkButton href="/trips" variant="secondary" className="mt-6">내 여행으로</LinkButton>
+            <p className="text-[15px] leading-relaxed text-muted">{lang === "en" ? <>No walks with the photo record option.<br />Add a photo record ({money(5000)}) to your next buddy booking and the buddy&apos;s photos will gather here.</> : <>앨범 옵션을 고른 동행이 없어요.<br />다음 버디 예약 때 앨범({money(5000)})을 더하면 버디가 찍은 사진이 여기에 모여요.</>}</p>
+            <LinkButton href="/trips" variant="secondary" className="mt-6">{tr("내 여행으로", "Go to My trips")}</LinkButton>
           </div>
         )}
         {album?.items.map((it, k) => (
           <Fragment key={it.item_id}>
             {k > 0 && (
               <div className="mt-10">
-                <h2 className="text-[22px] font-bold leading-snug text-ink">{krDate(it.date)}<br />{it.buddy_name}{wa(it.buddy_name)} 걸은 날</h2>
-                <p className="mt-1.5 text-[14px] text-muted">사진 {it.photos.length}장</p>
+                <h2 className="text-[22px] font-bold leading-snug text-ink">{krDate(it.date)}<br />{lang === "en" ? <>Walking with {it.buddy_name}</> : <>{it.buddy_name}{wa(it.buddy_name)} 걸은 날</>}</h2>
+                <p className="mt-1.5 text-[14px] text-muted">{tr(`사진 ${it.photos.length}장`, `${it.photos.length} photo${it.photos.length === 1 ? "" : "s"}`)}</p>
               </div>
             )}
             <AlbumSection it={it} />
@@ -62,7 +64,7 @@ export default function AlbumPage() {
 
       {album && album.items.length > 0 && (
         <ActionBar>
-          <Button variant="secondary" onClick={downloadAll} disabled={allPhotos.length === 0}>사진 모두 내려받기</Button>
+          <Button variant="secondary" onClick={downloadAll} disabled={allPhotos.length === 0}>{tr("사진 모두 내려받기", "Download all photos")}</Button>
         </ActionBar>
       )}
     </>
@@ -73,14 +75,14 @@ function AlbumSection({ it }: { it: AlbumItem }) {
   return (
     <section>
       {it.photos.length === 0 ? (
-        <p className="mt-2 text-[15px] leading-relaxed text-muted">{it.buddy_name}{iga(it.buddy_name)} 아직 사진을 올리지 않았어요. 동행이 끝나면 여기에 모여요.</p>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted">{tr(`${it.buddy_name}${iga(it.buddy_name)} 아직 사진을 올리지 않았어요. 동행이 끝나면 여기에 모여요.`, `${it.buddy_name} hasn't uploaded photos yet. They'll gather here after the walk.`)}</p>
       ) : (
         <div className="mt-2 grid grid-cols-3 gap-1.5">
           {it.photos.map((v, i) => {
             const src = mediaSrc(v);
-            const photo = <Photo src={src ?? ""} alt={`${it.buddy_name}${wa(it.buddy_name)} 걸은 날 사진 ${i + 1}`} className="h-full w-full" />;
+            const photo = <Photo src={src ?? ""} alt={tr(`${it.buddy_name}${wa(it.buddy_name)} 걸은 날 사진 ${i + 1}`, `Photo ${i + 1} from the walk with ${it.buddy_name}`)} className="h-full w-full" />;
             return src ? (
-              <a key={v + i} href={src} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-[10px]" aria-label={`사진 ${i + 1} 크게 보기`}>{photo}</a>
+              <a key={v + i} href={src} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-[10px]" aria-label={tr(`사진 ${i + 1} 크게 보기`, `View photo ${i + 1}`)}>{photo}</a>
             ) : <div key={v + i} className="aspect-square overflow-hidden rounded-[10px]">{photo}</div>;
           })}
         </div>
@@ -88,11 +90,11 @@ function AlbumSection({ it }: { it: AlbumItem }) {
 
       {it.places.length > 0 && (
         <>
-          <h2 className="mb-4 mt-9 text-[18px] font-bold text-ink">다녀온 곳</h2>
+          <h2 className="mb-4 mt-9 text-[18px] font-bold text-ink">{tr("다녀온 곳", "Places visited")}</h2>
           {it.places.map((p, i) => (
             <TimelineStep key={p + i} last={i === it.places.length - 1} node={<Node kind="open" />}>
               <div className="text-[16px] font-semibold leading-6 text-ink">{p}</div>
-              <div className="mt-0.5 text-[14px] text-muted">{i === 0 ? "출발" : i === it.places.length - 1 ? "마지막 장소" : `${i + 1}번째 장소`}</div>
+              <div className="mt-0.5 text-[14px] text-muted">{i === 0 ? tr("출발", "Start") : i === it.places.length - 1 ? tr("마지막 장소", "Last stop") : tr(`${i + 1}번째 장소`, `Stop ${i + 1}`)}</div>
             </TimelineStep>
           ))}
         </>

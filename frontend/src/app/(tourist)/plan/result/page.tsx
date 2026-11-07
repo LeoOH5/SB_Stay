@@ -10,7 +10,8 @@ import { errMsg, nightsBetween, okv, parseDate, SS_PLAN, SS_PLAN_BUDDY, SS_PLAN_
 import { useSS, writeSS } from "@/components/tourist/session";
 import { BottomBar, Headline, TotalLine, useHydrated } from "@/components/tourist/v3";
 import { DOW, koDay, koDuration, koMD, koRange, langNames, univShort, wa } from "@/components/tourist/v3/flow";
-import { get, post, won } from "@/lib/api";
+import { get, post } from "@/lib/api";
+import { money, tr, useLang } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
 import { buddyItemPrice } from "@/lib/codes";
 import type { AiPlan, Buddy, BuddyMatch, CartItem, DormRoom, PlanItem, PlanWarning, Tour } from "@/lib/types";
@@ -20,10 +21,12 @@ type PlanInput = { check_in: string; check_out: string; interests: string[]; lan
 /** 직접 고른 버디: 이 일정(plan_id)의 그 날짜 버디 항목을 item 으로 바꾼다. ai_* = AI가 처음 고른 버디 */
 type PlanBuddy = { plan_id: string; date: string; item: PlanItem; ai_ref_id: number; ai_name: string };
 
-const WARN: Record<PlanWarning, string> = {
-  NO_BUDDY: "이 기간에 함께 걸을 버디를 찾지 못했어요. 기숙사 숙박에는 버디가 꼭 필요해서, 장바구니에서 버디를 골라 주세요.",
-  OVER_BUDGET: "예산을 조금 넘었어요. 숙박에는 버디가 꼭 필요해서 버디는 빼지 않았어요.",
+const WARN: Record<PlanWarning, () => string> = {
+  NO_BUDDY: () => tr("이 기간에 함께 걸을 버디를 찾지 못했어요. 기숙사 숙박에는 버디가 꼭 필요해서, 장바구니에서 버디를 골라 주세요.", "We couldn't find a buddy for these dates. Dorm stays need a buddy, so please pick one in your cart."),
+  OVER_BUDGET: () => tr("예산을 조금 넘었어요. 숙박에는 버디가 꼭 필요해서 버디는 빼지 않았어요.", "This is a little over budget. Dorm stays need a buddy, so we kept the buddy."),
 };
+/** "2027-01-15" → "Fri, Jan 15" (영어 화면) */
+const enDay = (s: string) => parseDate(s).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
 /** 일정 항목(dorm/buddy) → CartItem. dorm 은 첫날~마지막날, buddy 는 그 날짜·시간 + 같이 걸을 코스 */
 async function planToCart(plan: AiPlan): Promise<CartItem[]> {
@@ -35,16 +38,16 @@ async function planToCart(plan: AiPlan): Promise<CartItem[]> {
       if (it.ref_id === null) continue;
       if (it.type === "dorm") {
         const from = first ?? day.date, to = last ?? day.date;
-        out.push({ type: "dorm", ref_id: it.ref_id, title: it.title, meta: `${koRange(from, to)}, ${nightsBetween(from, to)}박`, price: it.price, date_from: from, date_to: to, guests: 1, request: null });
+        out.push({ type: "dorm", ref_id: it.ref_id, title: it.title, meta: `${koRange(from, to)}, ${tr(`${nightsBetween(from, to)}박`, `${nightsBetween(from, to)} night${nightsBetween(from, to) === 1 ? "" : "s"}`)}`, price: it.price, date_from: from, date_to: to, guests: 1, request: null });
       } else if (it.type === "buddy") {
         const b = await okv(get<Buddy>(`/buddies/${it.ref_id}`)).catch(() => null);
         const courseItem = it.course_id ? day.items.find((x) => x.type === "course" && x.ref_id === it.course_id) : undefined;
         // 버디가 있으면 코스는 버디 항목(course_id)에만 붙어 있다 → 제목은 TR-02에서
         const course = courseItem ?? (it.course_id ? await okv(get<Tour>(`/tours/${it.course_id}`)).catch(() => null) : null);
         out.push({
-          type: "buddy", ref_id: it.ref_id, title: b ? `${b.name}${wa(b.name)} 동네 걷기` : it.title,
+          type: "buddy", ref_id: it.ref_id, title: b ? tr(`${b.name}${wa(b.name)} 동네 걷기`, `Neighborhood walk with ${b.name}`) : it.title,
           meta: `${koDay(day.date)} ${it.time ?? "14:00"}, ${koDuration(it.duration_min)}`, price: it.price,
-          date: day.date, time: it.time ?? "14:00", duration_min: it.duration_min ?? 120, course_id: it.course_id ?? null, course_title: course?.title ?? null,
+          date: day.date, time: it.time ?? "14:00", duration_min: it.duration_min ?? 120, course_id: it.course_id ?? null, course_title: course ? ("title_en" in course ? tr(course.title, course.title_en) : course.title) : null,
           meal_count: 0, album: false, hourly_fee: b?.hourly_fee, university_id: b?.university_id, request: null,
         });
       }
@@ -60,7 +63,7 @@ function Dot({ type }: { type: PlanItem["type"] }) {
 }
 
 function itemMeta(it: PlanItem): string {
-  if (!it.meta || it.meta === it.time) return it.time ?? "자유";
+  if (!it.meta || it.meta === it.time) return it.time ?? tr("자유", "Free time");
   return it.time ? `${it.time}, ${it.meta}` : it.meta;
 }
 
@@ -118,10 +121,10 @@ function BuddyPicker({ date, current, aiRefId, input, stayId, durationMin, moreH
   const currentName = cands?.find((c) => c.b.id === current)?.b.name ?? "";
   return (
     <div className="mt-3 rounded-[14px] border border-line p-3">
-      <div className="px-1 text-[13px] text-muted">{koDay(date)}에 만날 수 있는 버디</div>
+      <div className="px-1 text-[13px] text-muted">{tr(`${koDay(date)}에 만날 수 있는 버디`, `Buddies free on ${enDay(date)}`)}</div>
       <ErrorBox message={err} className="mt-2" />
       {!cands && !err && <div className="py-3"><Spinner /></div>}
-      {cands?.length === 0 && <p className="px-1 py-2 text-[14px] text-muted">그날 만날 수 있는 다른 버디가 없어요.</p>}
+      {cands?.length === 0 && <p className="px-1 py-2 text-[14px] text-muted">{tr("그날 만날 수 있는 다른 버디가 없어요.", "No other buddies are free that day.")}</p>}
       <div className="mt-1.5 space-y-1.5">
         {cands?.map(({ b, reason }) => {
           const on = b.id === current;
@@ -131,26 +134,27 @@ function BuddyPicker({ date, current, aiRefId, input, stayId, durationMin, moreH
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 text-[14px] text-muted">
                   <span className="text-[15.5px] font-bold text-ink">{b.name}</span> {univShort(b.university)} · {b.major}
-                  {b.review_count > 0 ? <span className="ml-1.5 inline-flex items-center gap-0.5 align-[-2px]"><Icon name="star" className="h-[15px] w-[15px] fill-orange text-orange" />{b.rating.toFixed(1)}</span> : <span className="ml-1.5">새 버디</span>}
+                  {b.review_count > 0 ? <span className="ml-1.5 inline-flex items-center gap-0.5 align-[-2px]"><Icon name="star" className="h-[15px] w-[15px] fill-orange text-orange" />{b.rating.toFixed(1)}</span> : <span className="ml-1.5">{tr("새 버디", "New buddy")}</span>}
                 </div>
-                <span className="shrink-0 text-[15px] font-bold text-ink">{won(buddyItemPrice(b.hourly_fee ?? 15000, durationMin))}</span>
+                <span className="shrink-0 text-[15px] font-bold text-ink">{money(buddyItemPrice(b.hourly_fee ?? 15000, durationMin))}</span>
               </div>
               <div className="mt-1 flex items-center gap-1.5">
-                {on && <span className="shrink-0 rounded-md bg-navy px-1.5 py-0.5 text-[11.5px] font-semibold text-white">지금</span>}
-                {b.id === aiRefId && <span className="shrink-0 rounded-md border border-navy/40 px-1.5 py-0.5 text-[11.5px] font-semibold text-navy">AI 추천</span>}
+                {on && <span className="shrink-0 rounded-md bg-navy px-1.5 py-0.5 text-[11.5px] font-semibold text-white">{tr("지금", "Current")}</span>}
+                {b.id === aiRefId && <span className="shrink-0 rounded-md border border-navy/40 px-1.5 py-0.5 text-[11.5px] font-semibold text-navy">{tr("AI 추천", "AI pick")}</span>}
                 {reason && <span className="truncate text-[13.5px] text-navy">{reason}</span>}
               </div>
             </button>
           );
         })}
       </div>
-      <Link href={moreHref} className="mt-2 inline-flex items-center gap-0.5 px-1 text-[14px] font-semibold text-navy">버디 목록에서 더 보기<Icon name="chevron-right" className="h-4 w-4" /></Link>
+      <Link href={moreHref} className="mt-2 inline-flex items-center gap-0.5 px-1 text-[14px] font-semibold text-navy">{tr("버디 목록에서 더 보기", "See more buddies")}<Icon name="chevron-right" className="h-4 w-4" /></Link>
     </div>
   );
 }
 
 export default function PlanResultPage() {
   const router = useRouter();
+  useLang();
   const cart = useCart();
   const hydrated = useHydrated();
   const saved = useSS<AiPlan | null>(SS_PLAN, null);
@@ -165,8 +169,8 @@ export default function PlanResultPage() {
     return (
       <>
         <TopBar back="/home" />
-        <Headline className="pt-2" title="아직 만든 일정이 없어요" sub="날짜와 관심사만 고르면 AI가 숙소·버디·산책 코스를 묶어 드려요." />
-        <div className="px-5 pt-6"><LinkButton href="/plan">일정 만들기</LinkButton></div>
+        <Headline className="pt-2" title={tr("아직 만든 일정이 없어요", "No plan yet")} sub={tr("날짜와 관심사만 고르면 AI가 숙소·버디·산책 코스를 묶어 드려요.", "Pick dates and interests, and AI bundles a stay, a buddy and a walk.")} />
+        <div className="px-5 pt-6"><LinkButton href="/plan">{tr("일정 만들기", "Plan my stay")}</LinkButton></div>
       </>
     );
   }
@@ -207,35 +211,35 @@ export default function PlanResultPage() {
 
   return (
     <>
-      <TopBar back="/plan" right={<Link href="/plan" className="font-semibold text-navy">다시 짜기</Link>} />
-      <Headline className="pt-2" title={nights > 0 ? `${nights}박 ${nights + 1}일 일정` : "하루 일정"}
-        sub={first && last ? `${koMD(first)} ${longDay(first)}부터 ${sameMonth ? `${parseDate(last).getDate()}일` : koMD(last)} ${longDay(last)}까지` : undefined} />
+      <TopBar back="/plan" right={<Link href="/plan" className="font-semibold text-navy">{tr("다시 짜기", "Start over")}</Link>} />
+      <Headline className="pt-2" title={nights > 0 ? tr(`${nights}박 ${nights + 1}일 일정`, `${nights} night${nights === 1 ? "" : "s"}, ${nights + 1} days`) : tr("하루 일정", "One-day plan")}
+        sub={first && last ? tr(`${koMD(first)} ${longDay(first)}부터 ${sameMonth ? `${parseDate(last).getDate()}일` : koMD(last)} ${longDay(last)}까지`, `${enDay(first)} – ${enDay(last)}`) : undefined} />
       <div className="px-5 pb-6 pt-5">
-        <AiBlock title="AI가 고른 이유">
+        <AiBlock title={tr("AI가 고른 이유", "Why AI picked this")}>
           {plan.reason}
-          {swapped && <p className="mt-1.5 text-[13.5px] text-muted">직접 고른 버디예요{pick.ai_name ? ` · AI 추천: ${pick.ai_name}` : ""}</p>}
+          {swapped && <p className="mt-1.5 text-[13.5px] text-muted">{tr("직접 고른 버디예요", "You picked this buddy")}{pick.ai_name ? tr(` · AI 추천: ${pick.ai_name}`, ` · AI pick: ${pick.ai_name}`) : ""}</p>}
         </AiBlock>
-        {plan.warnings?.map((w) => <Banner key={w} variant="warn" className="mt-3">{WARN[w] ?? w}</Banner>)}
+        {plan.warnings?.map((w) => <Banner key={w} variant="warn" className="mt-3">{WARN[w]?.() ?? w}</Banner>)}
 
         <div className="mt-6 border-t border-line">
           {plan.days.map((d) => (
             <section key={d.date} className="pt-6">
-              <h2 className="text-[14px] font-semibold text-muted">{koDay(d.date)}</h2>
-              {d.items.length === 0 && <p className="mt-3 pl-7 text-[14px] text-muted">자유롭게 쉬어요</p>}
+              <h2 className="text-[14px] font-semibold text-muted">{tr(koDay(d.date), enDay(d.date))}</h2>
+              {d.items.length === 0 && <p className="mt-3 pl-7 text-[14px] text-muted">{tr("자유롭게 쉬어요", "Free day")}</p>}
               {d.items.map((it, k) => (
                 <div key={k} className="mt-3.5 flex gap-4">
                   <Dot type={it.type} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <span className="text-[16px] font-semibold text-ink">{it.title}</span>
-                      {it.price > 0 ? <span className="shrink-0 text-[16px] font-bold text-ink">{won(it.price)}</span> : it.type === "course" ? <span className="shrink-0 text-[15px] font-bold text-navy">무료</span> : null}
+                      {it.price > 0 ? <span className="shrink-0 text-[16px] font-bold text-ink">{money(it.price)}</span> : it.type === "course" ? <span className="shrink-0 text-[15px] font-bold text-navy">{tr("무료", "Free")}</span> : null}
                     </div>
                     <div className={cn("mt-1 text-[14px] text-muted")}>{itemMeta(it)}</div>
                     {it.type === "buddy" && it.ref_id !== null && (
                       <>
                         <button type="button" onClick={() => setPicking((v) => !v)} aria-expanded={picking}
                           className="mt-1.5 inline-flex items-center gap-0.5 text-[14px] font-semibold text-navy">
-                          {picking ? "닫기" : "다른 버디 고르기"}<Icon name="chevron-right" className={cn("h-4 w-4 transition", picking ? "-rotate-90" : "rotate-90")} />
+                          {picking ? tr("닫기", "Close") : tr("다른 버디 고르기", "Choose another buddy")}<Icon name="chevron-right" className={cn("h-4 w-4 transition", picking ? "-rotate-90" : "rotate-90")} />
                         </button>
                         {picking && <BuddyPicker date={d.date} current={it.ref_id} aiRefId={aiBuddy?.ref_id ?? it.ref_id} input={input} stayId={stayId}
                           durationMin={it.duration_min ?? 120} moreHref={moreHref(d.date, it)} onPick={(b, oldName) => choose(d.date, it, b, oldName)} />}
@@ -247,13 +251,13 @@ export default function PlanResultPage() {
             </section>
           ))}
         </div>
-        <p className="mt-6 text-[13.5px] text-muted">코스와 자유 일정은 무료라 장바구니에 담기지 않아요.</p>
+        <p className="mt-6 text-[13.5px] text-muted">{tr("코스와 자유 일정은 무료라 장바구니에 담기지 않아요.", "Walks and free time are free, so they aren't added to the cart.")}</p>
         <ErrorBox message={err} className="mt-3" />
       </div>
 
       <BottomBar>
-        <TotalLine label="모두 합해서" amount={won(plan.total_price)} />
-        <Button className="mt-3" onClick={() => void addAll()} disabled={busy}>{busy ? "담는 중…" : "장바구니에 모두 담기"}</Button>
+        <TotalLine label={tr("모두 합해서", "Total")} amount={money(plan.total_price)} />
+        <Button className="mt-3" onClick={() => void addAll()} disabled={busy}>{busy ? tr("담는 중…", "Adding…") : tr("장바구니에 모두 담기", "Add all to cart")}</Button>
       </BottomBar>
     </>
   );

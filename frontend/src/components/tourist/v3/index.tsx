@@ -2,6 +2,7 @@
 // v3 관광객 화면 조각 — 아래 고정 바, 두 칸 고르기, 스위치, 큰 제목, 정보 줄, 코스 점선, 날짜 상자
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icon, cn } from "@/components/ui";
+import { tr } from "@/lib/i18n";
 import { koDay } from "./flow";
 
 /** 브라우저에서 그려졌는지 (sessionStorage 값을 읽기 전 깜빡임 방지) */
@@ -130,7 +131,7 @@ export function CourseDots({ n }: { n: number }) {
           <span className="h-3 w-3 rounded-full border-2 border-navy bg-white" />
         </span>
       ))}
-      <span className="ml-2">{n}곳</span>
+      <span className="ml-2">{tr(`${n}곳`, `${n} stop${n === 1 ? "" : "s"}`)}</span>
     </div>
   );
 }

@@ -9,16 +9,23 @@ import { DEMO_TODAY, addDays, errMsg, okv } from "@/components/tourist/format";
 import { ActionBar, Avatar, LANG_KO, SwapIcon, buddyNameOf, euro, iga, krDate, krRange, useBooking } from "@/components/tourist/trips/util";
 import { Button, Icon, Hero, LinkButton, Spinner, TagChip } from "@/components/ui";
 import { CAN_HELP, DIET_TO_HELP, PERSONALITY, buddyItemPrice, label, requestChips } from "@/lib/codes";
-import { get, post, won } from "@/lib/api";
+import { get, post } from "@/lib/api";
+import { curLang, money, tr, useLang } from "@/lib/i18n";
 import type { Booking, BookingItem, Buddy, BuddyRequestBody, CanHelp, DormRoom, ListResponse } from "@/lib/types";
 
 interface Cand { b: Buddy; dates: string[] }
 const canReplace = (it: BookingItem) => it.status === "requested" || it.status === "rejected" || (it.status === "confirmed" && (it.date_from ?? "") > DEMO_TODAY);
 const shortUniv = (u: string) => u.replace(/학교$/, "");
+const LANG_EN: Record<string, string> = { en: "English", ja: "Japanese", zh: "Chinese", fr: "French", de: "German", es: "Spanish", ru: "Russian", vi: "Vietnamese", th: "Thai", id: "Indonesian" };
 
 /** "요청 사항(비건, 버섯 알레르기)과 식사·앨범 옵션은" / "…, 문인의 성북동 산책 코스는" */
 function keepText(req: BuddyRequestBody | null, it: BookingItem): string {
-  const chips = requestChips(req);
+  const chips = requestChips(req, curLang());
+  if (curLang() === "en") {
+    const optsEn = [it.meal_count ? "meal" : "", it.album ? "photo record" : ""].filter(Boolean).join(" and ");
+    const partsEn = [chips.length ? `Your requests (${chips.join(", ")})` : "Your requests", optsEn ? `${optsEn} options` : ""].filter(Boolean).join(" and ");
+    return it.course_title ? `${partsEn}, plus the walk (${it.course_title}), will carry over` : `${partsEn} will carry over`;
+  }
   const opts = [it.meal_count ? "식사" : "", it.album ? "앨범" : ""].filter(Boolean).join("·");
   const parts = [chips.length ? `요청 사항(${chips.join(", ")})` : "요청 사항", opts ? `${opts} 옵션` : ""].filter(Boolean);
   let s = parts.join("과 ");
@@ -28,6 +35,7 @@ function keepText(req: BuddyRequestBody | null, it: BookingItem): string {
 }
 
 function ReplacePage() {
+  const { lang } = useLang();
   const { id } = useParams<{ id: string }>();
   const sp = useSearchParams();
   const { booking, err: loadErr } = useBooking(id);
@@ -92,70 +100,70 @@ function ReplacePage() {
   };
 
   const oldName = item ? buddyNameOf(item) : "";
-  const keep = [...requestChips(req), ...(item?.meal_count ? [`식사 ${item.meal_count}회`] : []), ...(item?.album ? ["앨범"] : [])];
+  const keep = [...requestChips(req, curLang()), ...(item?.meal_count ? [tr(`식사 ${item.meal_count}회`, `${item.meal_count} meal${item.meal_count === 1 ? "" : "s"}`)] : []), ...(item?.album ? [tr("앨범", "Photo record")] : [])];
   const newPrice = chosen && item ? buddyItemPrice(chosen.b.hourly_fee ?? 15000, item.duration_min ?? 120, item.meal_count ?? 0, !!item.album) : 0;
 
   if (done && chosen) {
     return (
       <>
-        <Hero back="/trips" backLabel="내 여행" title={<>{chosen.b.name}에게<br />요청했어요</>} sub={`${krDate(chosenDate)} ${item?.time ?? ""} · ${chosen.b.name}${iga(chosen.b.name)} 수락하면 내 여행에 확정으로 보여요.`} />
-        <ActionBar><LinkButton href="/trips">내 여행으로</LinkButton></ActionBar>
+        <Hero back="/trips" backLabel={tr("내 여행", "My trips")} title={lang === "en" ? <>Request sent<br />to {chosen.b.name}</> : <>{chosen.b.name}에게<br />요청했어요</>} sub={tr(`${krDate(chosenDate)} ${item?.time ?? ""} · ${chosen.b.name}${iga(chosen.b.name)} 수락하면 내 여행에 확정으로 보여요.`, `${krDate(chosenDate)} ${item?.time ?? ""} · Once ${chosen.b.name} accepts, it shows as confirmed in My trips.`)} />
+        <ActionBar><LinkButton href="/trips">{tr("내 여행으로", "Go to My trips")}</LinkButton></ActionBar>
       </>
     );
   }
 
   return (
     <>
-      <Hero back="/trips" backLabel="내 여행" title={<>다른 버디로<br />바꿀까요?</>}
-        sub={item ? `${item.status === "rejected" ? `${oldName}${iga(oldName)} ${krDate(orig)}에 갈 수 없게 됐어요.` : `${oldName} 대신 다른 버디와 걸어요.`}${dorm ? " 숙박에는 버디가 꼭 있어야 해서, 숙박 기간 안에서 다시 골라요." : ""}` : undefined} />
+      <Hero back="/trips" backLabel={tr("내 여행", "My trips")} title={lang === "en" ? <>Switch to<br />another buddy?</> : <>다른 버디로<br />바꿀까요?</>}
+        sub={item ? `${item.status === "rejected" ? tr(`${oldName}${iga(oldName)} ${krDate(orig)}에 갈 수 없게 됐어요.`, `${oldName} can't make it on ${krDate(orig)}.`) : tr(`${oldName} 대신 다른 버디와 걸어요.`, `Walk with another buddy instead of ${oldName}.`)}${dorm ? tr(" 숙박에는 버디가 꼭 있어야 해서, 숙박 기간 안에서 다시 골라요.", " A stay needs a buddy, so pick one within your stay dates.") : ""}` : undefined} />
 
       <div className="px-5">
         <ErrorBox message={loadErr} />
         {!booking && !loadErr && <Spinner />}
-        {booking && !item && <p className="py-8 text-center text-[15px] text-muted">바꿀 버디 동행이 없어요.</p>}
+        {booking && !item && <p className="py-8 text-center text-[15px] text-muted">{tr("바꿀 버디 동행이 없어요.", "No buddy walk to change.")}</p>}
 
         {item && (
           <>
             {(keep.length > 0 || item.course_title) && (
               <div className="flex items-start gap-3 rounded-[14px] bg-gray-bg px-4 py-3.5 text-[14px] leading-relaxed text-ink">
                 <SwapIcon className="mt-0.5 h-[18px] w-[18px] text-muted" />
-                <p>{keepText(req, item)} 그대로 옮겨요</p>
+                <p>{keepText(req, item)}{tr(" 그대로 옮겨요", ".")}</p>
               </div>
             )}
             {!canReplace(item) && (
-              <p className="mt-4 rounded-[14px] bg-orange-bg px-4 py-3 text-[14px] font-semibold text-orange-ink">이미 지난 동행이라 바꿀 수 없어요. 문제가 있었다면 신고로 알려 주세요.</p>
+              <p className="mt-4 rounded-[14px] bg-orange-bg px-4 py-3 text-[14px] font-semibold text-orange-ink">{tr("이미 지난 동행이라 바꿀 수 없어요. 문제가 있었다면 신고로 알려 주세요.", "This walk has already passed, so it can't be changed. If something went wrong, please send a report.")}</p>
             )}
 
-            <h2 className="mt-8 text-[18px] font-bold text-ink">{krRange(from, to)}에 가능한 {univ ? `${shortUniv(univ.name)} ` : ""}버디</h2>
-            {univ && <p className="mt-1 text-[13px] text-muted">같은 학교 버디를 먼저 보여 드려요</p>}
+            <h2 className="mt-8 text-[18px] font-bold text-ink">{tr(`${krRange(from, to)}에 가능한 ${univ ? `${shortUniv(univ.name)} ` : ""}버디`, `${univ ? `${shortUniv(univ.name)} b` : "B"}uddies free ${krRange(from, to)}`)}</h2>
+            {univ && <p className="mt-1 text-[13px] text-muted">{tr("같은 학교 버디를 먼저 보여 드려요", "Buddies from the same school come first")}</p>}
 
             {!sorted && <Spinner />}
-            {sorted?.length === 0 && <p className="py-8 text-[15px] text-muted">이 기간에 가능한 버디가 없어요. 운영팀에 문의해 주세요.</p>}
+            {sorted?.length === 0 && <p className="py-8 text-[15px] text-muted">{tr("이 기간에 가능한 버디가 없어요. 운영팀에 문의해 주세요.", "No buddies are free in this period. Please contact our team.")}</p>}
             <div className="mt-2 divide-y divide-line">
               {sorted?.map((c) => {
                 const on = chosen?.b.id === c.b.id;
                 const help = needs.find((n) => c.b.can_help.includes(n));
-                const tags = [label(PERSONALITY, c.b.personality[0] ?? ""), label(CAN_HELP, help ?? c.b.can_help[0] ?? ""), c.b.can_drive ? "운전 가능" : ""].filter(Boolean);
+                const tags = [label(PERSONALITY, c.b.personality[0] ?? "", curLang()), label(CAN_HELP, help ?? c.b.can_help[0] ?? "", curLang()), c.b.can_drive ? tr("운전 가능", "Can drive") : ""].filter(Boolean);
                 const same = c.dates.includes(orig);
                 const first = same ? orig : c.dates[0];
-                const langs = c.b.languages.filter((l) => l !== "ko").map((l) => LANG_KO[l] ?? l).join("·");
+                const langs = c.b.languages.filter((l) => l !== "ko").map((l) => (lang === "en" ? LANG_EN[l] : LANG_KO[l]) ?? l).join("·");
                 return (
                   <div key={c.b.id} role="radio" aria-checked={on} tabIndex={0} onClick={() => setSel(c.b.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel(c.b.id); } }}
                     className="flex cursor-pointer gap-4 py-5 outline-none focus-visible:bg-navy-bg/50">
                     <Avatar name={c.b.name} active={on} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 text-[16px]"><span className="font-bold text-ink">{c.b.name}</span> <span className="text-[14px] text-muted">{shortUniv(c.b.university)} {c.b.major} {c.b.year}학년</span></div>
-                        <Link href={`/buddies/${c.b.id}`} onClick={(e) => e.stopPropagation()} aria-label={`${c.b.name} 프로필`} className="-mr-1 -mt-0.5 p-1 text-ink"><Icon name="chevron-right" className="h-5 w-5" /></Link>
+                        <div className="min-w-0 text-[16px]"><span className="font-bold text-ink">{c.b.name}</span> <span className="text-[14px] text-muted">{shortUniv(c.b.university)} {c.b.major} {tr(`${c.b.year}학년`, `Year ${c.b.year}`)}</span></div>
+                        <Link href={`/buddies/${c.b.id}`} onClick={(e) => e.stopPropagation()} aria-label={tr(`${c.b.name} 프로필`, `${c.b.name} profile`)} className="-mr-1 -mt-0.5 p-1 text-ink"><Icon name="chevron-right" className="h-5 w-5" /></Link>
                       </div>
                       <div className="mt-1 flex items-center gap-1 text-[14px] text-muted">
                         {langs && <>{langs} · </>}
                         <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden><path d="m12 2.8 2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9L12 2.8Z" fill="#E2722F" /></svg>
-                        {c.b.review_count ? c.b.rating.toFixed(1) : "새 버디"}
+                        {c.b.review_count ? c.b.rating.toFixed(1) : tr("새 버디", "New buddy")}
                       </div>
                       {tags.length > 0 && <div className="mt-2.5 flex flex-wrap gap-1.5">{tags.map((t) => <TagChip key={t}>{t}</TagChip>)}</div>}
                       <div className="mt-2.5 border-l-2 border-navy pl-3 text-[14px] font-semibold text-navy">
-                        {same ? `${krDate(orig)} ${item.time ?? ""} 그대로 가능` : `${krDate(first)} 가능`}{help ? `, ${label(CAN_HELP, help)} 가능` : ""}
+                        {same ? tr(`${krDate(orig)} ${item.time ?? ""} 그대로 가능`, `Free ${krDate(orig)} ${item.time ?? ""}, same time`) : tr(`${krDate(first)} 가능`, `Free ${krDate(first)}`)}{help ? tr(`, ${label(CAN_HELP, help, curLang())} 가능`, `, can help: ${label(CAN_HELP, help, curLang())}`) : ""}
                       </div>
                     </div>
                   </div>
@@ -168,8 +176,8 @@ function ReplacePage() {
       </div>
 
       {item && chosen && (
-        <ActionBar note={`새 버디가 수락하면 확정돼요. ${newPrice === item.price ? "금액은 같아요." : `금액이 ${won(newPrice)}로 바뀌어요.`}`}>
-          <Button onClick={submit} disabled={busy || !canReplace(item)}>{busy ? "요청하는 중…" : `${chosen.b.name}${euro(chosen.b.name)} 바꾸기`}</Button>
+        <ActionBar note={`${tr("새 버디가 수락하면 확정돼요.", "Confirmed once the new buddy accepts.")} ${newPrice === item.price ? tr("금액은 같아요.", "The price stays the same.") : tr(`금액이 ${money(newPrice)}로 바뀌어요.`, `The price changes to ${money(newPrice)}.`)}`}>
+          <Button onClick={submit} disabled={busy || !canReplace(item)}>{busy ? tr("요청하는 중…", "Sending…") : tr(`${chosen.b.name}${euro(chosen.b.name)} 바꾸기`, `Switch to ${chosen.b.name}`)}</Button>
         </ActionBar>
       )}
     </>

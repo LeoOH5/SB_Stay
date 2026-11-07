@@ -8,16 +8,18 @@ import { afterLogin, errMsg } from "@/components/tourist/format";
 import { BottomBar } from "@/components/tourist/v3";
 import { patch } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
+import { tr, useLang } from "@/lib/i18n";
 import type { Role, User } from "@/lib/types";
 
-const ROLES: { role: Role; title: string; desc: string }[] = [
-  { role: "tourist", title: "관광객", desc: "기숙사에 머물며 같은 학교 버디와 성북을 걸어요" },
-  { role: "buddy", title: "버디", desc: "성북구 대학생이에요. 여행자와 캠퍼스·동네를 함께 걸어요" },
+const ROLES: { role: Role; title: () => string; desc: () => string }[] = [
+  { role: "tourist", title: () => tr("관광객", "Traveler"), desc: () => tr("기숙사에 머물며 같은 학교 버디와 성북을 걸어요", "Stay in a dorm and walk Seongbuk with a buddy from the same school") },
+  { role: "buddy", title: () => tr("버디", "Buddy"), desc: () => tr("성북구 대학생이에요. 여행자와 캠퍼스·동네를 함께 걸어요", "I'm a university student in Seongbuk. I walk the campus and neighborhood with travelers") },
 ];
 
 function RolePage() {
   const router = useRouter();
   const next = useSearchParams().get("next");
+  useLang();
   const { user } = useUser();
   const [sel, setSel] = useState<Role>("tourist");
   const [busy, setBusy] = useState(false);
@@ -35,8 +37,8 @@ function RolePage() {
   return (
     <div className="px-5 pt-5">
       <Brand />
-      <h1 className="mt-7 text-[26px] font-bold leading-[1.35] text-ink">어떻게<br />이용하시나요?</h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-muted">{user ? `${user.name} 님의 역할을 골라 주세요.` : "역할을 골라 주세요."} 나중에 바꿀 수 없어요.</p>
+      <h1 className="mt-7 text-[26px] font-bold leading-[1.35] text-ink">{tr("어떻게", "How will you")}<br />{tr("이용하시나요?", "use SB Stay?")}</h1>
+      <p className="mt-2 text-[15px] leading-relaxed text-muted">{user ? tr(`${user.name} 님의 역할을 골라 주세요.`, `${user.name}, please choose your role.`) : tr("역할을 골라 주세요.", "Please choose your role.")} {tr("나중에 바꿀 수 없어요.", "You can't change it later.")}</p>
 
       <div className="mt-7 divide-y divide-line" role="radiogroup">
         {ROLES.map((r) => (
@@ -45,16 +47,16 @@ function RolePage() {
               {sel === r.role && <span className="h-2 w-2 rounded-full bg-white" />}
             </span>
             <span className="min-w-0">
-              <span className="block text-[16px] font-semibold text-ink">{r.title}</span>
-              <span className="mt-1 block text-[14.5px] leading-relaxed text-muted">{r.desc}</span>
+              <span className="block text-[16px] font-semibold text-ink">{r.title()}</span>
+              <span className="mt-1 block text-[14.5px] leading-relaxed text-muted">{r.desc()}</span>
             </span>
           </button>
         ))}
       </div>
-      <p className="mt-6 text-[14px] text-muted">대학 담당자와 운영자 계정은 운영팀이 따로 발급해요.</p>
+      <p className="mt-6 text-[14px] text-muted">{tr("대학 담당자와 운영자 계정은 운영팀이 따로 발급해요.", "University staff and operator accounts are issued by our team.")}</p>
       <ErrorBox message={err} className="mt-4" />
 
-      <BottomBar><Button onClick={submit} disabled={busy}>{busy ? "저장 중…" : "시작하기"}</Button></BottomBar>
+      <BottomBar><Button onClick={submit} disabled={busy}>{busy ? tr("저장 중…", "Saving…") : tr("시작하기", "Get started")}</Button></BottomBar>
     </div>
   );
 }

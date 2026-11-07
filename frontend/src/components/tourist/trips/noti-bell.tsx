@@ -8,6 +8,7 @@ import { dateTime } from "@/components/tourist/format";
 import { Icon } from "@/components/ui";
 import { get } from "@/lib/api";
 import { useUser } from "@/lib/auth";
+import { tr } from "@/lib/i18n";
 import type { ListResponse, Notification } from "@/lib/types";
 
 export function NotiBell() {
@@ -26,18 +27,18 @@ export function NotiBell() {
   return (
     <div className="-mr-1.5 flex items-center gap-1">
       <CartButton className="h-10 w-10" />
-      <button type="button" onClick={() => setOpen(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-gray-bg" aria-label={`알림${unread ? ` ${unread}개` : ""}`}>
+      <button type="button" onClick={() => setOpen(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-gray-bg" aria-label={tr(`알림${unread ? ` ${unread}개` : ""}`, `Notifications${unread ? `, ${unread} new` : ""}`)}>
         <Icon name="bell" className="h-[22px] w-[22px]" />
         {unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-orange" />}
       </button>
       {user && (
-        <Link href="/me" aria-label="마이페이지" className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-gray-bg">
+        <Link href="/me" aria-label={tr("마이페이지", "My page")} className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-gray-bg">
           <Icon name="user" className="h-[22px] w-[22px]" />
         </Link>
       )}
-      <BottomSheet open={open} onClose={() => setOpen(false)} title="알림">
-        {!user && <p className="py-6 text-center text-[14px] text-muted">로그인하면 예약 알림을 볼 수 있어요.</p>}
-        {user && notis?.length === 0 && <p className="py-6 text-center text-[14px] text-muted">새 알림이 없어요.</p>}
+      <BottomSheet open={open} onClose={() => setOpen(false)} title={tr("알림", "Notifications")}>
+        {!user && <p className="py-6 text-center text-[14px] text-muted">{tr("로그인하면 예약 알림을 볼 수 있어요.", "Log in to see booking notifications.")}</p>}
+        {user && notis?.length === 0 && <p className="py-6 text-center text-[14px] text-muted">{tr("새 알림이 없어요.", "No new notifications.")}</p>}
         <div className="divide-y divide-line">
           {notis?.map((n) => (
             <div key={n.id} className="flex items-start gap-3 py-3">

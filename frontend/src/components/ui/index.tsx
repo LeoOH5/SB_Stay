@@ -263,13 +263,13 @@ export function ScoreBar({ label, value, max = 5, className }: { label: string; 
 }
 
 /** v3.2 버디 등급 배지 — 성장·우수만 보인다 (기본은 표시 없음). 우수는 감 주황, 성장은 쪽빛 */
-export function GradeBadge({ grade, className, suffix = "버디" }: { grade?: string | null; className?: string; suffix?: string }) {
+export function GradeBadge({ grade, className, suffix = "버디", en = false }: { grade?: string | null; className?: string; suffix?: string; en?: boolean }) {
   if (grade !== "growth" && grade !== "top") return null;
   return (
     <span className={cn("inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[12px] font-semibold",
       grade === "top" ? "bg-orange-bg text-orange-ink" : "bg-navy-bg text-navy", className)}>
       <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden><path d="M12 3.5 14.4 9l5.9.5-4.5 3.9 1.4 5.8L12 16.1l-5.2 3.1 1.4-5.8L3.7 9.5 9.6 9 12 3.5Z" fill="currentColor" /></svg>
-      {grade === "top" ? "우수" : "성장"}{suffix ? ` ${suffix}` : ""}
+      {en ? (grade === "top" ? "Top buddy" : "Rising buddy") : <>{grade === "top" ? "우수" : "성장"}{suffix ? ` ${suffix}` : ""}</>}
     </span>
   );
 }
@@ -329,10 +329,19 @@ export function AiBlock({ title = "AI", children, className }: { title?: string;
 
 /** 사진 자리 — 어두운 물결 무늬 + 왼쪽 아래 설명 */
 const WAVES = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cpath d='M0 18c8 0 8-10 16-10s8 10 16 10 8-10 16-10' fill='none' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='1.5'/%3E%3C/svg%3E\")";
-export function ImageBlock({ label, className, h = "h-40" }: { label: string; className?: string; h?: string }) {
+/** 사진 자리. src 가 있으면 사진을 깔고(아래쪽 그림자 위에 label), 없으면 물결 무늬 자리 표시 */
+export function ImageBlock({ label, className, h = "h-40", src, credit }: { label: string; className?: string; h?: string; src?: string; credit?: string }) {
   return (
-    <div className={cn("relative overflow-hidden rounded-[16px] bg-[#3B4652]", h, className)} style={{ backgroundImage: WAVES }}>
-      <span className="absolute bottom-3 left-4 right-4 truncate text-[12px] text-white/80">{label}</span>
+    <div className={cn("relative overflow-hidden rounded-[16px] bg-[#3B4652]", h, className)} style={src ? undefined : { backgroundImage: WAVES }}>
+      {src && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
+        </>
+      )}
+      <span className="absolute bottom-3 left-4 right-4 truncate text-[12px] text-white/90">{label}</span>
+      {credit && <span className="absolute right-3 top-2.5 rounded-full bg-black/35 px-2 py-0.5 text-[10px] text-white/85">{credit}</span>}
     </div>
   );
 }
