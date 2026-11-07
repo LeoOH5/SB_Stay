@@ -22,6 +22,7 @@ from app.routers.buddies import verified, walk_count
 from app.schemas.buddy import (
     ActivityIn,
     ActivityOut,
+    ApplyCodeIn,
     ApplyEmailIn,
     ApplyResidenceIn,
     ApplyStatusOut,
@@ -394,6 +395,17 @@ def apply_email(body: ApplyEmailIn, user: User = Depends(SUPPLIER), db: Session 
         return {"sent": True, "university": uni.name, "dev_code": None}
     s = get_settings()
     return {"sent": True, "university": uni.name, "dev_code": s.buddy_otp_code if s.debug else None}
+
+
+@router.post("/apply/email/check")
+def apply_email_check(body: ApplyCodeIn, user: User = Depends(SUPPLIER), db: Session = Depends(get_db)) -> dict:
+    """1단계(대학 메일 경로): 인증번호만 먼저 확인 (번호를 쓰지 않음 — 다음 단계 /apply/verify 에서 다시 확인하고 쓴다)"""
+    _university_for(db, body.email)
+    if mail.enabled():
+        email_otp.peek(db, user, body.email, body.code)
+    elif body.code.strip() != get_settings().buddy_otp_code:
+        raise api_error(422, "BAD_CODE", "인증번호가 맞지 않아요")
+    return {"verified": True}
 
 
 @router.post("/apply/verify", response_model=ApplyStatusOut)

@@ -79,3 +79,25 @@ def test_mail_failure_is_reported(client, monkeypatch, reset_db):
     h = _new_buddy(client, "otp3@example.com")
     r = client.post(f"{B}/apply/email", json={"email": EMAIL}, headers=h)
     assert r.status_code == 502 and r.json()["error"]["code"] == "MAIL_FAILED"
+
+
+def test_check_button_does_not_consume(client, sent, reset_db):
+    """'인증하기' 버튼: 맞으면 verified, 틀리면 시도 횟수에 들어가고, 확인만 해서 다음 단계에서 같은 번호를 쓴다"""
+    h = _new_buddy(client, "otp4@example.com")
+    client.post(f"{B}/apply/email", json={"email": EMAIL}, headers=h)
+    code = _code(sent)
+    wrong = "000000" if code != "000000" else "111111"
+    bad = client.post(f"{B}/apply/email/check", json={"email": EMAIL, "code": wrong}, headers=h)
+    assert bad.status_code == 422 and bad.json()["error"]["code"] == "BAD_CODE"
+    ok = client.post(f"{B}/apply/email/check", json={"email": EMAIL, "code": code}, headers=h)
+    assert ok.status_code == 200 and ok.json() == {"verified": True}
+    assert _verify(client, h, code).status_code == 200  # 확인만 했으니 그대로 쓸 수 있다
+
+
+def test_check_button_demo_code(client, reset_db):
+    """메일 키가 없으면(데모) 고정 인증번호로 확인"""
+    h = _new_buddy(client, "otp5@example.com")
+    r = client.post(f"{B}/apply/email/check", json={"email": EMAIL, "code": get_settings().buddy_otp_code}, headers=h)
+    assert r.json() == {"verified": True}
+    assert client.post(f"{B}/apply/email/check", json={"email": EMAIL, "code": "000000"}, headers=h).status_code == 422
+    assert client.post(f"{B}/apply/email/check", json={"email": "me@gmail.com", "code": "123456"}, headers=h).json()["error"]["code"] == "NOT_SEONGBUK_SCHOOL"
