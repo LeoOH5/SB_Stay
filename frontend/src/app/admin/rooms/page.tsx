@@ -7,8 +7,7 @@ import { useLS, writeLS } from "@/lib/store";
 import type { AdminBookingRow, DormRoom, ListResponse, University } from "@/lib/types";
 import { Button, Icon, Spinner } from "@/components/ui";
 import {
-  AdminGate, AdminHeader, EmptyRow, ErrorText, KeyValues, Note, ROOM_LABEL, SectionLabel, Select, Table, Td, Toggle, Tr, adminInput, errMsg, linkCls, mdKo, smallBtn,
-} from "@/components/admin/shell";
+  AdminGate, AdminHeader, EmptyRow, ErrorText, KeyValues, Note, ROOM_LABEL, SectionLabel, Select, Table, Td, Toggle, Tr, adminInput, errMsg, linkCls, mdKo, smallBtn, Pager, usePaged } from "@/components/admin/shell";
 
 // 어드민 응답에는 total_rooms·active 가 있지만 DormRoom 에는 없어 어드민 화면에서만 확장한다
 type AdminRoom = DormRoom & { total_rooms?: number; active?: boolean };
@@ -26,6 +25,7 @@ export default function AdminRoomsPage() {
 
   const [all, setAll] = useState<AdminRoom[] | null>(null);
   const [rooms, setRooms] = useState<AdminRoom[] | null>(null);
+  const pgRooms = usePaged(rooms);
   const [bookings, setBookings] = useState<AdminBookingRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<{ from: string; to: string } | null>(null);
@@ -158,7 +158,7 @@ export default function AdminRoomsPage() {
       {showAdd && form && (
         <section className="mb-8 border-y border-line py-5">
           <SectionLabel className="mb-4">객실 추가</SectionLabel>
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <label className="text-[13px] text-muted">건물<input className={adminInput + " mt-1.5 w-full"} value={form.building} onChange={(e) => setForm({ ...form, building: e.target.value })} /></label>
             <label className="text-[13px] text-muted">유형
               <select className={adminInput + " mt-1.5 w-full"} value={form.room_type} onChange={(e) => setForm({ ...form, room_type: e.target.value as RoomType })}>
@@ -176,13 +176,13 @@ export default function AdminRoomsPage() {
         </section>
       )}
 
-      <div className="grid items-start gap-10" style={{ gridTemplateColumns: "minmax(0,1fr) 440px" }}>
+      <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1fr)_440px]">
         <div className="min-w-0">
           <SectionLabel>객실</SectionLabel>
           {!rooms ? <Spinner /> : (
-            <Table cols={[{ label: "건물" }, { label: "유형" }, { label: "1박" }, { label: "객실 수" }, { label: "예약" }, { label: "판매" }, { label: "", className: "w-[64px]" }]}>
+            <><Table cols={[{ label: "건물" }, { label: "유형" }, { label: "1박" }, { label: "객실 수" }, { label: "예약" }, { label: "판매" }, { label: "", className: "w-[64px]" }]}>
               {rooms.length === 0 && <EmptyRow cols={7}>등록된 객실이 없어요. 객실 추가로 등록하세요.</EmptyRow>}
-              {rooms.map((r) => {
+              {pgRooms.items.map((r) => {
                 const editing = editId === r.id;
                 const on = r.active !== false;
                 return (
@@ -208,6 +208,7 @@ export default function AdminRoomsPage() {
                 );
               })}
             </Table>
+            <Pager {...pgRooms} /></>
           )}
 
           <SectionLabel className="mt-14">숙소 규칙</SectionLabel>

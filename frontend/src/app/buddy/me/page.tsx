@@ -51,7 +51,7 @@ export default function Page() {
     setDocKey(key); setDoc(null); setDocErr(null);
     get<ContentDoc>(`/contents/${key}`, { lang: "ko" }).then(setDoc).catch((e: unknown) => { if (key === "privacy") setDoc(PRIVACY); else setDocErr(e instanceof Error ? e.message : "불러오지 못했어요"); });
   };
-  const logout = () => { session.clear(); router.push("/buddy/login"); };
+  const logout = () => { session.clear(); router.push("/"); };
 
   const name = user?.name ?? profile?.name ?? "";
   return (

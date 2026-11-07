@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { get } from "@/lib/api";
 import type { AdminCourseRow, ListResponse } from "@/lib/types";
 import { Button, Icon, Spinner, StatusPill } from "@/components/ui";
-import { OperatorOnly, AdminHeader, EmptyRow, ErrorText, Note, Table, Td, Tr, errMsg, smallBtn } from "@/components/admin/shell";
+import { OperatorOnly, AdminHeader, EmptyRow, ErrorText, Note, Table, Td, Tr, errMsg, smallBtn, Pager, usePaged } from "@/components/admin/shell";
 
 const THEME_LABEL: Record<string, string> = { literature: "문학", independence: "독립운동", royal: "왕릉·성곽", hanok: "한옥·사찰", history: "역사", temple: "사찰" };
 const walkTime = (min: number) => (min % 60 === 0 ? `${min / 60}시간` : min < 60 ? `${min}분` : `${Math.floor(min / 60)}시간 ${min % 60}분`);
 
 export default function AdminToursPage() {
   const [courses, setCourses] = useState<AdminCourseRow[] | null>(null);
+  const pgCourses = usePaged(courses);
   const [error, setError] = useState<string | null>(null);
   const [askAdd, setAskAdd] = useState(false);
 
@@ -36,9 +37,9 @@ export default function AdminToursPage() {
       {error && <ErrorText>{error}</ErrorText>}
 
       {!courses ? <Spinner /> : (
-        <Table cols={[{ label: "코스" }, { label: "테마" }, { label: "경로" }, { label: "걸리는 시간" }, { label: "AI 이야기 자료" }, { label: "버디와 함께" }]}>
+        <><Table cols={[{ label: "코스" }, { label: "테마" }, { label: "경로" }, { label: "걸리는 시간" }, { label: "AI 이야기 자료" }, { label: "버디와 함께" }]}>
           {courses.length === 0 && <EmptyRow cols={6}>등록된 코스가 없어요.</EmptyRow>}
-          {courses.map((c) => {
+          {pgCourses.items.map((c) => {
             const ready = c.story_ready >= c.place_count;
             return (
               <Tr key={c.id}>
@@ -52,6 +53,7 @@ export default function AdminToursPage() {
             );
           })}
         </Table>
+        <Pager {...pgCourses} /></>
       )}
       {courses && <Note className="mt-9">코스에 나오는 장소 {placeCount}곳의 이야기 자료는 성북구청·국가유산청·서울시 자료에서 가져왔어요. 코스는 무료라 결제와 정산이 없어요. 걸리는 시간은 장소마다 머무는 시간 + 장소 사이 걷는 시간으로 계산해요. {courses.length > 0 && courses.every((c) => c.route_source === "route") ? "걷는 시간은 OpenStreetMap 실제 도보 경로를 시속 4km로 잡은 값이에요 (경로 © OpenStreetMap)." : "실제 도보 경로가 없는 구간은 직선거리 × 1.3, 시속 4km로 어림해요. 경로를 받으려면 scripts/fetch_walk_routes.py 를 돌려요."}</Note>}
     </OperatorOnly>

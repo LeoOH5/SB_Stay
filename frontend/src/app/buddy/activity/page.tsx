@@ -44,7 +44,7 @@ export default function Page() {
   const monthClaims = claims?.filter((c) => c.date.startsWith(month)) ?? null;
   const name = user?.name ?? profile?.name ?? "";
   const tags = profile ? [...profile.personality.slice(0, 1).map((p) => label(PERSONALITY, p)), ...profile.can_help.slice(0, 2).map((c) => label(CAN_HELP, c))] : [];
-  const logout = () => { session.clear(); router.push("/buddy/login"); };
+  const logout = () => { session.clear(); router.push("/"); };
 
   return (
     <div className="pb-8">
