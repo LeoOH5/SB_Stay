@@ -44,7 +44,7 @@ export default function Splash() {
         <div className="mt-3 text-[14px] font-bold tracking-[0.3em] text-navy">SB STAY</div>
       </div>
       <Button onClick={start}>시작하기</Button>
-      <Button variant="secondary" className="mt-3" onClick={() => { set("ko"); router.push("/buddy/apply"); }}>버디 신청하기</Button>
+      <Button variant="secondary" className="mt-3" onClick={() => { set("ko"); router.push(user ? "/buddy/apply" : "/signup?next=/buddy/apply"); }}>버디 신청하기</Button>
 
       <section className="mt-7" aria-label="데모 계정">
         <h2 className="text-[14px] font-bold text-ink">데모 계정으로 둘러보기</h2>
