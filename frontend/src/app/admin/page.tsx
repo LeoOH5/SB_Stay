@@ -6,8 +6,7 @@ import { useUser } from "@/lib/auth";
 import type { AdminBookingRow, Dashboard, DormRoom, ListResponse } from "@/lib/types";
 import { Button, Spinner, cn } from "@/components/ui";
 import {
-  AdminGate, AdminHeader, EmptyRow, ErrorText, KpiStrip, SectionLabel, Select, SplitLayout, Table, Td, Tr, errMsg, mdKo, scheduleKo, smallBtn,
-} from "@/components/admin/shell";
+  AdminGate, AdminHeader, EmptyRow, ErrorText, KpiStrip, SectionLabel, Select, SplitLayout, Table, Td, Tr, errMsg, mdKo, scheduleKo, smallBtn, Pager, usePaged } from "@/components/admin/shell";
 
 const PERIODS = [
   { key: "all", label: "전체 기간", from: "2027-01-05", to: "2027-02-20" },
@@ -48,6 +47,7 @@ export default function AdminDashboardPage() {
   const [raw, setRaw] = useState<Dashboard | null>(null);
   const [adjust, setAdjust] = useState<Adjust>(ZERO);
   const [rows, setRows] = useState<AdminBookingRow[] | null>(null);
+  const pgRows = usePaged(rows);
   const [rooms, setRooms] = useState<AdminRoom[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rowError, setRowError] = useState<Record<number, string>>({});
@@ -127,9 +127,9 @@ export default function AdminDashboardPage() {
       {/* 승인을 기다리는 숙박 */}
       <SectionLabel>승인을 기다리는 숙박</SectionLabel>
       {!rows ? <Spinner /> : (
-        <Table cols={[{ label: "신청자" }, { label: "국적" }, { label: "기간" }, { label: "객실" }, { label: "금액" }, { label: "", className: "w-[160px]" }]}>
+        <><Table cols={[{ label: "신청자" }, { label: "국적" }, { label: "기간" }, { label: "객실" }, { label: "금액" }, { label: "", className: "w-[160px]" }]}>
           {rows.length === 0 && <EmptyRow cols={6}>승인을 기다리는 숙박이 없어요.</EmptyRow>}
-          {rows.map((r) => (
+          {pgRows.items.map((r) => (
             <Tr key={r.item_id} className="h-[75px]">
               <Td className="font-semibold">{r.tourist}</Td>
               <Td className="text-muted">{r.nationality}</Td>
@@ -146,6 +146,7 @@ export default function AdminDashboardPage() {
             </Tr>
           ))}
         </Table>
+        <Pager {...pgRows} /></>
       )}
 
       <div className="mt-10">

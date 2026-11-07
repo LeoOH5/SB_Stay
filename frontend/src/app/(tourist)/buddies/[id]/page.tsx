@@ -11,6 +11,7 @@ import { Avatar, BottomBar, InfoRow, SectionHead, TotalLine } from "@/components
 import { EMPTY_REQUEST, allLangs, buddiesIn, isBuddyRequest, koDay, koDuration, koMD, koRange, readDraft, saveDraft, stayIn } from "@/components/tourist/v3/flow";
 import { get } from "@/lib/api";
 import { money, tr, useLang, curLang } from "@/lib/i18n";
+import { dataText, majorText, personName, placeText } from "@/lib/i18n-data";
 import { useCart } from "@/lib/cart";
 import { CAN_HELP, PERSONALITY, REVIEW_TAGS, STYLE, SUB_SCORES, buddyItemPrice, keysOf, label, labels } from "@/lib/codes";
 import { mediaSrc } from "@/lib/uploads";
@@ -35,8 +36,8 @@ function ActivityRow({ a }: { a: PublicActivity }) {
     <div className="flex items-center gap-4 py-4">
       {photo ? <DormPhoto src={photo} className="h-[52px] w-[52px] shrink-0 rounded-[10px] [&_svg]:hidden" /> : <PhotoTile className="h-[52px] w-[52px] shrink-0 rounded-[10px] [&_svg]:hidden" />}
       <div className="min-w-0 flex-1">
-        <div className="text-[16px] font-semibold text-ink">{a.places.join(" → ")}</div>
-        <div className="mt-1 text-[14px] text-muted">{koMD(a.date)}{a.foods ? ` · ${a.foods}` : ""}</div>
+        <div className="text-[16px] font-semibold text-ink">{a.places.map(placeText).join(" → ")}</div>
+        <div className="mt-1 text-[14px] text-muted">{koMD(a.date)}{a.foods ? ` · ${dataText(a.foods)}` : ""}</div>
       </div>
     </div>
   );
@@ -105,10 +106,10 @@ function Detail() {
       {buddy && (
         <div className="px-5">
           <div className="flex items-center gap-5 pt-2">
-            <Avatar name={buddy.name} size="lg" />
+            <Avatar name={personName(buddy.name)} size="lg" />
             <div className="min-w-0">
-              <h1 className="flex items-center gap-2 text-[24px] font-bold leading-tight text-ink">{buddy.name}<GradeBadge en={curLang() === "en"} grade={buddy.grade} /></h1>
-              <div className="mt-1 text-[14.5px] text-muted">{univLabel(buddy.university)} {buddy.major} {tr(`${buddy.year}학년`, `Year ${buddy.year}`)}</div>
+              <h1 className="flex items-center gap-2 text-[24px] font-bold leading-tight text-ink">{personName(buddy.name)}<GradeBadge en={curLang() === "en"} grade={buddy.grade} /></h1>
+              <div className="mt-1 text-[14.5px] text-muted">{univLabel(buddy.university)} {majorText(buddy.major)} {tr(`${buddy.year}학년`, `Year ${buddy.year}`)}</div>
               {(buddy.verified.school_email || buddy.verified.residence || buddy.verified.trained) && (
                 <div className="mt-1 flex items-center gap-1.5 text-[13.5px] font-semibold text-navy">
                   <span className="h-1.5 w-1.5 rounded-full bg-navy" />
@@ -117,7 +118,7 @@ function Detail() {
               )}
             </div>
           </div>
-          <p className="mt-5 text-[16px] leading-relaxed text-ink">“{buddy.intro}”</p>
+          <p className="mt-5 text-[16px] leading-relaxed text-ink">“{dataText(buddy.intro)}”</p>
 
           <SectionHead className="mt-8" title={tr("이런 친구예요", "About me")} />
           <TagGroup title={tr("성격", "Personality")} items={labels(PERSONALITY, buddy.personality, lang)} />

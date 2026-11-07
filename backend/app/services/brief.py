@@ -6,6 +6,7 @@
 - 장소 요약·팁은 DB 값(story_doc 소개, 운영시간, 휴무, 요금)으로만 만든다.
 - LLM은 버디에게 줄 2~3문장 안내(brief)와 관광객에게 쓸 영어 문장(phrases)만 쓴다. 실패하면 템플릿.
 버디 화면은 한국어라 brief와 장소 요약은 한국어, phrases는 관광객에게 말할 영어다.
+v3.9 개인정보: LLM에는 여행자 이름·국적을 보내지 않는다 (요청 사항·코스·장소·날짜만). 템플릿 문장에서만 이름을 쓴다.
 v3.8 추천 동선(route): 코스 장소(그날 여는 곳) + 여행자가 고른 '더 가 보고 싶은 곳'(최대 3, 코스에 없는 곳)을
 걷는 거리가 가장 짧은 순서로 놓는다(courses.best_order, 코스 첫 장소는 그대로 처음). 코스도 요청 장소도 없으면 위의 추천 장소로.
 구간 거리는 저장한 OpenStreetMap 실제 도보 경로 → 없으면 직선 × 1.3 추정, 4 km/h. 순서는 코드가 정하고 LLM은 바꾸지 않는다.
@@ -163,7 +164,8 @@ def fallback_brief(m: Material) -> str:
 def material_text(m: Material) -> str:
     d = m.item.date_from
     lines = [
-        f"Tourist: {m.tourist} ({m.nationality or 'unknown'}), meeting {d.month}/{d.day} ({d.isoformat()}) {m.item.time or ''}",
+        # v3.9 개인정보: 여행자 이름·국적은 LLM에 보내지 않는다 (버디 화면의 템플릿 문장에만 쓴다)
+        f"Traveler: (name withheld), meeting {d.month}/{d.day} ({d.isoformat()}) {m.item.time or ''}",
         f"Course to walk together: {m.course.title} / {m.course.title_en}" if m.course else "Course: none",
         f"Traveler requests: {request_sentence(m) or 'none'}",
         f"Suggested walking order (fixed by the app, do not change it): {route_text(m) or 'none'}",
@@ -179,6 +181,7 @@ def llm_prompt(m: Material) -> tuple[str, str]:
         "You help a Korean university student buddy prepare for a walk with a foreign traveler in Seongbuk, Seoul.\n"
         "Rules:\n"
         "- Use only the facts in MATERIAL. Never add dates, prices, hours or history that are not there.\n"
+        "- The traveler's name is not given; call them '여행자' in Korean and 'you' in the English phrases.\n"
         "- brief: 2 or 3 short sentences in Korean for the buddy. If there are traveler requests, the FIRST sentence must\n"
         "  restate them (diet, allergies, pace, including any free-text 'other' items such as\n"
         "  '기타: 고수' or '복숭아 알레르기') and remind the buddy to check at restaurants. Then what to talk about.\n"

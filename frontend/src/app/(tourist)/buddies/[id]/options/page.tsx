@@ -12,6 +12,7 @@ import { BottomBar, Headline, OutlineBox, Toggle, TotalLine, useHydrated } from 
 import { SS_BUDDY_DRAFT, buddiesIn, clearDraft, iga, koDay, koDuration, saveDraft, wa, type BuddyDraft } from "@/components/tourist/v3/flow";
 import { get } from "@/lib/api";
 import { money, tr, useLang, curLang } from "@/lib/i18n";
+import { personName } from "@/lib/i18n-data";
 import { useCart } from "@/lib/cart";
 import { ALBUM_FEE, MEAL_LIMIT, MEAL_MAX, buddyItemPrice, cleanOther, requestChips } from "@/lib/codes";
 import type { Buddy, BuddyRequestBody, Tour } from "@/lib/types";
@@ -75,7 +76,7 @@ export default function BuddyOptionsPage() {
     // 버디 항목은 하나 — 이미 담긴 버디는 바꾼다
     buddiesIn(cart.items).forEach((i) => cart.remove("buddy", i.ref_id));
     cart.add({
-      type: "buddy", ref_id: buddy.id, title: tr(`${buddy.name}${wa(buddy.name)} 동네 걷기`, `Neighborhood walk with ${buddy.name}`),
+      type: "buddy", ref_id: buddy.id, title: tr(`${personName(buddy.name)}${wa(buddy.name)} 동네 걷기`, `Neighborhood walk with ${personName(buddy.name)}`),
       meta: `${koDay(draft.date)} ${draft.time}, ${koDuration(DURATION)}${tourCourse ? ` · ${tr(tourCourse.title, tourCourse.title_en || tourCourse.title)}` : ""}`,
       price: total, date: draft.date, time: draft.time, duration_min: DURATION,
       request, course_id: draft.course_id, course_title: tourCourse?.title ?? null,
@@ -96,7 +97,7 @@ export default function BuddyOptionsPage() {
             <Icon name="fork" className="mt-0.5 h-[22px] w-[22px] text-ink" />
             <div>
               <div className="text-[16px] font-semibold text-ink">{tr("식사 맡기기", "Meals with your buddy")}</div>
-              <p className="mt-1 text-[14.5px] leading-relaxed text-muted">{tr(`${buddy ? `${buddy.name}${iga(buddy.name)}` : "버디가"} 식당을 고르고 먼저 계산해요. 영수증만큼만 쓰고 남은 돈은 돌려드려요.`, `${buddy ? buddy.name : "Your buddy"} picks the restaurant and pays first. Only the receipt amount is used; the rest is refunded.`)}</p>
+              <p className="mt-1 text-[14.5px] leading-relaxed text-muted">{tr(`${buddy ? `${personName(buddy.name)}${iga(buddy.name)}` : "버디가"} 식당을 고르고 먼저 계산해요. 영수증만큼만 쓰고 남은 돈은 돌려드려요.`, `${buddy ? buddy.name : "Your buddy"} picks the restaurant and pays first. Only the receipt amount is used; the rest is refunded.`)}</p>
             </div>
           </div>
           <div className="mt-5 flex items-center justify-between">
@@ -117,7 +118,7 @@ export default function BuddyOptionsPage() {
             <Icon name="camera" className="mt-0.5 h-[22px] w-[22px] text-ink" />
             <div className="min-w-0 flex-1">
               <div className="text-[16px] font-semibold text-ink">{tr("여행 앨범", "Photo record")}</div>
-              <p className="mt-1 text-[14.5px] leading-relaxed text-muted">{tr(`${buddy ? `${buddy.name}${iga(buddy.name)}` : "버디가"} 찍어 준 사진을 앨범으로 모아 드려요.`, `Photos ${buddy ? buddy.name : "your buddy"} takes, collected in one album.`)}</p>
+              <p className="mt-1 text-[14.5px] leading-relaxed text-muted">{tr(`${buddy ? `${personName(buddy.name)}${iga(buddy.name)}` : "버디가"} 찍어 준 사진을 앨범으로 모아 드려요.`, `Photos ${buddy ? buddy.name : "your buddy"} takes, collected in one album.`)}</p>
             </div>
             <Toggle label={tr("여행 앨범", "Photo record")} checked={draft.album} onChange={(album) => set({ album })} />
           </div>

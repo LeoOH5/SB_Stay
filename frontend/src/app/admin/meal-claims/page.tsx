@@ -6,8 +6,7 @@ import type { AdminMealClaimRow, ListResponse, MealClaimStatus } from "@/lib/typ
 import { mediaSrc } from "@/lib/uploads";
 import { Button, ImageBlock, Spinner, StatusPill } from "@/components/ui";
 import {
-  AdminHeader, EmptyRow, ErrorText, KeyValues, Note, OperatorOnly, SectionLabel, Select, SplitLayout, Table, Td, Tr, adminInput, errMsg, mdKo, smallBtn,
-} from "@/components/admin/shell";
+  AdminHeader, EmptyRow, ErrorText, KeyValues, Note, OperatorOnly, SectionLabel, Select, SplitLayout, Table, Td, Tr, adminInput, errMsg, mdKo, smallBtn, Pager, usePaged } from "@/components/admin/shell";
 
 /** 목업 행에는 traveler_agreed_over 가 있을 수 있지만 AdminMealClaimRow 타입에는 없다 */
 type Row = AdminMealClaimRow & { traveler_agreed_over?: boolean | null };
@@ -46,6 +45,7 @@ function MealClaims() {
 
   const waiting = (rows ?? []).filter((c) => c.status === "requested").length;
   const visible = (rows ?? []).filter((c) => filter === "all" || c.status === filter);
+  const pgVisible = usePaged(visible);
   const current = (rows ?? []).find((c) => c.id === selected) ?? null;
 
   return (
@@ -66,9 +66,9 @@ function MealClaims() {
 
       <SplitLayout aside={current ? <ClaimPanel key={current.id} c={current} onDone={(c) => setRows((rs) => rs?.map((x) => (x.id === c.id ? { ...x, ...c } : x)) ?? rs)} /> : rows && <Note className="pt-10">왼쪽에서 청구를 고르면 영수증이 보여요.</Note>}>
         {!rows ? <Spinner /> : (
-          <Table dense cols={[{ label: "예약" }, { label: "버디" }, { label: "여행자" }, { label: "날짜" }, { label: "가게" }, { label: "청구" }, { label: "보증금 남음" }, { label: "상태" }]}>
+          <><Table dense cols={[{ label: "예약" }, { label: "버디" }, { label: "여행자" }, { label: "날짜" }, { label: "가게" }, { label: "청구" }, { label: "보증금 남음" }, { label: "상태" }]}>
             {visible.length === 0 && <EmptyRow cols={8}>{filter === "requested" ? "확인을 기다리는 청구가 없어요." : "청구가 없어요."}</EmptyRow>}
-            {visible.map((c) => (
+            {pgVisible.items.map((c) => (
               <Tr key={c.id} selected={c.id === selected} onClick={() => setSelected(c.id)}>
                 <Td className="font-semibold">
                   <button type="button" className="text-left font-semibold" aria-pressed={c.id === selected} onClick={(e) => { e.stopPropagation(); setSelected(c.id); }}>{c.booking_code}</button>
@@ -83,6 +83,7 @@ function MealClaims() {
               </Tr>
             ))}
           </Table>
+          <Pager {...pgVisible} /></>
         )}
       </SplitLayout>
     </>

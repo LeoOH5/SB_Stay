@@ -110,7 +110,7 @@ export default function MePage() {
     setDocKey(key); setDoc(null); setDocErr(null);
     okv(get<ContentDoc>(`/contents/${key}`, { lang })).then(setDoc).catch((e: unknown) => { if (key === "privacy") setDoc(lang === "en" ? PRIVACY_FALLBACK_EN : PRIVACY_FALLBACK); else setDocErr(errMsg(e)); });
   };
-  const logout = () => { session.clear(); router.push("/login"); };
+  const logout = () => { session.clear(); router.push("/"); };
 
   if (!user) {
     return (<><Hero title={tr("마이페이지", "My page")} right={<CartButton className="-mr-1" />} /><div className="px-5 pb-6 pt-2"><LoginRequired what={tr("마이페이지", "My page")} /><BuddyEntry className="mt-4" /></div></>);

@@ -15,6 +15,7 @@ import { get, post } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import { CAN_HELP, DIET_TO_HELP, PERSONALITY, label, requestChips } from "@/lib/codes";
 import { curLang, tr, useLang } from "@/lib/i18n";
+import { personName, majorText } from "@/lib/i18n-data";
 import type { Buddy, BuddyMatch, CanHelp, DormRoom, ListResponse, Personality, WalkStyle } from "@/lib/types";
 
 const LANGS: { key: string; label: string }[] = [{ key: "en", label: "English" }, { key: "ja", label: "日本語" }, { key: "zh", label: "中文" }];
@@ -34,10 +35,10 @@ function BuddyRow({ b, reason, href, needs }: { b: Buddy; reason?: string; href:
   const tags = [b.personality[0] && label(PERSONALITY, b.personality[0], curLang()), b.interests[0] && (INTEREST_LABEL[b.interests[0]] ?? b.interests[0]), help && label(CAN_HELP, help, curLang())].concat(b.can_drive ? [tr("운전 가능", "Can drive")] : []).filter(Boolean) as string[];
   return (
     <Link href={href} className="flex gap-4 py-5">
-      <Avatar name={b.name} />
+      <Avatar name={personName(b.name)} />
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1 text-[15px] text-muted"><span className="text-[17px] font-bold text-ink">{b.name}</span> {univLabel(univShort(b.university))} {b.major} {tr(`${b.year}학년`, `Year ${b.year}`)}<GradeBadge en={curLang() === "en"} grade={b.grade} className="ml-1.5 align-[2px]" /></div>
+          <div className="min-w-0 flex-1 text-[15px] text-muted"><span className="text-[17px] font-bold text-ink">{personName(b.name)}</span> {univLabel(univShort(b.university))} {majorText(b.major)} {tr(`${b.year}학년`, `Year ${b.year}`)}<GradeBadge en={curLang() === "en"} grade={b.grade} className="ml-1.5 align-[2px]" /></div>
           <Icon name="chevron-right" className="h-5 w-5 text-ink" />
         </div>
         <div className="mt-1 flex items-center gap-1.5 text-[14.5px] text-muted">

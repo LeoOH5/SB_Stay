@@ -10,7 +10,7 @@ import { BUDDY_PROMISES, CAN_HELP, ELIGIBILITY, GRADE, QUIZ_PASS, QUIZ_TOTAL, RE
 import { mediaSrc } from "@/lib/uploads";
 import type { AdminBuddyRow, ListResponse } from "@/lib/types";
 import { Button, Icon, Spinner, StatusPill } from "@/components/ui";
-import { OperatorOnly, AdminHeader, EmptyRow, ErrorText, Note, SectionLabel, Table, Td, Tr, errMsg, langNames, linkCls, smallBtn, univShort } from "@/components/admin/shell";
+import { OperatorOnly, AdminHeader, EmptyRow, ErrorText, Note, SectionLabel, Table, Td, Tr, errMsg, langNames, linkCls, smallBtn, univShort, Pager, usePaged } from "@/components/admin/shell";
 
 /** 버디 약속(행동 규칙) 항목 수 — 동의하면 7/7 */
 const CODE_ITEMS = BUDDY_PROMISES.length;
@@ -88,7 +88,9 @@ export default function AdminMembersPage() {
   }
 
   const pending = (buddies ?? []).filter((b) => b.status === "pending");
+  const pgPending = usePaged(pending);
   const active = (buddies ?? []).filter((b) => b.status !== "pending");
+  const pgActive = usePaged(active);
 
   return (
     <OperatorOnly title="회원·버디 승인">
@@ -97,9 +99,9 @@ export default function AdminMembersPage() {
 
       <SectionLabel>승인을 기다리는 버디 {buddies ? `${pending.length}명` : ""}</SectionLabel>
       {!buddies ? <Spinner /> : (
-        <Table cols={[{ label: "이름" }, { label: "학교·학과" }, { label: "나이" }, { label: "언어" }, { label: "자격 경로" }, { label: "국적 확인" }, { label: "약속" }, { label: "교육 영상" }, { label: "퀴즈" }, { label: "", className: "w-[170px]" }]}>
+        <><Table cols={[{ label: "이름" }, { label: "학교·학과" }, { label: "나이" }, { label: "언어" }, { label: "자격 경로" }, { label: "국적 확인" }, { label: "약속" }, { label: "교육 영상" }, { label: "퀴즈" }, { label: "", className: "w-[170px]" }]}>
           {pending.length === 0 && <EmptyRow cols={10}>승인을 기다리는 버디가 없어요.</EmptyRow>}
-          {pending.map((b) => {
+          {pgPending.items.map((b) => {
             const quizOk = (b.quiz_score ?? 0) >= QUIZ_PASS;
             const videosOk = b.videos_watched >= b.videos_total;
             const ready = quizOk && videosOk;
@@ -135,6 +137,7 @@ export default function AdminMembersPage() {
             );
           })}
         </Table>
+        <Pager {...pgPending} /></>
       )}
 
       <SectionLabel className="mt-10" right={isOperator && (
@@ -144,9 +147,9 @@ export default function AdminMembersPage() {
         </span>
       )}>활동 중인 버디</SectionLabel>
       {!buddies ? <Spinner /> : (
-        <Table cols={[{ label: "이름" }, { label: "학과" }, { label: "자격 경로" }, { label: `${ym(active[0]?.eval_month)} 동행` }, { label: "누적 후기" }, { label: "평점" }, { label: "등급" }, { label: "정산율" }, { label: "운전" }, { label: "신고" }, { label: "상태" }, { label: "", className: "w-[140px]" }]}>
+        <><Table cols={[{ label: "이름" }, { label: "학과" }, { label: "자격 경로" }, { label: `${ym(active[0]?.eval_month)} 동행` }, { label: "누적 후기" }, { label: "평점" }, { label: "등급" }, { label: "정산율" }, { label: "운전" }, { label: "신고" }, { label: "상태" }, { label: "", className: "w-[140px]" }]}>
           {active.length === 0 && <EmptyRow cols={12}>활동 중인 버디가 없어요.</EmptyRow>}
-          {active.map((b) => {
+          {pgActive.items.map((b) => {
             const suspended = b.status === "suspended";
             const auto = suspended && b.report_count >= REPORT_SUSPEND_AT;
             return (
@@ -174,6 +177,7 @@ export default function AdminMembersPage() {
             );
           })}
         </Table>
+        <Pager {...pgActive} /></>
       )}
 
       <Note className="mt-9">

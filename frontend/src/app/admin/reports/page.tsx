@@ -7,8 +7,7 @@ import { mediaSrc } from "@/lib/uploads";
 import type { AdminBookingRow, AdminBuddyRow, AdminReportRow, ListResponse, ReportAction, ReportCategory, ReportStatus } from "@/lib/types";
 import { Button, Spinner, StatusPill } from "@/components/ui";
 import {
-  AdminHeader, EmptyRow, ErrorText, KeyValues, Note, OperatorOnly, SectionLabel, Select, SplitLayout, Table, Td, Tr, dateTimeKo, errMsg, scheduleKo, smallBtn, univShort,
-} from "@/components/admin/shell";
+  AdminHeader, EmptyRow, ErrorText, KeyValues, Note, OperatorOnly, SectionLabel, Select, SplitLayout, Table, Td, Tr, dateTimeKo, errMsg, scheduleKo, smallBtn, univShort, Pager, usePaged } from "@/components/admin/shell";
 
 /** 표에 들어가는 짧은 유형 이름 (긴 이름은 lib/codes REPORT_CATEGORY) */
 const CATEGORY_SHORT: Record<ReportCategory, string> = { no_show: "약속 장소에 안 옴", rude: "불편한 말이나 행동", money: "돈·선물 요구", unsafe: "안전이 걱정됨", other: "기타" };
@@ -66,6 +65,7 @@ function Reports() {
 
   const openCount = (rows ?? []).filter((r) => r.status === "open").length;
   const visible = (rows ?? []).filter((r) => filter === "all" || r.status === filter);
+  const pgVisible = usePaged(visible);
   const current = (rows ?? []).find((r) => r.id === selected) ?? null;
 
   function applyResult(out: Row) {
@@ -92,9 +92,9 @@ function Reports() {
 
       <SplitLayout aside={current ? <ReportPanel key={current.id} r={current} buddy={buddies.find((b) => b.id === current.buddy_id)} bookings={bookings} onDone={applyResult} /> : rows && <Note className="pt-10">왼쪽에서 신고를 고르면 내용이 보여요.</Note>}>
         {!rows ? <Spinner /> : (
-          <Table dense cols={[{ label: "접수" }, { label: "대상" }, { label: "신고한 사람" }, { label: "예약" }, { label: "유형" }, { label: "누적" }, { label: "상태" }]}>
+          <><Table dense cols={[{ label: "접수" }, { label: "대상" }, { label: "신고한 사람" }, { label: "예약" }, { label: "유형" }, { label: "누적" }, { label: "상태" }]}>
             {visible.length === 0 && <EmptyRow cols={7}>{filter === "open" ? "처리할 신고가 없어요." : "신고가 없어요."}</EmptyRow>}
-            {visible.map((r) => (
+            {pgVisible.items.map((r) => (
               <Tr key={r.id} selected={r.id === selected} onClick={() => setSelected(r.id)}>
                 <Td className="font-semibold">
                   <button type="button" className="text-left font-semibold" aria-pressed={r.id === selected} onClick={(e) => { e.stopPropagation(); setSelected(r.id); }}>{dateTimeKo(r.created_at)}</button>
@@ -108,6 +108,7 @@ function Reports() {
               </Tr>
             ))}
           </Table>
+          <Pager {...pgVisible} /></>
         )}
       </SplitLayout>
     </>
