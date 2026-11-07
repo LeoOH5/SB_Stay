@@ -46,9 +46,7 @@ export default function Page() {
       <h1 className="mt-8 text-[28px] font-bold leading-[1.3] text-ink">버디<br />로그인</h1>
       <p className="mt-2 text-[15px] text-muted">학교 이메일로 들어오면 소속 대학이 자동으로 정해져요.</p>
 
-      <Button variant="ghost" className="mt-7 border-[#C9CED3]" onClick={google} disabled={busy}><GoogleG />Google로 계속하기</Button>
-
-      <form onSubmit={login} className="mt-6 space-y-5">
+      <form onSubmit={login} className="mt-7 space-y-5">
         <label className="block">
           <span className="mb-2 block text-[14px] font-semibold text-ink">학교 이메일</span>
           <input className={`${inputCls} h-[52px] text-[16px]`} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@univ.ac.kr" />
@@ -60,6 +58,8 @@ export default function Page() {
         {error && <p className="text-[14px] font-semibold text-red">{error}</p>}
         <Button type="submit" disabled={busy || !email || !password}>{busy ? "로그인 중…" : "로그인"}</Button>
       </form>
+      <div className="my-6 flex items-center gap-3 text-[13px] text-muted"><span className="h-px flex-1 bg-line" />또는<span className="h-px flex-1 bg-line" /></div>
+      <Button variant="ghost" className="border-[#C9CED3]" onClick={google} disabled={busy}><GoogleG />Google로 계속하기</Button>
       <p className="mt-4 text-[14px] text-muted">데모: jiwoo@a-univ.ac.kr (비밀번호 demo1234)</p>
 
       <h2 className="mt-10 text-[18px] font-bold text-ink">버디가 되고 싶어요</h2>
