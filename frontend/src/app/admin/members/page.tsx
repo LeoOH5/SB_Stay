@@ -10,7 +10,7 @@ import { BUDDY_PROMISES, CAN_HELP, ELIGIBILITY, GRADE, QUIZ_PASS, QUIZ_TOTAL, RE
 import { mediaSrc } from "@/lib/uploads";
 import type { AdminBuddyRow, ListResponse } from "@/lib/types";
 import { Button, Icon, Spinner, StatusPill } from "@/components/ui";
-import { OperatorOnly, AdminHeader, EmptyRow, ErrorText, Note, SectionLabel, Table, Td, Tr, errMsg, langNames, linkCls, smallBtn, univShort, Pager, usePaged } from "@/components/admin/shell";
+import { OperatorOnly, AdminHeader, EmptyRow, ErrorText, SectionLabel, Table, Td, Tr, errMsg, langNames, linkCls, smallBtn, univShort, Pager, usePaged } from "@/components/admin/shell";
 
 /** 버디 약속(행동 규칙) 항목 수 — 동의하면 7/7 */
 const CODE_ITEMS = BUDDY_PROMISES.length;
@@ -180,11 +180,6 @@ export default function AdminMembersPage() {
         <Pager {...pgActive} /></>
       )}
 
-      <Note className="mt-9">
-        승인하려면 자격 경로 하나(성북구 대학 메일 인증, 또는 성북구 거주 — 주소 증빙과 재학 증명 사진을 보고 승인하면 확인한 것으로 남아요), 대한민국 국적, 만 19세 이상, 약속 동의, 교육 영상 5개, 퀴즈 {QUIZ_PASS}점 이상이 모두 필요해요. 신고가 {REPORT_SUSPEND_AT}건 쌓이면 활동이 자동으로 멈춰요.
-        등급은 매달 1일, 지난달 동행(누적 아님)과 누적 후기·평점으로 다시 정해요(기본 70% · 성장 75% · 우수 80%). 올라갈 때는 한 단계씩, 내려갈 때는 바로 가요. 승인 후 첫 달은 기본이고, 정산율은 예약 확정 때 고정돼요. 운영 기간 중 30일간 활동이 없으면 휴면으로 목록에서 빠져요(등급은 그대로 매달 평가).
-        {!isOperator && " 대학 담당자는 우리 학교 버디만 볼 수 있어요."}
-      </Note>
     </OperatorOnly>
   );
 }
