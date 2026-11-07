@@ -24,7 +24,6 @@ export default function AdminToursPage() {
     return () => { alive = false; };
   }, []);
 
-  const placeCount = new Set((courses ?? []).flatMap((c) => c.places)).size;
 
   return (
     <OperatorOnly title="산책 코스">
@@ -55,7 +54,6 @@ export default function AdminToursPage() {
         </Table>
         <Pager {...pgCourses} /></>
       )}
-      {courses && <Note className="mt-9">코스에 나오는 장소 {placeCount}곳의 이야기 자료는 성북구청·국가유산청·서울시 자료에서 가져왔어요. 코스는 무료라 결제와 정산이 없어요. 걸리는 시간은 장소마다 머무는 시간 + 장소 사이 걷는 시간으로 계산해요. {courses.length > 0 && courses.every((c) => c.route_source === "route") ? "걷는 시간은 OpenStreetMap 실제 도보 경로를 시속 4km로 잡은 값이에요 (경로 © OpenStreetMap)." : "실제 도보 경로가 없는 구간은 직선거리 × 1.3, 시속 4km로 어림해요. 경로를 받으려면 scripts/fetch_walk_routes.py 를 돌려요."}</Note>}
     </OperatorOnly>
   );
 }

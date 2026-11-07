@@ -7,7 +7,7 @@ import { useUser } from "@/lib/auth";
 import type { AdminBookingRow, ItemStatus, ItemType, ListResponse } from "@/lib/types";
 import { Chip, Spinner, StatusPill } from "@/components/ui";
 import {
-  AdminGate, AdminHeader, BoxTag, EmptyRow, ErrorText, Note, SearchInput, Select, TYPE_LABEL, Table, Td, Tr, errMsg, linkCls, scheduleKo, univShort, Pager, usePaged } from "@/components/admin/shell";
+  AdminGate, AdminHeader, BoxTag, EmptyRow, ErrorText, SearchInput, Select, TYPE_LABEL, Table, Td, Tr, errMsg, linkCls, scheduleKo, univShort, Pager, usePaged } from "@/components/admin/shell";
 
 const TYPES: { key: ItemType | ""; label: string }[] = [{ key: "", label: "전체" }, { key: "dorm", label: "숙박" }, { key: "buddy", label: "버디" }];
 const STATUSES: { key: ItemStatus | ""; label: string }[] = [{ key: "", label: "전체" }, { key: "requested", label: "신청" }, { key: "approved", label: "승인" }, { key: "confirmed", label: "확정" }, { key: "cancelled", label: "취소" }];
@@ -137,7 +137,6 @@ function BookingsBody() {
         </Table>
         <Pager {...pgVisible} /></>
       )}
-      <Note className="mt-9">숙박은 대학 담당자가 승인하고, 버디 항목은 버디가 직접 수락해요.</Note>
     </>
   );
 }

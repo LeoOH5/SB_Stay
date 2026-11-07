@@ -60,7 +60,6 @@ export function AdminSidebar() {
         })}
       </nav>
       <div className="hidden px-5 pb-6 xl:block">
-        {!isOperator && <p className="mb-3 px-3.5 text-[13px] leading-relaxed text-muted">버디 승인·산책 코스·식비·신고는 운영팀 계정에서만 보여요</p>}
         {logoutBtn("flex h-11 w-full items-center px-3.5 text-left")}
       </div>
     </aside>
