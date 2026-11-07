@@ -11,10 +11,10 @@ import { BottomBar } from "@/components/buddy/ui";
 import { UploadThumb, usePhotoUploads } from "@/components/photo-upload";
 import { Button, Icon, LinkButton, Spinner, StepDots, TopBar, cn, inputCls } from "@/components/ui";
 import { BUDDY_MIN_AGE, BUDDY_PROMISES as PROMISES, KOREAN_NATIONAL_NOTE, QUIZ_PASS, QUIZ_TOTAL } from "@/lib/codes";
-import { ApiError, get, post, put } from "@/lib/api";
-import { useUser } from "@/lib/auth";
+import { ApiError, get, patch, post, put } from "@/lib/api";
+import { session, useUser } from "@/lib/auth";
 import { UPLOAD_ACCEPT } from "@/lib/uploads";
-import type { BuddyApplyEmailOut, BuddyApplyStatus, BuddyProfile, EducationOut, Eligibility, QuizQuestion, QuizResult } from "@/lib/types";
+import type { User, BuddyApplyEmailOut, BuddyApplyStatus, BuddyProfile, EducationOut, Eligibility, QuizQuestion, QuizResult } from "@/lib/types";
 
 const STEPS = 6;
 const OTP_SECONDS = 5 * 60;
@@ -48,13 +48,46 @@ function ApplyPage() {
   const [quizIdx, setQuizIdx] = useState(0);
 
   const refresh = useCallback(async () => { const s = await get<BuddyApplyStatus>("/buddy/apply"); setStatus(s); return s; }, []);
+  // v3.9 지원은 버디 역할 계정만 할 수 있다 (서버 403). 로그인 안 했거나 여행자 계정이면 먼저 안내한다
+  const [switching, setSwitching] = useState(false);
+  const [gateErr, setGateErr] = useState<string | null>(null);
+  const needsRole = !!user && user.role === "tourist";
   useEffect(() => {
+    if (!user || user.role === "tourist") return;
     const forced = Number(sp.get("step"));
     const ok = forced >= 1 && forced <= STEPS;
     get<BuddyApplyStatus>("/buddy/apply")
       .then((s) => { setStatus(s); setStep(ok ? forced : stepOf(s)); })
       .catch(() => setStep(ok ? forced : 1));
-  }, [sp]);
+  }, [sp, user]);
+  const becomeBuddy = async () => {
+    setSwitching(true); setGateErr(null);
+    try {
+      const u = await patch<User>("/users/me/role", { role: "buddy" });
+      session.update({ role: u?.role ?? "buddy" });
+    } catch (e) { setGateErr(errText(e)); }
+    finally { setSwitching(false); }
+  };
+
+  if (!user) {
+    return (
+      <div className="px-5 pb-10 pt-10">
+        <Title sub="버디 지원은 로그인한 계정으로 진행해요. 학교 메일이 아니어도 괜찮아요.">먼저 로그인해 주세요</Title>
+        <LinkButton href="/buddy/login" className="mt-8">버디 로그인으로</LinkButton>
+        <LinkButton href="/signup?next=/buddy/apply" variant="ghost" className="mt-3">새 계정 만들기</LinkButton>
+      </div>
+    );
+  }
+  if (needsRole) {
+    return (
+      <div className="px-5 pb-10 pt-10">
+        <Title sub={`지금 여행자 계정(${user.email})으로 로그인돼 있어요. 버디 지원을 하려면 이 계정을 버디 계정으로 바꿔야 해요. 바꾸면 이 계정으로는 여행 예약을 할 수 없어요.`}>버디 계정으로 바꿀까요?</Title>
+        {gateErr && <p className="mt-4 text-[14px] font-semibold text-red">{gateErr}</p>}
+        <Button className="mt-8" onClick={becomeBuddy} disabled={switching}>{switching ? "바꾸는 중…" : "이 계정으로 버디 지원하기"}</Button>
+        <LinkButton href="/buddy/login" variant="ghost" className="mt-3">다른 계정으로 로그인</LinkButton>
+      </div>
+    );
+  }
 
   const go = (n: number) => { setStep(n); window.scrollTo(0, 0); };
   const back = () => {

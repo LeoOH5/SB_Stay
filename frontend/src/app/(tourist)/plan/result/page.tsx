@@ -12,6 +12,7 @@ import { BottomBar, Headline, TotalLine, useHydrated } from "@/components/touris
 import { DOW, koDay, koDuration, koMD, koRange, langNames, univShort, wa } from "@/components/tourist/v3/flow";
 import { get, post } from "@/lib/api";
 import { money, tr, useLang } from "@/lib/i18n";
+import { personName, majorText } from "@/lib/i18n-data";
 import { useCart } from "@/lib/cart";
 import { buddyItemPrice } from "@/lib/codes";
 import type { AiPlan, Buddy, BuddyMatch, CartItem, DormRoom, PlanItem, PlanWarning, Tour } from "@/lib/types";
@@ -45,7 +46,7 @@ async function planToCart(plan: AiPlan): Promise<CartItem[]> {
         // 버디가 있으면 코스는 버디 항목(course_id)에만 붙어 있다 → 제목은 TR-02에서
         const course = courseItem ?? (it.course_id ? await okv(get<Tour>(`/tours/${it.course_id}`)).catch(() => null) : null);
         out.push({
-          type: "buddy", ref_id: it.ref_id, title: b ? tr(`${b.name}${wa(b.name)} 동네 걷기`, `Neighborhood walk with ${b.name}`) : it.title,
+          type: "buddy", ref_id: it.ref_id, title: b ? tr(`${personName(b.name)}${wa(b.name)} 동네 걷기`, `Neighborhood walk with ${personName(b.name)}`) : it.title,
           meta: `${koDay(day.date)} ${it.time ?? "14:00"}, ${koDuration(it.duration_min)}`, price: it.price,
           date: day.date, time: it.time ?? "14:00", duration_min: it.duration_min ?? 120, course_id: it.course_id ?? null, course_title: course ? ("title_en" in course ? tr(course.title, course.title_en) : course.title) : null,
           meal_count: 0, album: false, hourly_fee: b?.hourly_fee, university_id: b?.university_id, request: null,
@@ -73,12 +74,12 @@ function swapBuddy(it: PlanItem, oldName: string, b: Buddy): PlanItem {
   const lang: "ko" | "en" = it.title.startsWith("버디") || (it.meta ?? "").startsWith("버디") ? "ko" : "en";
   const ko = `버디 ${oldName}`;
   let title: string;
-  if (it.title.startsWith(ko)) title = `버디 ${b.name}${wa(b.name)}${it.title.slice(ko.length + 1)}`;
-  else if (it.title.endsWith(` ${oldName}`)) title = `${it.title.slice(0, -oldName.length)}${b.name}`;
-  else title = lang === "en" ? `Walk the neighborhood with ${b.name}` : `버디 ${b.name}${wa(b.name)} 동네 걷기`;
+  if (it.title.startsWith(ko)) title = `버디 ${personName(b.name)}${wa(b.name)}${it.title.slice(ko.length + 1)}`;
+  else if (it.title.endsWith(` ${oldName}`)) title = `${it.title.slice(0, -oldName.length)}${personName(b.name)}`;
+  else title = lang === "en" ? `Walk the neighborhood with ${personName(b.name)}` : `버디 ${personName(b.name)}${wa(b.name)} 동네 걷기`;
   const parts = (it.meta ?? "").split(" · ");
   if (parts[0]?.startsWith("버디 ") || parts[0]?.startsWith("Buddy ")) {
-    parts[0] = lang === "en" ? `Buddy ${b.name}` : `버디 ${b.name}`;
+    parts[0] = lang === "en" ? `Buddy ${personName(b.name)}` : `버디 ${personName(b.name)}`;
     if (parts.length > 1) parts[1] = langNames(b.languages, lang);
   }
   return { ...it, ref_id: b.id, title, meta: parts.join(" · "), price: buddyItemPrice(b.hourly_fee ?? 15000, it.duration_min ?? 120) };
@@ -133,7 +134,7 @@ function BuddyPicker({ date, current, aiRefId, input, stayId, durationMin, moreH
               className={cn("w-full rounded-[12px] border px-3 py-2.5 text-left transition", on ? "border-navy bg-navy-bg" : "border-transparent hover:border-line")}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 text-[14px] text-muted">
-                  <span className="text-[15.5px] font-bold text-ink">{b.name}</span> {univShort(b.university)} · {b.major}
+                  <span className="text-[15.5px] font-bold text-ink">{personName(b.name)}</span> {univShort(b.university)} · {majorText(b.major)}
                   {b.review_count > 0 ? <span className="ml-1.5 inline-flex items-center gap-0.5 align-[-2px]"><Icon name="star" className="h-[15px] w-[15px] fill-orange text-orange" />{b.rating.toFixed(1)}</span> : <span className="ml-1.5">{tr("새 버디", "New buddy")}</span>}
                 </div>
                 <span className="shrink-0 text-[15px] font-bold text-ink">{money(buddyItemPrice(b.hourly_fee ?? 15000, durationMin))}</span>

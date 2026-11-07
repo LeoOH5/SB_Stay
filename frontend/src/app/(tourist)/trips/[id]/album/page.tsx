@@ -9,6 +9,7 @@ import { ActionBar, Node, Photo, TimelineStep, iga, krDate, wa } from "@/compone
 import { Button, Hero, LinkButton, Spinner } from "@/components/ui";
 import { get } from "@/lib/api";
 import { money, tr, useLang } from "@/lib/i18n";
+import { placeText } from "@/lib/i18n-data";
 import type { Album, AlbumItem } from "@/lib/types";
 import { mediaSrc } from "@/lib/uploads";
 
@@ -93,7 +94,7 @@ function AlbumSection({ it }: { it: AlbumItem }) {
           <h2 className="mb-4 mt-9 text-[18px] font-bold text-ink">{tr("다녀온 곳", "Places visited")}</h2>
           {it.places.map((p, i) => (
             <TimelineStep key={p + i} last={i === it.places.length - 1} node={<Node kind="open" />}>
-              <div className="text-[16px] font-semibold leading-6 text-ink">{p}</div>
+              <div className="text-[16px] font-semibold leading-6 text-ink">{placeText(p)}</div>
               <div className="mt-0.5 text-[14px] text-muted">{i === 0 ? tr("출발", "Start") : i === it.places.length - 1 ? tr("마지막 장소", "Last stop") : tr(`${i + 1}번째 장소`, `Stop ${i + 1}`)}</div>
             </TimelineStep>
           ))}
