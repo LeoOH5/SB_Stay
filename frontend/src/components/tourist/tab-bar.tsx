@@ -6,6 +6,6 @@ import { useLang } from "@/lib/i18n";
 export function TouristTabBar() {
   const { t } = useLang();
   return (
-    <TabBar tabs={[{ href: "/home", label: t.home, icon: "home" }, { href: "/stay", label: t.stay, icon: "bed" }, { href: "/tours", label: t.tour, icon: "route" }, { href: "/trips", label: t.trips, icon: "suitcase", also: ["/me"] }]} hideOn={["/login", "/signup", "/checkout", "/pay", "/cart", "/plan", "^/stay/\\d+$", "^/tours/\\d+$", "^/buddies/\\d+", "^/trips/\\d+/"]} />
+    <TabBar tabs={[{ href: "/home", label: t.home, icon: "home" }, { href: "/stay", label: t.stay, icon: "bed" }, { href: "/tours", label: t.tour, icon: "route" }, { href: "/trips", label: t.trips, icon: "suitcase" }]} hideOn={["/login", "/signup", "/checkout", "/pay", "/cart", "/plan", "^/stay/\\d+$", "^/tours/\\d+$", "^/buddies/\\d+", "^/trips/\\d+/"]} />
   );
 }
