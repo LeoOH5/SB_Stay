@@ -11,6 +11,7 @@ import { useLang } from "@/lib/i18n";
 import type { TokenOut } from "@/lib/types";
 
 const DEMO_PASSWORD = "demo1234";
+const ENGLISH_DEMO = "emma@example.com";
 const DEMOS = [
   { email: "emma@example.com", role: "여행자", who: "Emma · 미국" },
   { email: "jiwoo@a-univ.ac.kr", role: "버디", who: "지우 · 고려대" },
@@ -31,7 +32,7 @@ export default function Splash() {
     try {
       const r = await post<TokenOut>("/auth/login", { email, password: DEMO_PASSWORD });
       session.set(r.user, r.access_token);
-      set("ko");
+      set(email === ENGLISH_DEMO ? "en" : "ko"); // 외국인 여행자 데모(Emma)는 영어 화면으로
       router.push(homeFor(r.user.role));
     } catch (e) { setErr(errMsg(e)); setBusy(null); }
   }
