@@ -11,7 +11,7 @@ import { errMsg, THEMES } from "@/components/tourist/format";
 import { CourseSection } from "@/components/tourist/v3/course";
 import { hasXY, walkNote } from "@/components/tourist/v3/flow";
 import { get } from "@/lib/api";
-import { useLang } from "@/lib/i18n";
+import { tr, useLang } from "@/lib/i18n";
 import type { ListResponse, Tour } from "@/lib/types";
 
 export default function ToursPage() {
@@ -34,12 +34,12 @@ export default function ToursPage() {
 
   return (
     <>
-      <Hero title="코스" className="pb-2"
-        sub={tours ? `${free ? "무료 " : ""}AI 산책 코스 ${tours.length}개 · 장소에 닿으면 AI가 이야기를 들려줘요` : "장소에 닿으면 AI가 이야기를 들려줘요"}
+      <Hero title={tr("코스", "Walks")} className="pb-2"
+        sub={tours ? tr(`${free ? "무료 " : ""}AI 산책 코스 ${tours.length}개 · 장소에 닿으면 AI가 이야기를 들려줘요`, `${tours.length} ${free ? "free " : ""}AI walks · AI tells the story when you reach each stop`) : tr("장소에 닿으면 AI가 이야기를 들려줘요", "AI tells the story when you reach each stop")}
         right={
           <div className="-mr-1 flex shrink-0 items-center gap-1.5">
             <button type="button" onClick={() => setShowMap((v) => !v)} aria-pressed={showMap} className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-semibold ${showMap ? "border-navy bg-navy text-white" : "border-line text-ink"}`}>
-              <Icon name="pin" className="h-[18px] w-[18px]" />지도
+              <Icon name="pin" className="h-[18px] w-[18px]" />{tr("지도", "Map")}
             </button>
             <CartButton />
           </div>
@@ -47,17 +47,17 @@ export default function ToursPage() {
 
       <div className="px-5 pb-8 pt-3">
         <div className="flex flex-wrap gap-2">
-          <Chip selected={theme === ""} onClick={() => pick("")}>전체</Chip>
+          <Chip selected={theme === ""} onClick={() => pick("")}>{tr("전체", "All")}</Chip>
           {THEMES.map((t) => <Chip key={t.key} selected={theme === t.key} onClick={() => pick(t.key)}>{t.label}</Chip>)}
         </div>
         {showMap && tours && <KakaoMap className="mt-4" points={starts} />}
 
         <ErrorBox message={err} className="mt-4" />
         {!tours && !err && <Spinner />}
-        {tours && tours.length === 0 && <p className="py-8 text-center text-[14px] text-muted">이 테마의 코스가 아직 없어요.</p>}
+        {tours && tours.length === 0 && <p className="py-8 text-center text-[14px] text-muted">{tr("이 테마의 코스가 아직 없어요.", "No walks for this theme yet.")}</p>}
         <div className="mt-6 space-y-7">
           {(tours ?? []).map((t) => (
-            <Link key={t.id} href={`/tours/${t.id}`} className="block" aria-label={`${lang === "en" ? t.title_en : t.title} 코스 보기`}>
+            <Link key={t.id} href={`/tours/${t.id}`} className="block" aria-label={tr(`${t.title} 코스 보기`, `View ${t.title_en}`)}>
               <CourseSection tour={t} lang={lang} />
             </Link>
           ))}
@@ -65,7 +65,7 @@ export default function ToursPage() {
         {tours && tours.length > 0 && (
           <div className="mt-8 flex items-start gap-2.5 border-t border-line pt-5 text-[14px] leading-relaxed text-muted">
             <Icon name="users" className="mt-0.5 h-[18px] w-[18px] shrink-0 text-navy" />
-            <p>버디와 같이 걷고 싶다면 버디 요청에서 코스를 골라요. <Link href="/buddies" className="font-semibold text-navy">버디 보기 →</Link></p>
+            <p>{tr("버디와 같이 걷고 싶다면 버디 요청에서 코스를 골라요.", "Want to walk with a buddy? Pick a walk when you request one.")} <Link href="/buddies" className="font-semibold text-navy">{tr("버디 보기 →", "See buddies →")}</Link></p>
           </div>
         )}
         {tours && tours.length > 0 && <p className="mt-3 text-[12px] text-muted">{walkNote(tours.every((t) => t.route_source === "route") ? "route" : "estimate", lang)}</p>}

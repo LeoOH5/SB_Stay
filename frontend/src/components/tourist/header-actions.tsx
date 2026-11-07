@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { get, patch } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
-import { useLang } from "@/lib/i18n";
+import { tr, useLang } from "@/lib/i18n";
 import type { Lang, ListResponse, Notification, User } from "@/lib/types";
 import { BottomSheet } from "@/components/tourist";
 import { Icon } from "@/components/ui";
@@ -27,7 +27,7 @@ export function CartButton({ className }: { className?: string }) {
   const { items } = useCart();
   if (items.length === 0) return null;
   return (
-    <Link href="/cart" aria-label={`장바구니 ${items.length}개`} className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink hover:bg-gray-bg ${className ?? ""}`}>
+    <Link href="/cart" aria-label={tr(`장바구니 ${items.length}개`, `Cart, ${items.length} item${items.length === 1 ? "" : "s"}`)} className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink hover:bg-gray-bg ${className ?? ""}`}>
       <Icon name="bag" className="h-[21px] w-[21px]" />
       <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold leading-none text-white">{items.length}</span>
     </Link>
@@ -72,11 +72,11 @@ export function HeaderActions() {
     <>
       <div className="-mr-1 flex shrink-0 items-center gap-1.5 text-ink">
         <div className="relative">
-          <button type="button" onClick={() => setLangOpen((v) => !v)} className="flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-[13px] font-semibold text-ink hover:bg-gray-bg" aria-label="언어 선택">
+          <button type="button" onClick={() => setLangOpen((v) => !v)} className="flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-[13px] font-semibold text-ink hover:bg-gray-bg" aria-label={tr("언어 선택", "Language")}>
             <Icon name="globe" className="h-[18px] w-[18px]" />
             {lang === "en" ? "EN" : "KO"}
           </button>
-          {langOpen && <button type="button" aria-label="닫기" className="fixed inset-0 z-20 cursor-default" onClick={() => setLangOpen(false)} />}
+          {langOpen && <button type="button" aria-label={tr("닫기", "Close")} className="fixed inset-0 z-20 cursor-default" onClick={() => setLangOpen(false)} />}
           {langOpen && (
             <div className="absolute right-0 top-11 z-30 w-32 overflow-hidden rounded-xl bg-white py-1 text-ink shadow-lg ring-1 ring-line">
               {([["en", "English"], ["ko", "한국어"]] as const).map(([l, label]) => (
@@ -87,20 +87,20 @@ export function HeaderActions() {
         </div>
         <CartButton />
         {user && (
-          <button type="button" onClick={openNotis} className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-gray-bg" aria-label={`알림${unread ? ` ${unread}개` : ""}`}>
+          <button type="button" onClick={openNotis} className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-gray-bg" aria-label={tr(`알림${unread ? ` ${unread}개` : ""}`, `Notifications${unread ? `, ${unread} new` : ""}`)}>
             <Icon name="bell" className="h-[21px] w-[21px]" />
             {unread > 0 && <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold leading-none text-white">{unread}</span>}
           </button>
         )}
-        <Link href={meHref} aria-label={user ? "마이페이지" : "로그인"} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-bg text-[15px] font-bold text-navy">
+        <Link href={meHref} aria-label={user ? tr("마이페이지", "My page") : tr("로그인", "Log in")} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-bg text-[15px] font-bold text-navy">
           {user ? user.name.trim().charAt(0).toUpperCase() : <Icon name="user" className="h-[18px] w-[18px]" />}
         </Link>
       </div>
 
-      <BottomSheet open={open} onClose={() => setOpen(false)} title="알림">
-        {!user && <p className="py-6 text-center text-[14px] text-muted">로그인하면 예약 알림을 볼 수 있어요.</p>}
-        {user && !notis && <p className="py-6 text-center text-[14px] text-muted">불러오는 중…</p>}
-        {user && notis?.length === 0 && <p className="py-6 text-center text-[14px] text-muted">알림이 없어요.</p>}
+      <BottomSheet open={open} onClose={() => setOpen(false)} title={tr("알림", "Notifications")}>
+        {!user && <p className="py-6 text-center text-[14px] text-muted">{tr("로그인하면 예약 알림을 볼 수 있어요.", "Log in to see booking notifications.")}</p>}
+        {user && !notis && <p className="py-6 text-center text-[14px] text-muted">{tr("불러오는 중…", "Loading…")}</p>}
+        {user && notis?.length === 0 && <p className="py-6 text-center text-[14px] text-muted">{tr("알림이 없어요.", "No notifications.")}</p>}
         <div className="divide-y divide-line/60">
           {user && notis?.map((n) => (
             <div key={n.id} className="flex items-start gap-3 py-3">

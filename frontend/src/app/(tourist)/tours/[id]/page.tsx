@@ -13,17 +13,29 @@ import { AdInterstitial, FixedCourseNote, HelpSheet, QuestionLimit, QuestionsLef
 import { DAY_LABEL, errMsg, herePath, loginHref, okv } from "@/components/tourist/format";
 import { ArrowUp, BottomBar, InfoRow, SectionHead } from "@/components/tourist/v3";
 import { aboutDuration, hasXY, koDuration, walkNote, walkText } from "@/components/tourist/v3/flow";
-import { ApiError, get, post, won } from "@/lib/api";
+import { ApiError, get, post } from "@/lib/api";
 import { useUser } from "@/lib/auth";
-import { useLang } from "@/lib/i18n";
+import { money, tr, useLang } from "@/lib/i18n";
 import type { AiStory, ListResponse, Place, Tour } from "@/lib/types";
 
 /** 장소 한 줄 정보 — 운영 시간 · 휴관일 · 입장료 (DB 값) */
+const DAY_EN: Record<string, string> = { MON: "Mon", TUE: "Tue", WED: "Wed", THU: "Thu", FRI: "Fri", SAT: "Sat", SUN: "Sun" };
 function placeMeta(p?: Place): string {
   if (!p) return "";
-  const closed = p.closed_days?.length ? `${p.closed_days.map((d) => DAY_LABEL[d] ?? d).join("·")} 휴관` : "쉬는 날 없음";
-  return [p.hours, closed, p.fee > 0 ? won(p.fee) : "무료 입장", p.need_reservation ? "예약 필요" : ""].filter(Boolean).join(" · ");
+  const closed = p.closed_days?.length
+    ? tr(`${p.closed_days.map((d) => DAY_LABEL[d] ?? d).join("·")} 휴관`, `Closed ${p.closed_days.map((d) => DAY_EN[d] ?? d).join("·")}`)
+    : tr("쉬는 날 없음", "Open every day");
+  return [p.hours, closed, p.fee > 0 ? money(p.fee) : tr("무료 입장", "Free entry"), p.need_reservation ? tr("예약 필요", "Reservation needed") : ""].filter(Boolean).join(" · ");
 }
+
+/** 코스 설명·만나는 곳은 한국어만 있어서, 영어 화면용 문장을 시드 코스 id 로 둔다 (없으면 한국어 그대로) */
+const TOUR_EN: Record<number, { description: string; meeting_point: string }> = {
+  3: { description: "From the Seongbuk Museum of Modern Literature past Suyeonsanbang and Simujang to Gilsangsa — a walk through the homes and writings of modern Korean writers.", meeting_point: "Hansung Univ. Station, Exit 5" },
+  4: { description: "Simujang, the fortress wall trail and the Seongbuk-dong alleys where traces of the independence movement remain.", meeting_point: "Hansung Univ. Station, Exit 6" },
+  5: { description: "From Jeongneung along the Bugak section of the Seoul City Wall to the Seonjam Museum — a history walk linking a Joseon royal tomb and the fortress wall.", meeting_point: "Jeongneung ticket booth" },
+  6: { description: "From Gilsangsa through Seongbuk-dong's hanok alleys to the Seonjam Museum.", meeting_point: "Hansung Univ. Station, Exit 5" },
+  7: { description: "Links Jeongneung, the tomb of Queen Sindeok, with Heungcheonsa, the temple King Taejo built for her.", meeting_point: "In front of the Jeongneung ticket booth" },
+};
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -102,7 +114,7 @@ export default function CourseDetailPage() {
 
   return (
     <>
-      <TopBar back="/tours" title="코스" right={tour && my.free ? <button type="button" onClick={() => setHelpOpen(true)} className="font-semibold text-navy">도움이 필요해요</button> : undefined} />
+      <TopBar back="/tours" title={tr("코스", "Walk")} right={tour && my.free ? <button type="button" onClick={() => setHelpOpen(true)} className="font-semibold text-navy">{tr("도움이 필요해요", "I need help")}</button> : undefined} />
       <div className="px-5">
         <ErrorBox message={err} />
         {!tour && !err && <Spinner />}
@@ -110,21 +122,21 @@ export default function CourseDetailPage() {
       {tour && (
         <div className="px-5">
           <h1 className="pt-2 text-[26px] font-bold leading-[1.35] text-ink">{title}</h1>
-          {tour.description && <p className="mt-2 text-[15px] leading-relaxed text-muted">{tour.description}</p>}
+          {tour.description && <p className="mt-2 text-[15px] leading-relaxed text-muted">{tr(tour.description, TOUR_EN[tour.id]?.description ?? tour.description)}</p>}
 
           <div className="mt-4 divide-y divide-line">
-            <InfoRow label="걸리는 시간">
-              {aboutDuration(tour.duration_min, lang)} · 장소 {tour.places.length}곳
+            <InfoRow label={tr("걸리는 시간", "Time")}>
+              {aboutDuration(tour.duration_min, lang)} · {tr(`장소 ${tour.places.length}곳`, `${tour.places.length} stops`)}
               <span className="mt-0.5 block text-[13px] font-normal text-muted">
-                머무는 {koDuration(tour.stay_min_total)} + 걷는 {tour.walk_min_total}분 · {tour.walk_m_total.toLocaleString("ko-KR")}m
-                {!tour.walk_complete && " · 걷는 시간 일부 빠짐"}
+                {tr(`머무는 ${koDuration(tour.stay_min_total)} + 걷는 ${tour.walk_min_total}분 · ${tour.walk_m_total.toLocaleString("ko-KR")}m`, `${tour.stay_min_total} min at stops + ${tour.walk_min_total} min walking · ${tour.walk_m_total.toLocaleString("en-US")} m`)}
+                {!tour.walk_complete && tr(" · 걷는 시간 일부 빠짐", " · some walking time missing")}
               </span>
               <span className="mt-0.5 block text-[12px] font-normal text-muted">{walkNote(tour.route_source, lang)}</span>
             </InfoRow>
-            <InfoRow label="가격"><span className="text-navy">{tour.price === 0 ? `무료${anyFee ? " (입장료는 장소마다)" : ""}` : won(tour.price)}</span></InfoRow>
-            <InfoRow label="시작">{tour.meeting_point}</InfoRow>
-            {my.free && my.left !== null && <InfoRow label="AI 질문">오늘 남은 질문 {my.left}/{my.limit}</InfoRow>}
-            {my.plan === "buddy" && <InfoRow label="AI 질문">제한 없음 · 광고 없음</InfoRow>}
+            <InfoRow label={tr("가격", "Price")}><span className="text-navy">{tour.price === 0 ? tr(`무료${anyFee ? " (입장료는 장소마다)" : ""}`, `Free${anyFee ? " (entry fees vary by stop)" : ""}`) : money(tour.price)}</span></InfoRow>
+            <InfoRow label={tr("시작", "Start")}>{tr(tour.meeting_point, TOUR_EN[tour.id]?.meeting_point ?? tour.meeting_point)}</InfoRow>
+            {my.free && my.left !== null && <InfoRow label={tr("AI 질문", "AI questions")}>{tr(`오늘 남은 질문 ${my.left}/${my.limit}`, `${my.left}/${my.limit} left today`)}</InfoRow>}
+            {my.plan === "buddy" && <InfoRow label={tr("AI 질문", "AI questions")}>{tr("제한 없음 · 광고 없음", "Unlimited · no ads")}</InfoRow>}
           </div>
           {my.free && <FixedCourseNote courseId={tour.id} className="mt-4" />}
 
@@ -134,7 +146,7 @@ export default function CourseDetailPage() {
             onSelect={(i) => { const pid = mapPlaces[i]?.id; if (pid !== undefined && pid !== placeId) select(pid); }} />
 
           <div ref={stopsRef} className="scroll-mt-4">
-            <SectionHead className="mt-8" title="코스" right="눌러서 AI 이야기 듣기" />
+            <SectionHead className="mt-8" title={tr("코스", "Stops")} right={tr("눌러서 AI 이야기 듣기", "Tap for the AI story")} />
           </div>
           <ol className="mt-4">
             {orderedPlaces.map((p, i) => {
@@ -145,7 +157,7 @@ export default function CourseDetailPage() {
               return (
                 <li key={p.id} className="relative flex gap-4 pb-6">
                   {!last && <span className="absolute bottom-0 left-[11px] top-7 border-l-[1.5px] border-dashed border-[#B8BFC8]" aria-hidden />}
-                  <button type="button" onClick={() => select(p.id)} aria-expanded={open} aria-label={`${i + 1}번 장소 이야기`}
+                  <button type="button" onClick={() => select(p.id)} aria-expanded={open} aria-label={tr(`${i + 1}번 장소 이야기`, `Story for stop ${i + 1}`)}
                     className={cn("relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] text-[12px] font-bold", open ? "border-ink bg-ink text-white" : "border-ink bg-white text-ink")}>{i + 1}</button>
                   <div className="min-w-0 flex-1">
                     <button type="button" onClick={() => select(p.id)} className="block text-left">
@@ -157,17 +169,17 @@ export default function CourseDetailPage() {
                         {info?.photo_url && (
                           <figure className="mb-3 overflow-hidden rounded-[12px] bg-gray-bg">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={info.photo_url} alt={info.name} className="h-40 w-full object-cover" loading="lazy" />
-                            {info.photo_credit && <figcaption className="px-2 py-1 text-[11px] text-muted">사진: {info.photo_credit}</figcaption>}
+                            <img src={info.photo_url} alt={tr(info.name, info.name_en)} className="h-40 w-full object-cover" loading="lazy" />
+                            {info.photo_credit && <figcaption className="px-2 py-1 text-[11px] text-muted">{tr("사진", "Photo")}: {info.photo_credit}</figcaption>}
                           </figure>
                         )}
                         <div className="border-l-[3px] border-navy py-1 pl-4">
-                          <div className="text-[13px] font-bold text-navy">AI가 자료에서 찾은 이야기</div>
-                          {!story && <p className="mt-1.5 text-[14px] text-muted">이야기를 찾는 중…</p>}
+                          <div className="text-[13px] font-bold text-navy">{tr("AI가 자료에서 찾은 이야기", "Story AI found in the sources")}</div>
+                          {!story && <p className="mt-1.5 text-[14px] text-muted">{tr("이야기를 찾는 중…", "Finding the story…")}</p>}
                           {story && (
                             <>
                               <p className="mt-1.5 text-[15.5px] leading-relaxed text-ink">{story.answer}</p>
-                              {story.sources.length > 0 && <p className="mt-2 text-[13px] text-muted">출처: {story.sources.map((s) => s.title).join(" · ")}</p>}
+                              {story.sources.length > 0 && <p className="mt-2 text-[13px] text-muted">{tr("출처", "Sources")}: {story.sources.map((s) => s.title).join(" · ")}</p>}
                             </>
                           )}
                         </div>
@@ -177,17 +189,17 @@ export default function CourseDetailPage() {
                             {x.a ? (
                               <>
                                 <p className="mt-1.5 text-[15.5px] leading-relaxed text-ink">{x.a.answer}</p>
-                                {!x.a.grounded && <p className="mt-1 text-[13px] text-orange-ink">자료에 없는 내용이라 확실하지 않아요.</p>}
+                                {!x.a.grounded && <p className="mt-1 text-[13px] text-orange-ink">{tr("자료에 없는 내용이라 확실하지 않아요.", "This isn't in our sources, so it may not be accurate.")}</p>}
                               </>
-                            ) : <p className="mt-1.5 text-[14px] text-muted">답을 찾는 중…</p>}
+                            ) : <p className="mt-1.5 text-[14px] text-muted">{tr("답을 찾는 중…", "Finding an answer…")}</p>}
                           </div>
                         ))}
                         {my.free && my.left === 0 ? <QuestionLimit limit={my.limit} courseId={tour.id} className="mt-5" /> : (
                           <>
                             <form className="relative mt-4" onSubmit={(e) => { e.preventDefault(); void ask(); }}>
                               <input className="h-12 w-full rounded-full border border-line bg-white pl-4 pr-14 text-[15px] text-ink placeholder:text-muted focus:border-navy focus:outline-none"
-                                placeholder="이 장소에 대해 물어보세요" value={question} onChange={(e) => setQuestion(e.target.value)} aria-label="장소 질문" />
-                              <button type="submit" disabled={askBusy || !question.trim()} aria-label="보내기"
+                                placeholder={tr("이 장소에 대해 물어보세요", "Ask about this place")} value={question} onChange={(e) => setQuestion(e.target.value)} aria-label={tr("장소 질문", "Question about this place")} />
+                              <button type="submit" disabled={askBusy || !question.trim()} aria-label={tr("보내기", "Send")}
                                 className="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-navy text-white disabled:opacity-40"><ArrowUp className="h-[18px] w-[18px]" /></button>
                             </form>
                             {my.free && my.left !== null && <QuestionsLeft left={my.left} limit={my.limit} className="mt-2 pl-4" />}
@@ -201,20 +213,20 @@ export default function CourseDetailPage() {
               );
             })}
           </ol>
-          <p className="pb-6 text-[14px] leading-relaxed text-muted">AI는 장소마다 확인한 자료 안에서만 답해요. 자료에 없으면 없다고 말해요.</p>
+          <p className="pb-6 text-[14px] leading-relaxed text-muted">{tr("AI는 장소마다 확인한 자료 안에서만 답해요. 자료에 없으면 없다고 말해요.", "AI answers only from checked sources for each place. If it's not there, it says so.")}</p>
           {my.free && (
             <div className="grid grid-cols-2 gap-3 pb-8">
-              <Button variant="secondary" onClick={() => (user ? setSurveyOpen(true) : router.push(loginHref(herePath())))}>코스 다 걸었어요</Button>
-              <Button variant="ghost" onClick={() => setHelpOpen(true)}>도움이 필요해요</Button>
+              <Button variant="secondary" onClick={() => (user ? setSurveyOpen(true) : router.push(loginHref(herePath())))}>{tr("코스 다 걸었어요", "I finished the walk")}</Button>
+              <Button variant="ghost" onClick={() => setHelpOpen(true)}>{tr("도움이 필요해요", "I need help")}</Button>
             </div>
           )}
 
           <BottomBar>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="secondary" onClick={walkAlone}>혼자 걷기</Button>
-              <Button onClick={() => router.push(`/buddies?course=${tour.id}`)}>버디와 걷기</Button>
+              <Button variant="secondary" onClick={walkAlone}>{tr("혼자 걷기", "Walk on my own")}</Button>
+              <Button onClick={() => router.push(`/buddies?course=${tour.id}`)}>{tr("버디와 걷기", "Walk with a buddy")}</Button>
             </div>
-            <p className="mt-2.5 text-center text-[13px] text-muted">버디와 걸으면 이 코스가 버디 요청에 함께 들어가요</p>
+            <p className="mt-2.5 text-center text-[13px] text-muted">{tr("버디와 걸으면 이 코스가 버디 요청에 함께 들어가요", "With a buddy, this walk is added to your buddy request")}</p>
           </BottomBar>
           {adFor !== null && <AdInterstitial seed={adFor} courseId={tour.id} onDone={() => setAdFor(null)} />}
           <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} courseId={tour.id} />
