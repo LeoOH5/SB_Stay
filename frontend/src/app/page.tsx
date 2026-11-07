@@ -24,7 +24,7 @@ export default function Splash() {
   const { set } = useLang();
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const start = () => { set("ko"); router.push(user ? homeFor(user.role) : "/home"); };
+  const start = () => { set("ko"); router.push(user ? homeFor(user.role) : "/login"); };
 
   async function demo(email: string) {
     setBusy(email); setErr(null);
