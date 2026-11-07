@@ -75,3 +75,26 @@ def test_calendar_connect_and_disconnect(client, buddy, tourist, monkeypatch, re
     assert client.get("/api/v1/auth/me", headers=buddy).json()["calendar_connected"] is True
     r = client.delete("/api/v1/auth/google/calendar", headers=buddy)
     assert r.json()["calendar_connected"] is False
+
+
+def test_demo_accounts_cannot_change_role(client, tourist):
+    """심사 중 데모 계정(Emma 등)이 버디로 바뀌어 데모 시나리오가 깨지지 않게 막는다"""
+    r = client.patch("/api/v1/auth/me/role", json={"role": "buddy"}, headers=tourist)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "DEMO_LOCKED"
+    assert client.get("/api/v1/auth/me", headers=tourist).json()["role"] == "tourist"
+
+
+def test_back_to_tourist_drops_pending_application(client, reset_db):
+    """버디로 바꿔 지원(승인 대기)하다 여행자로 돌아가면 지원서가 지워져 운영자 승인 대기 목록에 남지 않는다"""
+    from tests.conftest import login
+    r = client.post("/api/v1/auth/signup", json={"name": "Back", "email": "back@example.org", "password": "password1"})
+    h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    client.patch("/api/v1/auth/me/role", json={"role": "buddy"}, headers=h)
+    v = client.post("/api/v1/buddy/apply/verify", json={"email": "back@korea.ac.kr", "code": "123456", "birth_date": "2003-01-01", "korean_national": True}, headers=h)
+    assert v.status_code == 200 and v.json()["status"] == "pending"
+    op = login(client, "operator@sbstay.app")
+    names = lambda: [b["name"] for b in client.get("/api/v1/admin/buddies", params={"status": "pending"}, headers=op).json()["items"]]
+    assert "Back" in names()
+    r = client.patch("/api/v1/auth/me/role", json={"role": "tourist"}, headers=h)
+    assert r.status_code == 200 and r.json()["role"] == "tourist" and r.json()["university_id"] is None
+    assert "Back" not in names()
