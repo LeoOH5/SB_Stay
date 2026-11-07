@@ -1,6 +1,9 @@
 """인증 — AU-01 구글 로그인 · AU-02 회원가입 · AU-03 내 정보 · AU-04 설정 · AU-05 데모 로그인 · AU-06 역할 · AU-07/08 캘린더 · AU-09 이용 방식"""
+import json
+from pathlib import Path
+
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -9,6 +12,9 @@ from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.core.errors import api_error
 from app.core.security import create_access_token, hash_password, verify_password
+from app.models.booking import MealClaim, Report
+from app.models.content import Package
+from app.models.supply import BuddyActivity, BuddyAvailability, BuddyProfile
 from app.models.user import User
 from app.schemas.auth import (
     DemoLoginIn,
@@ -111,6 +117,24 @@ def update_me(body: MeUpdateIn, user: User = Depends(get_current_user), db: Sess
     return user
 
 
+# 시드 데모 계정 — 심사 중 누가 버디 지원을 눌러도 데모 시나리오(Emma 예약 등)가 깨지지 않게 역할 변경을 막는다
+DEMO_EMAILS = frozenset(u["email"] for u in json.loads((Path(__file__).resolve().parents[1] / "seeds" / "data" / "users.json").read_text()))
+
+
+def drop_pending_application(db: Session, user: User) -> None:
+    """버디 → 여행자로 돌아가면, 아직 승인 전이고 활동 기록이 없는 지원서는 지운다 (운영자 승인 대기 목록에 남지 않게)"""
+    prof = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
+    if not prof or prof.status != "pending":
+        return
+    used = any(db.scalar(select(exists().where(col == prof.id))) for col in
+               (MealClaim.buddy_id, Report.buddy_id, BuddyActivity.buddy_id, Package.buddy_profile_id))
+    if used:
+        return
+    db.execute(delete(BuddyAvailability).where(BuddyAvailability.buddy_id == prof.id))
+    db.delete(prof)
+    user.university_id = None
+
+
 @router.patch("/me/role", response_model=UserOut)
 def set_role(body: RoleIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> User:
     """AU-06: 첫 로그인 후 역할 선택 (tourist | buddy). buddy의 대학은 university_id로 주거나 지원 단계(학교 메일 인증)에서 정해진다.
@@ -119,6 +143,10 @@ def set_role(body: RoleIn, user: User = Depends(get_current_user), db: Session =
         raise api_error(422, "VALIDATION", "role은 tourist | buddy")
     if user.role in ("univ_admin", "operator"):
         raise api_error(409, "CONFLICT", "관리자 계정은 역할을 바꿀 수 없습니다")
+    if user.email in DEMO_EMAILS and body.role != user.role:
+        raise api_error(409, "DEMO_LOCKED", "데모 계정은 역할을 바꿀 수 없어요. 새 계정을 만들어 버디 지원을 해 보세요")
+    if body.role == "tourist" and user.role == "buddy":
+        drop_pending_application(db, user)
     if body.role == "buddy" and body.university_id:
         user.university_id = body.university_id
     user.role = body.role
