@@ -2,7 +2,8 @@
 // 내 여행(T16)·후기(T20)·앨범(T21)·신고(T22)·버디 바꾸기(T23) 공용 조각 — 한국어 날짜, 아바타, 타임라인 점, 사진 타일, 아래 버튼 줄
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, cn } from "@/components/ui";
-import { okv, errMsg } from "@/components/tourist/format";
+import { biRecord, dowEn, monEn, okv, errMsg } from "@/components/tourist/format";
+import { curLang, tr } from "@/lib/i18n";
 import { get } from "@/lib/api";
 import type { Booking, BookingItem } from "@/lib/types";
 
@@ -13,19 +14,20 @@ const parts = (s: string) => s.split("-").map(Number) as [number, number, number
 export function krDate(s?: string | null): string {
   if (!s) return "";
   const [, m, d] = parts(s);
-  return `${m}월 ${d}일`;
+  return curLang() === "en" ? `${monEn(m)} ${d}` : `${m}월 ${d}일`;
 }
 /** "2027-01-13" → "1월 13일 수" */
 export function krDateDow(s: string): string {
   const [y, m, d] = parts(s);
-  return `${m}월 ${d}일 ${DOW[new Date(y, m - 1, d).getDay()]}`;
+  const w = new Date(y, m - 1, d).getDay();
+  return curLang() === "en" ? `${dowEn(w)}, ${monEn(m)} ${d}` : `${m}월 ${d}일 ${DOW[w]}`;
 }
 /** 같은 달이면 "1월 12일 – 15일", 아니면 "1월 30일 – 2월 2일" */
 export function krRange(from?: string | null, to?: string | null): string {
   if (!from) return "";
   if (!to || to === from) return krDate(from);
   const [, fm] = parts(from), [, tm, td] = parts(to);
-  return fm === tm ? `${krDate(from)} – ${td}일` : `${krDate(from)} – ${krDate(to)}`;
+  return fm === tm ? `${krDate(from)} – ${curLang() === "en" ? td : `${td}일`}` : `${krDate(from)} – ${krDate(to)}`;
 }
 export const nightsOf = (from: string, to: string) => {
   const [fy, fm, fd] = parts(from), [ty, tm, td] = parts(to);
@@ -35,6 +37,7 @@ export const nightsOf = (from: string, to: string) => {
 export function hoursLabel(min?: number | null): string {
   const m = min ?? 120;
   const h = Math.floor(m / 60), r = m % 60;
+  if (curLang() === "en") return h && r ? `${h} hr ${r} min` : h ? `${h} hr` : `${r} min`;
   return h && r ? `${h}시간 ${r}분` : h ? `${h}시간` : `${r}분`;
 }
 
@@ -46,7 +49,7 @@ export function bookingSpan(b: Booking): { from: string; to: string } {
 
 /** "지우와 동네 걷기" → "지우" (버디 이름) */
 export function buddyNameOf(it: Pick<BookingItem, "title">): string {
-  return it.title.replace(/\s*[와과]\s*동네 걷기.*$/, "").replace(/\s*동네 걷기.*$/, "").trim() || "버디";
+  return it.title.replace(/\s*[와과]\s*동네 걷기.*$/, "").replace(/\s*동네 걷기.*$/, "").replace(/^Walk with\s+/i, "").replace(/\s+neighborhood walk.*$/i, "").trim() || tr("버디", "Buddy");
 }
 const batchim = (name: string) => { const c = name.charCodeAt(name.length - 1); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0; };
 /** 받침 있으면 "과", 없으면 "와" */
@@ -56,7 +59,7 @@ export const iga = (name: string) => (batchim(name) ? "이" : "가");
 /** 받침(ㄹ 제외) 있으면 "으로", 없으면 "로" */
 export const euro = (name: string) => { const c = name.charCodeAt(name.length - 1); return batchim(name) && (c - 0xac00) % 28 !== 8 ? "으로" : "로"; };
 
-export const LANG_KO: Record<string, string> = { ko: "한국어", en: "영어", ja: "일본어", zh: "중국어" };
+export const LANG_KO: Record<string, string> = biRecord<string>({ ko: "한국어", en: "영어", ja: "일본어", zh: "중국어" }, { ko: "Korean", en: "English", ja: "Japanese", zh: "Chinese" });
 
 /** GET /bookings/{id} — 페이지 공용 */
 export function useBooking(id: string | undefined) {
@@ -130,7 +133,7 @@ export function StarRow({ value, onChange, size = "h-5 w-5", gap = "gap-2", labe
           </svg>
         );
         return onChange ? (
-          <button key={n} type="button" role="radio" aria-checked={n === value} aria-label={`${label ? `${label} ` : ""}${n}점`} onClick={() => onChange(n)} className="-m-1 p-1">{star}</button>
+          <button key={n} type="button" role="radio" aria-checked={n === value} aria-label={`${label ? `${label} ` : ""}${tr(`${n}점`, `${n} star${n === 1 ? "" : "s"}`)}`} onClick={() => onChange(n)} className="-m-1 p-1">{star}</button>
         ) : <span key={n}>{star}</span>;
       })}
     </div>

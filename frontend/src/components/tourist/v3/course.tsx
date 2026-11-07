@@ -2,7 +2,7 @@
 // v3.5 코스 목록(T07) C안 — 장소마다 사진 + 한국어·영어 이름, 장소 사이 세로선 위에 걷는 구간 (도보 N분 · Mm)
 import { useState } from "react";
 import { Icon, cn } from "@/components/ui";
-import type { L } from "@/lib/i18n";
+import { tr, type L } from "@/lib/i18n";
 import type { Tour, TourPlace } from "@/lib/types";
 import { courseMeta, walkText } from "./flow";
 
@@ -21,7 +21,7 @@ export function PlaceThumb({ place, className }: { place: Pick<TourPlace, "id" |
       </div>
     );
   }
-  const credit = place.photo_credit ? `사진: ${place.photo_credit}` : undefined;
+  const credit = place.photo_credit ? tr(`사진: ${place.photo_credit}`, `Photo: ${place.photo_credit}`) : undefined;
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={place.photo_url} alt={place.name} title={credit} loading="lazy" onError={() => setFailed(true)} className={cn(box, "object-cover")} />;
 }

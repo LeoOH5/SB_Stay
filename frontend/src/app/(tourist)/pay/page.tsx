@@ -7,7 +7,7 @@ import { Button, Card, Chip, Hero, Spinner } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { errMsg, okv } from "@/components/tourist/format";
 import { get, post, won } from "@/lib/api";
-import { useLang } from "@/lib/i18n";
+import { money, tr, useLang } from "@/lib/i18n";
 import { loadPayPal, PAYPAL_CLIENT_ID } from "@/lib/paypal";
 import { loadTossPayments, TOSS_CLIENT_KEY, type PaymentOrder } from "@/lib/toss";
 import type { Booking } from "@/lib/types";
@@ -19,7 +19,7 @@ interface Methods { toss: boolean; paypal: boolean; usd_krw_rate: number }
 function Pay() {
   const params = useSearchParams();
   const router = useRouter();
-  const { lang } = useLang();
+  const { lang, currency } = useLang();
   const bookingId = Number(params.get("booking"));
   const [booking, setBooking] = useState<Booking | null>(null);
   const [avail, setAvail] = useState<Methods | null>(null);
@@ -110,7 +110,7 @@ function Pay() {
     } catch (e) { setErr(errMsg(e)); setBusy(false); }
   };
 
-  if (!bookingId) return <div className="px-5 pt-4"><ErrorBox message="결제할 예약이 없어요" /></div>;
+  if (!bookingId) return <div className="px-5 pt-4"><ErrorBox message={tr("결제할 예약이 없어요", "No booking to pay for")} /></div>;
   const usd = booking && avail ? Math.ceil((booking.total_price / avail.usd_krw_rate) * 100) / 100 : null;
 
   return (
@@ -119,19 +119,19 @@ function Pay() {
         <Card className="flex items-center justify-between gap-3">
           <div className="min-w-0"><div className="text-[12px] text-muted">{lang === "en" ? "Booking" : "예약"} {booking.code}</div><div className="text-[13px] text-ink break-keep">{booking.items.map((i) => i.title).join(" · ")}</div></div>
           <div className="shrink-0 text-right">
-            <div className="text-[20px] font-bold text-navy">{won(booking.total_price)}</div>
-            {method === "paypal" && usd !== null && <div className="text-[12px] text-muted">≈ ${usd.toFixed(2)} USD</div>}
+            <div className="text-[20px] font-bold text-navy">{money(booking.total_price)}</div>
+            {method === "paypal" && usd !== null && currency !== "USD" && <div className="text-[12px] text-muted">≈ ${usd.toFixed(2)} USD</div>}
           </div>
         </Card>
       )}
 
       {avail && avail.toss && avail.paypal && (
         <div className="grid grid-cols-2 gap-2">
-          <Chip selected={method === "toss"} onClick={() => setPicked("toss")} className="justify-center">국내 카드·간편결제</Chip>
+          <Chip selected={method === "toss"} onClick={() => setPicked("toss")} className="justify-center">{tr("국내 카드·간편결제", "Korean card · easy pay")}</Chip>
           <Chip selected={method === "paypal"} onClick={() => setPicked("paypal")} className="justify-center">Overseas card · PayPal</Chip>
         </div>
       )}
-      {avail && !avail.toss && !avail.paypal && <ErrorBox message="사용할 수 있는 결제수단이 없어요. 결제 키 설정을 확인해 주세요." />}
+      {avail && !avail.toss && !avail.paypal && <ErrorBox message={tr("사용할 수 있는 결제수단이 없어요. 결제 키 설정을 확인해 주세요.", "No payment method is available. Please check the payment key settings.")} />}
       {!avail && !err && <Spinner />}
 
       {/* 두 영역 모두 그려 두고 숨기기만 한다 (위젯이 다시 그려지지 않게) */}
@@ -139,7 +139,7 @@ function Pay() {
         {!tossReady && !err && method === "toss" && <Spinner />}
         <div id="payment-method" />
         <div id="agreement" />
-        {tossReady && tossOrder && <Button onClick={payToss} disabled={busy}>{busy ? "결제창 여는 중…" : `${won(tossOrder.amount)} 결제하기`}</Button>}
+        {tossReady && tossOrder && <Button onClick={payToss} disabled={busy}>{busy ? tr("결제창 여는 중…", "Opening payment…") : tr(`${won(tossOrder.amount)} 결제하기`, `Pay ${won(tossOrder.amount)}`)}</Button>}
       </div>
       <div className={method === "paypal" ? "space-y-3" : "hidden"}>
         {!paypalReady && !err && method === "paypal" && <Spinner />}
@@ -152,16 +152,17 @@ function Pay() {
       <p className="text-[12px] leading-relaxed text-muted">
         {method === "paypal"
           ? `Charged in USD at a fixed rate of ₩${avail?.usd_krw_rate.toLocaleString() ?? "1,400"} = $1. Refunds follow the same policy in USD.`
-          : "테스트 결제는 실제로 돈이 빠져나가지 않아요. 숙박·버디가 거절되면 해당 금액은 환불돼요."}
+          : tr("테스트 결제는 실제로 돈이 빠져나가지 않아요. 숙박·버디가 거절되면 해당 금액은 환불돼요.", "Test payments don't charge real money. If a stay or buddy is declined, that amount is refunded. Korean cards are charged in KRW.")}
       </p>
     </div>
   );
 }
 
 export default function PayPage() {
+  useLang();
   return (
     <>
-      <Hero back="/trips" title="Payment" sub="국내 결제는 토스페이먼츠, 해외 카드는 PayPal" />
+      <Hero back="/trips" title={tr("결제", "Payment")} sub={tr("국내 결제는 토스페이먼츠, 해외 카드는 PayPal", "Korean cards via Toss Payments, international cards via PayPal")} />
       <Suspense fallback={<Spinner />}><Pay /></Suspense>
     </>
   );

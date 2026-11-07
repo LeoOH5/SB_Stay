@@ -22,10 +22,10 @@ export default function Splash() {
         <div className="mt-3 text-[14px] font-bold tracking-[0.3em] text-navy">SB STAY</div>
         <p className="mt-6 text-[15px] leading-relaxed text-muted">성북구와 대학이 함께 여는<br />방학 기숙사 스테이</p>
         <p className="mt-5 max-w-[300px] text-[13px] leading-relaxed text-muted">
-          방학 동안 비는 성북구 대학 기숙사에 묵고, 지역 코스와 대학생 버디 가이드를 한 번에 예약하는 여행 서비스입니다.
+          방학 동안 비는 성북구 대학 기숙사에 묵고, 동네 대학생 버디와 함께 걷는 여행 서비스입니다.
         </p>
         <p className="mt-2 max-w-[300px] text-[12.5px] leading-relaxed text-muted">
-          Stay in Seongbuk university dorms during school breaks, and book local tours with student buddies.
+          Stay in Seongbuk university dorms during school breaks, and walk the neighborhood with a local student buddy.
         </p>
       </div>
       <div className="space-y-3">

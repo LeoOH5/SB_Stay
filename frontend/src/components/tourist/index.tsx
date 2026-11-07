@@ -3,10 +3,15 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Banner, Card, LinkButton, TagChip, cn } from "@/components/ui";
+import { tr } from "@/lib/i18n";
 import type { ItemType } from "@/lib/types";
 import { TYPE_LABEL, loginHref } from "./format";
 
+/** 버디·어드민 화면은 한국어만 (버디 화면도 이 시트를 같이 쓴다) */
+const koOnly = (path: string | null) => !!path && (path.startsWith("/buddy") || path.startsWith("/admin"));
+
 export function BottomSheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title?: string; children: ReactNode }) {
+  const path = usePathname();
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40" onClick={onClose} role="dialog" aria-modal="true">
@@ -14,7 +19,7 @@ export function BottomSheet({ open, onClose, title, children }: { open: boolean;
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-[16px] font-bold text-ink">{title}</h3>
-          <button type="button" onClick={onClose} className="text-[13px] text-muted">닫기</button>
+          <button type="button" onClick={onClose} className="text-[13px] text-muted">{koOnly(path) ? "닫기" : tr("닫기", "Close")}</button>
         </div>
         {children}
       </div>
@@ -36,9 +41,9 @@ export function LoginRequired({ what }: { what: string }) {
   const path = usePathname();
   return (
     <Card tint className="text-center py-8">
-      <div className="text-[16px] font-semibold text-ink">{what}은 로그인 후 볼 수 있어요</div>
-      <p className="mt-1 text-[13px] text-muted">데모 계정으로 바로 로그인할 수 있어요.</p>
-      <LinkButton href={loginHref(path)} className="mt-4">로그인하러 가기</LinkButton>
+      <div className="text-[16px] font-semibold text-ink">{tr(`${what}은 로그인 후 볼 수 있어요`, `Log in to see ${what}`)}</div>
+      <p className="mt-1 text-[13px] text-muted">{tr("데모 계정으로 바로 로그인할 수 있어요.", "You can log in right away with a demo account.")}</p>
+      <LinkButton href={loginHref(path)} className="mt-4">{tr("로그인하러 가기", "Log in")}</LinkButton>
     </Card>
   );
 }
@@ -53,7 +58,7 @@ export function Stars({ value, onChange, size = "text-[18px]" }: { value: number
     <span className={cn("inline-flex", size, "text-orange")}>
       {[1, 2, 3, 4, 5].map((n) =>
         onChange ? (
-          <button key={n} type="button" onClick={() => onChange(n)} className={cn("px-0.5", n > value && "opacity-30")} aria-label={`${n}점`}>★</button>
+          <button key={n} type="button" onClick={() => onChange(n)} className={cn("px-0.5", n > value && "opacity-30")} aria-label={tr(`${n}점`, `${n} star${n === 1 ? "" : "s"}`)}>★</button>
         ) : (
           <span key={n} className={cn(n > value && "opacity-30")}>★</span>
         ),

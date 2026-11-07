@@ -3,6 +3,7 @@
 // v3.8 legs[i].path(점 i → i+1 실제 도보 경로, OpenStreetMap)가 있으면 선을 그 길을 따라 그리고 '경로 © OpenStreetMap'을 붙인다.
 import { useEffect, useRef, useState } from "react";
 import { MapEmbed } from "@/components/ui";
+import { tr } from "@/lib/i18n";
 import type { LatLng } from "@/lib/types";
 
 export interface MapPoint { lat: number; lng: number; label?: string }
@@ -158,7 +159,7 @@ export function KakaoMap({ points, legs, route = false, numbered = false, active
       <div ref={el} className={`overflow-hidden rounded-[14px] ring-1 ring-line/60 ${h}`} />
       {/* ODbL: 실제 도보 경로는 OpenStreetMap 자료 → 출처 표시 */}
       <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer"
-        className="absolute left-2 top-2 z-10 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] text-muted shadow-sm">경로 © OpenStreetMap</a>
+        className="absolute left-2 top-2 z-10 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] text-muted shadow-sm">{tr("경로 © OpenStreetMap", "Route © OpenStreetMap")}</a>
     </div>
   );
 }

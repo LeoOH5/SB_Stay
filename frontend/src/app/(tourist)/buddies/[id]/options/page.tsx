@@ -10,7 +10,8 @@ import { errMsg, okv } from "@/components/tourist/format";
 import { useSS } from "@/components/tourist/session";
 import { BottomBar, Headline, OutlineBox, Toggle, TotalLine, useHydrated } from "@/components/tourist/v3";
 import { SS_BUDDY_DRAFT, buddiesIn, clearDraft, iga, koDay, koDuration, saveDraft, wa, type BuddyDraft } from "@/components/tourist/v3/flow";
-import { get, won } from "@/lib/api";
+import { get } from "@/lib/api";
+import { money, tr, useLang, curLang } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
 import { ALBUM_FEE, MEAL_LIMIT, MEAL_MAX, buddyItemPrice, cleanOther, requestChips } from "@/lib/codes";
 import type { Buddy, BuddyRequestBody, Tour } from "@/lib/types";
@@ -18,6 +19,7 @@ import type { Buddy, BuddyRequestBody, Tour } from "@/lib/types";
 const DURATION = 120;
 
 export default function BuddyOptionsPage() {
+  useLang();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const cart = useCart();
@@ -47,8 +49,8 @@ export default function BuddyOptionsPage() {
       <>
         <TopBar back={`/buddies/${id}`} />
         <div className="px-5 py-10 text-center">
-          <p className="text-[15px] text-muted">버디와 만날 날짜를 먼저 골라 주세요.</p>
-          <Link href={`/buddies/${id}`} className="mt-3 inline-block text-[15px] font-semibold text-navy">버디 보러 가기</Link>
+          <p className="text-[15px] text-muted">{tr("버디와 만날 날짜를 먼저 골라 주세요.", "Please pick a date with your buddy first.")}</p>
+          <Link href={`/buddies/${id}`} className="mt-3 inline-block text-[15px] font-semibold text-navy">{tr("버디 보러 가기", "Go to buddy")}</Link>
         </div>
       </>
     );
@@ -58,7 +60,7 @@ export default function BuddyOptionsPage() {
   const walk = buddyItemPrice(fee, DURATION);
   const meals = draft.meal_count * MEAL_LIMIT;
   const total = buddyItemPrice(fee, DURATION, draft.meal_count, draft.album);
-  const reqText = requestChips(draft.request).filter((c) => !c.includes("천천히"));
+  const reqText = requestChips(draft.request, curLang()).filter((c) => !/천천히|slow/i.test(c));
   const set = (patch: Partial<BuddyDraft>) => saveDraft({ ...draft, ...patch });
 
   const addToCart = () => {
@@ -73,8 +75,8 @@ export default function BuddyOptionsPage() {
     // 버디 항목은 하나 — 이미 담긴 버디는 바꾼다
     buddiesIn(cart.items).forEach((i) => cart.remove("buddy", i.ref_id));
     cart.add({
-      type: "buddy", ref_id: buddy.id, title: `${buddy.name}${wa(buddy.name)} 동네 걷기`,
-      meta: `${koDay(draft.date)} ${draft.time}, ${koDuration(DURATION)}${tourCourse ? ` · ${tourCourse.title}` : ""}`,
+      type: "buddy", ref_id: buddy.id, title: tr(`${buddy.name}${wa(buddy.name)} 동네 걷기`, `Neighborhood walk with ${buddy.name}`),
+      meta: `${koDay(draft.date)} ${draft.time}, ${koDuration(DURATION)}${tourCourse ? ` · ${tr(tourCourse.title, tourCourse.title_en || tourCourse.title)}` : ""}`,
       price: total, date: draft.date, time: draft.time, duration_min: DURATION,
       request, course_id: draft.course_id, course_title: tourCourse?.title ?? null,
       meal_count: draft.meal_count, album: draft.album, hourly_fee: fee, university_id: buddy.university_id,
@@ -86,48 +88,48 @@ export default function BuddyOptionsPage() {
   return (
     <>
       <TopBar back={`/buddies/${id}/request`} />
-      <Headline className="pt-2" title="식사와 사진" sub="필요한 것만 더해요. 둘 다 안 골라도 돼요." />
+      <Headline className="pt-2" title={tr("식사와 사진", "Meals and photos")} sub={tr("필요한 것만 더해요. 둘 다 안 골라도 돼요.", "Add only what you need. Both are optional.")} />
       <div className="space-y-4 px-5 pb-6 pt-6">
         <ErrorBox message={err} />
         <OutlineBox>
           <div className="flex gap-3">
             <Icon name="fork" className="mt-0.5 h-[22px] w-[22px] text-ink" />
             <div>
-              <div className="text-[16px] font-semibold text-ink">식사 맡기기</div>
-              <p className="mt-1 text-[14.5px] leading-relaxed text-muted">{buddy ? `${buddy.name}${iga(buddy.name)}` : "버디가"} 식당을 고르고 먼저 계산해요. 영수증만큼만 쓰고 남은 돈은 돌려드려요.</p>
+              <div className="text-[16px] font-semibold text-ink">{tr("식사 맡기기", "Meals with your buddy")}</div>
+              <p className="mt-1 text-[14.5px] leading-relaxed text-muted">{tr(`${buddy ? `${buddy.name}${iga(buddy.name)}` : "버디가"} 식당을 고르고 먼저 계산해요. 영수증만큼만 쓰고 남은 돈은 돌려드려요.`, `${buddy ? buddy.name : "Your buddy"} picks the restaurant and pays first. Only the receipt amount is used; the rest is refunded.`)}</p>
             </div>
           </div>
           <div className="mt-5 flex items-center justify-between">
-            <span className="text-[15px] text-ink">식사 횟수</span>
+            <span className="text-[15px] text-ink">{tr("식사 횟수", "Meals")}</span>
             <div className="rounded-[14px] border border-line px-2 py-1.5">
-              <Stepper label="식사 횟수" value={draft.meal_count} min={0} max={MEAL_MAX} onChange={(meal_count) => set({ meal_count })} className="[&_button]:border-0" />
+              <Stepper label={tr("식사 횟수", "Meals")} value={draft.meal_count} min={0} max={MEAL_MAX} onChange={(meal_count) => set({ meal_count })} className="[&_button]:border-0" />
             </div>
           </div>
           <div className="mt-4 divide-y divide-line text-[15px]">
-            <div className="flex justify-between py-3"><span className="text-muted">1회 한도 (2인)</span><span className="font-bold text-ink">{won(MEAL_LIMIT)}</span></div>
-            <div className="flex justify-between py-3"><span className="text-muted">미리 맡기는 금액</span><span className="font-bold text-ink">{won(meals)}</span></div>
+            <div className="flex justify-between py-3"><span className="text-muted">{tr("1회 한도 (2인)", "Limit per meal (2 people)")}</span><span className="font-bold text-ink">{money(MEAL_LIMIT)}</span></div>
+            <div className="flex justify-between py-3"><span className="text-muted">{tr("미리 맡기는 금액", "Meal deposit")}</span><span className="font-bold text-ink">{money(meals)}</span></div>
           </div>
-          <p className="mt-2 text-[13.5px] text-muted">수수료 없음{reqText.length ? ` · ${reqText.join(", ")}가 버디에게 전달돼요` : ""}</p>
+          <p className="mt-2 text-[13.5px] text-muted">{tr("수수료 없음", "No fee")}{reqText.length ? tr(` · ${reqText.join(", ")}가 버디에게 전달돼요`, ` · Your buddy will know: ${reqText.join(", ")}`) : ""}</p>
         </OutlineBox>
 
         <OutlineBox>
           <div className="flex items-start gap-3">
             <Icon name="camera" className="mt-0.5 h-[22px] w-[22px] text-ink" />
             <div className="min-w-0 flex-1">
-              <div className="text-[16px] font-semibold text-ink">여행 앨범</div>
-              <p className="mt-1 text-[14.5px] leading-relaxed text-muted">{buddy ? `${buddy.name}${iga(buddy.name)}` : "버디가"} 찍어 준 사진을 앨범으로 모아 드려요.</p>
+              <div className="text-[16px] font-semibold text-ink">{tr("여행 앨범", "Photo record")}</div>
+              <p className="mt-1 text-[14.5px] leading-relaxed text-muted">{tr(`${buddy ? `${buddy.name}${iga(buddy.name)}` : "버디가"} 찍어 준 사진을 앨범으로 모아 드려요.`, `Photos ${buddy ? buddy.name : "your buddy"} takes, collected in one album.`)}</p>
             </div>
-            <Toggle label="여행 앨범" checked={draft.album} onChange={(album) => set({ album })} />
+            <Toggle label={tr("여행 앨범", "Photo record")} checked={draft.album} onChange={(album) => set({ album })} />
           </div>
-          <div className="mt-4 flex justify-between border-t border-line pt-3 text-[15px]"><span className="text-muted">앨범</span><span className="font-bold text-ink">{won(ALBUM_FEE)}</span></div>
+          <div className="mt-4 flex justify-between border-t border-line pt-3 text-[15px]"><span className="text-muted">{tr("앨범", "Photo record")}</span><span className="font-bold text-ink">{money(ALBUM_FEE)}</span></div>
         </OutlineBox>
-        <p className="text-[14px] text-muted">식사 기록과 사진은 여행이 끝나도 내 여행에 남아요.</p>
+        <p className="text-[14px] text-muted">{tr("식사 기록과 사진은 여행이 끝나도 내 여행에 남아요.", "Meal receipts and photos stay in My trips after your trip.")}</p>
       </div>
 
       <BottomBar>
-        <p className="text-[14px] text-muted">버디 {won(walk)}{draft.meal_count ? ` + 식사 ${won(meals)}` : ""}{draft.album ? ` + 앨범 ${won(ALBUM_FEE)}` : ""}</p>
-        <TotalLine className="mt-1.5" label="버디 합계" amount={won(total)} />
-        <Button className="mt-3" onClick={addToCart} disabled={!buddy}>장바구니에 담기</Button>
+        <p className="text-[14px] text-muted">{tr("버디", "Buddy")} {money(walk)}{draft.meal_count ? ` + ${tr("식사", "meals")} ${money(meals)}` : ""}{draft.album ? ` + ${tr("앨범", "photos")} ${money(ALBUM_FEE)}` : ""}</p>
+        <TotalLine className="mt-1.5" label={tr("버디 합계", "Buddy total")} amount={money(total)} />
+        <Button className="mt-3" onClick={addToCart} disabled={!buddy}>{tr("장바구니에 담기", "Add to cart")}</Button>
       </BottomBar>
     </>
   );

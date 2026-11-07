@@ -9,7 +9,7 @@ import { afterLogin, errMsg, loginHref } from "@/components/tourist/format";
 import { BottomBar, CheckRow, FieldLabel, Headline } from "@/components/tourist/v3";
 import { post } from "@/lib/api";
 import { session } from "@/lib/auth";
-import { useLang } from "@/lib/i18n";
+import { tr, useLang } from "@/lib/i18n";
 import type { Lang, TokenOut } from "@/lib/types";
 
 function SignupPage() {
@@ -28,10 +28,10 @@ function SignupPage() {
 
   const submit = async () => {
     setErr(null);
-    if (!name.trim() || !email.trim()) { setErr("이름과 이메일을 입력해 주세요"); return; }
-    if (pw.length < 8) { setErr("비밀번호는 8자 이상이어야 해요"); return; }
-    if (pw !== pw2) { setErr("비밀번호가 서로 달라요"); return; }
-    if (!agree) { setErr("이용약관과 개인정보 처리방침에 동의해 주세요"); return; }
+    if (!name.trim() || !email.trim()) { setErr(tr("이름과 이메일을 입력해 주세요", "Please enter your name and email")); return; }
+    if (pw.length < 8) { setErr(tr("비밀번호는 8자 이상이어야 해요", "Password must be at least 8 characters")); return; }
+    if (pw !== pw2) { setErr(tr("비밀번호가 서로 달라요", "Passwords don't match")); return; }
+    if (!agree) { setErr(tr("이용약관과 개인정보 처리방침에 동의해 주세요", "Please agree to the Terms and Privacy Policy")); return; }
     setBusy(true);
     try {
       const r = await post<TokenOut>("/auth/signup", { name: name.trim(), email: email.trim(), password: pw, language });
@@ -44,28 +44,28 @@ function SignupPage() {
   return (
     <form onSubmit={(e) => { e.preventDefault(); void submit(); }}>
       <TopBar back={loginHref(next)} />
-      <Headline className="pt-2" title="계정 만들기" sub="여권 정보는 예약할 때만 받아요." />
+      <Headline className="pt-2" title={tr("계정 만들기", "Create account")} sub={tr("여권 정보는 예약할 때만 받아요.", "We only ask for passport details when you book.")} />
       <div className="space-y-5 px-5 pb-4 pt-6">
-        <label className="block"><FieldLabel>이름</FieldLabel><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Emma Clark" autoComplete="name" /></label>
-        <label className="block"><FieldLabel>이메일</FieldLabel><input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="emma@example.com" autoComplete="email" /></label>
-        <label className="block"><FieldLabel>비밀번호</FieldLabel><input className={inputCls} type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="8자 이상" autoComplete="new-password" /></label>
-        <label className="block"><FieldLabel>비밀번호 확인</FieldLabel><input className={inputCls} type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="한 번 더 입력" autoComplete="new-password" /></label>
+        <label className="block"><FieldLabel>{tr("이름", "Name")}</FieldLabel><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Emma Clark" autoComplete="name" /></label>
+        <label className="block"><FieldLabel>{tr("이메일", "Email")}</FieldLabel><input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="emma@example.com" autoComplete="email" /></label>
+        <label className="block"><FieldLabel>{tr("비밀번호", "Password")}</FieldLabel><input className={inputCls} type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder={tr("8자 이상", "8+ characters")} autoComplete="new-password" /></label>
+        <label className="block"><FieldLabel>{tr("비밀번호 확인", "Confirm password")}</FieldLabel><input className={inputCls} type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder={tr("한 번 더 입력", "Enter it again")} autoComplete="new-password" /></label>
         <div>
-          <FieldLabel>앱 언어</FieldLabel>
+          <FieldLabel>{tr("앱 언어", "App language")}</FieldLabel>
           <div className="flex gap-2">
             <Chip selected={language === "en"} onClick={() => setLanguage("en")}>English</Chip>
             <Chip selected={language === "ko"} onClick={() => setLanguage("ko")}>한국어</Chip>
           </div>
         </div>
         <div>
-          <CheckRow checked={agree} onChange={setAgree}>이용약관과 개인정보 처리방침에 동의해요 <span className="text-[13px] text-muted">(필수)</span></CheckRow>
-          <CheckRow checked={marketing} onChange={setMarketing}>이벤트 소식 받기 <span className="text-[13px] text-muted">(선택)</span></CheckRow>
+          <CheckRow checked={agree} onChange={setAgree}>{tr("이용약관과 개인정보 처리방침에 동의해요", "I agree to the Terms and Privacy Policy")} <span className="text-[13px] text-muted">{tr("(필수)", "(required)")}</span></CheckRow>
+          <CheckRow checked={marketing} onChange={setMarketing}>{tr("이벤트 소식 받기", "Send me event news")} <span className="text-[13px] text-muted">{tr("(선택)", "(optional)")}</span></CheckRow>
         </div>
         <ErrorBox message={err} />
       </div>
       <BottomBar>
-        <Button type="submit" disabled={busy}>{busy ? "가입 중…" : "가입하기"}</Button>
-        <p className="mt-3 text-center text-[14px] text-muted">이미 계정이 있어요 <Link href={loginHref(next)} className="font-semibold text-ink">로그인</Link></p>
+        <Button type="submit" disabled={busy}>{busy ? tr("가입 중…", "Signing up…") : tr("가입하기", "Sign up")}</Button>
+        <p className="mt-3 text-center text-[14px] text-muted">{tr("이미 계정이 있어요", "Already have an account?")} <Link href={loginHref(next)} className="font-semibold text-ink">{tr("로그인", "Log in")}</Link></p>
       </BottomBar>
     </form>
   );
