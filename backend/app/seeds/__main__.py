@@ -30,6 +30,7 @@ from app.models import (
     Content,
     CourseSurvey,
     DormRoom,
+    EmailOtp,
     Guide,
     MealClaim,
     Message,
@@ -70,7 +71,7 @@ ORDER = [
     ("meal_claims.json", MealClaim),
     ("reports.json", Report),
 ]
-DELETE_ORDER = [CourseSurvey, AiUsage, Report, MealClaim, BuddyActivity, Notification, Message, Review, AiPlan, Payment, BookingItem, Booking, Content, Package,
+DELETE_ORDER = [EmailOtp, CourseSurvey, AiUsage, Report, MealClaim, BuddyActivity, Notification, Message, Review, AiPlan, Payment, BookingItem, Booking, Content, Package,
                 BuddyAvailability, BuddyProfile, WalkRoute, TourPlace, Tour, Place, Guide, DormRoom, User, University]
 
 

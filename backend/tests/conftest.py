@@ -4,7 +4,7 @@ import tempfile
 os.environ["DATABASE_URL"] = "postgresql+psycopg://sbstay:sbstay@localhost:5432/sbstay_test"
 os.environ["JWT_SECRET"] = "test-secret"
 # 로컬 .env 의 결제 키가 테스트에 섞이지 않게 비운다 (필요한 테스트에서만 켬)
-for _k in ("TOSS_SECRET_KEY", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"):
+for _k in ("TOSS_SECRET_KEY", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "RESEND_API_KEY"):
     os.environ[_k] = ""
 os.environ["AUTO_REFUND_AFTER_HOURS"] = "0"
 # v3 데모 '오늘' (지난 여행 후기·식비 정산 시나리오), 버디 지원 인증번호
