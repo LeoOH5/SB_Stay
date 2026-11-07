@@ -85,15 +85,15 @@ function BookingsBody() {
 
       {/* 필터 */}
       <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-        <div className="flex items-center gap-2" role="group" aria-label="종류">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="종류">
           <span className="mr-1 text-[14px] text-muted">종류</span>
           {TYPES.map((t) => <Chip key={t.key} className={chipCls} selected={type === t.key} onClick={() => { setType(t.key); setRows(null); }}>{t.label}</Chip>)}
         </div>
-        <div className="flex items-center gap-2" role="group" aria-label="상태">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="상태">
           <span className="mr-1 text-[14px] text-muted">상태</span>
           {STATUSES.map((s) => <Chip key={s.key} className={chipCls} selected={status === s.key} onClick={() => { setStatus(s.key); setRows(null); }}>{s.label}</Chip>)}
         </div>
-        <SearchInput value={q} onChange={setQ} placeholder="예약번호나 이름" className="ml-auto w-[280px]" />
+        <SearchInput value={q} onChange={setQ} placeholder="예약번호나 이름" className="w-full sm:ml-auto sm:w-[280px]" />
       </div>
 
       {!rows ? <Spinner /> : (
