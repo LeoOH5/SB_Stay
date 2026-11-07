@@ -199,7 +199,11 @@ function EmailPath({ status, userEmail, person, personFields, onDone }: { status
     try {
       const r = await post<BuddyApplyEmailOut>("/buddy/apply/email", { email: email.trim() });
       setUniv(r.university); setDevCode(r.dev_code ?? null); setExpires(Date.now() + OTP_SECONDS * 1000); setNow(Date.now()); setCode("");
-    } catch (e) { setErr({ field: "email", msg: errText(e) }); setUniv(null); }
+    } catch (e) {
+      // 1분 안에 다시 받기를 누른 경우: 이미 보낸 번호는 그대로 쓸 수 있게 화면을 유지한다
+      if (e instanceof ApiError && e.code === "TOO_SOON") setErr({ field: "code", msg: errText(e) });
+      else { setErr({ field: "email", msg: errText(e) }); setUniv(null); }
+    }
     finally { setBusy(false); }
   };
   const verify = async () => {
@@ -207,7 +211,7 @@ function EmailPath({ status, userEmail, person, personFields, onDone }: { status
     try { await post<BuddyApplyStatus>("/buddy/apply/verify", { email: email.trim(), code, birth_date: person.birth, korean_national: person.korean }); onDone(); }
     catch (e) {
       const c = e instanceof ApiError ? e.code : "";
-      if (c === "BAD_CODE") setErr({ field: "code", msg: errText(e) });
+      if (c === "BAD_CODE" || c === "CODE_EXPIRED" || c === "TOO_MANY_ATTEMPTS") setErr({ field: "code", msg: errText(e) });
       else if (c === "NOT_SEONGBUK_SCHOOL") setErr({ field: "email", msg: errText(e) });
       else { const rest = personErr(e, person.setErr); if (rest) setErr({ field: "all", msg: rest }); }
     } finally { setBusy(false); }

@@ -55,8 +55,11 @@ class Settings(BaseSettings):
     # 숙박 수수료 (퍼센트 정수). 돈 계산은 정수만 쓴다: rules.pct(금액, 퍼센트)
     platform_fee_percent: int = 10
 
-    # v3 버디: 학교 메일 인증번호(데모는 메일 발송 없이 고정값), debug면 응답에 dev_code 포함
+    # v3 버디: 학교 메일 인증번호. RESEND_API_KEY가 있으면 무작위 번호를 메일로 보내고,
+    # 없으면 메일 없이 고정값(BUDDY_OTP_CODE)으로 동작한다. debug면 응답에 dev_code 포함
     buddy_otp_code: str = "123456"
+    resend_api_key: str = ""
+    mail_from: str = "성북스테이 <no-reply@sbstay.site>"
     debug: bool = False
     # 데모용 '오늘' (후기 가능 여부·식비 환불 확정). 비우면 실제 오늘
     demo_today: date | None = None
