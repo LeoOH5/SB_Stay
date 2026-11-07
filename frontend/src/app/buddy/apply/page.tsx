@@ -185,25 +185,33 @@ function EmailPath({ status, userEmail, person, personFields, onDone }: { status
   const [expires, setExpires] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
+  const [verified, setVerified] = useState(false);
   const [err, setErr] = useState<{ field: "email" | "code" | "all"; msg: string } | null>(null);
 
   useEffect(() => {
-    if (!expires) return;
+    if (!expires || verified) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [expires]);
+  }, [expires, verified]);
   const left = expires ? Math.max(0, Math.round((expires - now) / 1000)) : 0;
 
   const send = async () => {
     setBusy(true); setErr(null);
     try {
       const r = await post<BuddyApplyEmailOut>("/buddy/apply/email", { email: email.trim() });
-      setUniv(r.university); setDevCode(r.dev_code ?? null); setExpires(Date.now() + OTP_SECONDS * 1000); setNow(Date.now()); setCode("");
+      setUniv(r.university); setDevCode(r.dev_code ?? null); setExpires(Date.now() + OTP_SECONDS * 1000); setNow(Date.now()); setCode(""); setVerified(false);
     } catch (e) {
       // 1분 안에 다시 받기를 누른 경우: 이미 보낸 번호는 그대로 쓸 수 있게 화면을 유지한다
       if (e instanceof ApiError && e.code === "TOO_SOON") setErr({ field: "code", msg: errText(e) });
       else { setErr({ field: "email", msg: errText(e) }); setUniv(null); }
     }
+    finally { setBusy(false); }
+  };
+  /** '인증하기' — 번호만 먼저 확인 (POST /buddy/apply/email/check). 번호는 다음 단계에서 쓴다 */
+  const check = async () => {
+    setBusy(true); setErr(null);
+    try { await post<{ verified: boolean }>("/buddy/apply/email/check", { email: email.trim(), code }); setVerified(true); }
+    catch (e) { setErr({ field: "code", msg: errText(e) }); }
     finally { setBusy(false); }
   };
   const verify = async () => {
@@ -225,7 +233,7 @@ function EmailPath({ status, userEmail, person, personFields, onDone }: { status
           <span className="mb-2 block text-[14px] font-semibold text-ink">학교 이메일</span>
           <span className="relative block">
             <input className={cn(fieldCls, sent && "pr-32")} type="email" autoComplete="email" value={email} placeholder="you@univ.ac.kr"
-              onChange={(e) => { setEmail(e.target.value); setUniv(null); setExpires(null); }} />
+              disabled={verified} onChange={(e) => { setEmail(e.target.value); setUniv(null); setExpires(null); setVerified(false); }} />
             {sent && <span className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-1.5 text-[14px] font-semibold text-navy"><span className="h-1.5 w-1.5 rounded-full bg-navy" />{univ}</span>}
           </span>
         </label>
@@ -233,18 +241,21 @@ function EmailPath({ status, userEmail, person, personFields, onDone }: { status
 
         <div className="mt-4 flex gap-2.5">
           <input className={cn(fieldCls, "flex-1 tracking-[0.12em]")} inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="인증번호 6자리" aria-label="인증번호"
-            value={code.length > 3 ? `${code.slice(0, 3)} ${code.slice(3)}` : code} disabled={!sent} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
-          <Button variant="secondary" full={false} className="min-h-[52px] shrink-0 px-4 text-[15px]" onClick={send} disabled={busy || !/@[\w.-]+\.[a-z]{2,}$/i.test(email.trim())}>{sent ? "다시 받기" : "인증번호 받기"}</Button>
+            value={code.length > 3 ? `${code.slice(0, 3)} ${code.slice(3)}` : code} disabled={!sent || verified} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+          {sent && (
+            <Button variant={verified ? "ghost" : "primary"} full={false} className="min-h-[52px] shrink-0 px-3.5 text-[15px]" onClick={check} disabled={busy || verified || code.length !== 6 || left === 0}>{verified ? "인증됨" : "인증하기"}</Button>
+          )}
+          {!verified && <Button variant="secondary" full={false} className="min-h-[52px] shrink-0 px-3.5 text-[15px]" onClick={send} disabled={busy || !/@[\w.-]+\.[a-z]{2,}$/i.test(email.trim())}>{sent ? "다시 받기" : "인증번호 받기"}</Button>}
         </div>
-        <p className={cn("mt-2 text-[14px]", err?.field === "code" ? "font-semibold text-red" : "text-muted")}>
-          {err?.field === "code" ? err.msg : sent ? `메일로 받은 6자리를 넣어 주세요 · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} 남음` : "학교 메일을 넣고 인증번호를 받아 주세요"}
+        <p className={cn("mt-2 text-[14px]", err?.field === "code" ? "font-semibold text-red" : verified ? "font-semibold text-navy" : "text-muted")}>
+          {err?.field === "code" ? err.msg : verified ? "✓ 학교 메일 인증이 끝났어요" : sent ? `메일로 받은 6자리를 넣고 인증하기를 눌러 주세요 · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} 남음` : "학교 메일을 넣고 인증번호를 받아 주세요"}
         </p>
         {sent && devCode && <p className="mt-1 text-[13px] text-muted">데모 인증번호 {devCode}</p>}
         {personFields}
         {err?.field === "all" && <p className="mt-3 text-[14px] font-semibold text-red">{err.msg}</p>}
       </div>
       <BottomBar>
-        <Button onClick={verify} disabled={busy || !sent || code.length !== 6 || !person.birth || !person.korean || left === 0}>{busy ? "확인하는 중…" : "인증하고 다음"}</Button>
+        <Button onClick={verify} disabled={busy || !verified || !person.birth || !person.korean}>{busy ? "확인하는 중…" : verified ? "다음" : "메일 인증을 먼저 해 주세요"}</Button>
       </BottomBar>
     </>
   );

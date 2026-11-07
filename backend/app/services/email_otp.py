@@ -57,8 +57,8 @@ def issue(db: Session, user: User, email: str, university: str) -> None:
     db.commit()
 
 
-def check(db: Session, user: User, email: str, code: str) -> EmailOtp:
-    """맞으면 used_at을 찍은 기록을 돌려준다 (커밋은 호출부가 나머지와 함께). 틀리면 시도 횟수를 저장하고 오류"""
+def peek(db: Session, user: User, email: str, code: str) -> EmailOtp:
+    """번호만 확인한다(쓰지 않음). 틀리면 시도 횟수를 저장하고 오류 — 화면의 '인증하기' 버튼"""
     email = email.strip().lower()
     otp = _latest(db, user, email)
     if not otp or otp.expires_at <= datetime.now(UTC):
@@ -69,5 +69,11 @@ def check(db: Session, user: User, email: str, code: str) -> EmailOtp:
         otp.attempts += 1
         db.commit()
         raise api_error(422, "BAD_CODE", "인증번호가 맞지 않아요")
+    return otp
+
+
+def check(db: Session, user: User, email: str, code: str) -> EmailOtp:
+    """맞으면 used_at을 찍은 기록을 돌려준다 (커밋은 호출부가 나머지와 함께). 틀리면 시도 횟수를 저장하고 오류"""
+    otp = peek(db, user, email, code)
     otp.used_at = datetime.now(UTC)
     return otp

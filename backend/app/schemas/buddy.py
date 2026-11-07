@@ -224,6 +224,12 @@ class ApplyEmailIn(BaseModel):
     email: str = Field(max_length=255)
 
 
+class ApplyCodeIn(BaseModel):
+    """학교 메일 인증번호만 확인"""
+    email: str = Field(max_length=255)
+    code: str = Field(max_length=10)
+
+
 class ApplyResidenceIn(BaseModel):
     """1단계 성북구 거주 경로: 주소 증빙 + 재학 증명 사진(POST /uploads 의 /media 주소). 운영자가 승인 때 확인"""
     school_name: str = Field(min_length=2, max_length=100)
