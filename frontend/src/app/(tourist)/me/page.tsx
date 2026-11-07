@@ -163,7 +163,7 @@ export default function MePage() {
 
         <h2 className="mb-1 mt-9 text-[18px] font-bold text-ink">{tr("버디", "Buddy")}</h2>
         <BuddyEntry />
-        <button type="button" onClick={logout} className="mt-2 py-3 text-[15px] text-muted">{tr("로그아웃", "Log out")}</button>
+        <Button onClick={logout} className="mt-8">{tr("로그아웃", "Log out")}</Button>
       </div>
 
       <BottomSheet open={docKey !== null} onClose={() => setDocKey(null)} title={doc?.title ?? (() => { const d = DOCS.find((x) => x.key === docKey); return d ? (lang === "en" ? d.en : d.label) : ""; })()}>

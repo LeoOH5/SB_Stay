@@ -105,7 +105,7 @@ export default function Page() {
             </div>
           </div>
         )}
-        <button type="button" onClick={logout} className="mt-6 py-2 text-[15px] text-muted">로그아웃</button>
+        <Button onClick={logout} className="mt-8">로그아웃</Button>
       </div>
     </div>
   );
