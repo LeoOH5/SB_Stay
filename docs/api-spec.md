@@ -19,7 +19,7 @@
 | AU-03 | GET | /auth/me | 전체 | 현재 사용자 정보 | 공통 | 필수 | 구현 |
 | AU-04 | PATCH | /users/me | 전체 | 언어(한/영)·통화 설정, 프로필 수정. 언어 설정은 MVP 필수 | 마이페이지 | 필수 | 구현(언어만) |
 | AU-05 | POST | /auth/login | 전체 | 이메일 로그인 — **데모 계정 전용** 폴백. 역할·소속 학교 반환 | T0 | 필수 | 구현 |
-| AU-06 | PATCH | /users/me/role | 전체 | 첫 로그인 후 역할 선택 (`tourist` \| `buddy` \| `guide`, buddy/guide는 `university_id` 필수). univ_admin·operator는 시드 계정만 | T0(역할 선택) | 필수 | 구현 |
+| AU-06 | PATCH | /auth/me/role | 전체 | 첫 로그인 후 역할 선택 (`tourist` \| `buddy` \| `guide`, buddy/guide는 `university_id` 필수). univ_admin·operator는 시드 계정만 | T0(역할 선택) | 필수 | 구현 |
 | AU-07 | POST | /auth/google/calendar | buddy, guide | 증분 인증으로 `calendar.events` 범위 동의 코드를 받아 refresh token 저장(암호화), `calendar_connected=true` | B3 | 권장 | 구현 |
 | AU-08 | DELETE | /auth/google/calendar | buddy, guide | 캘린더 연동 해제 (토큰 폐기, `calendar_connected=false`) | B3 | 권장 | 구현 |
 | AU-09 | GET | /auth/me/plan | 전체 | v3.4 내 이용 방식 `free`/`buddy` + 오늘 남은 AI 질문 (무료 하루 3번) | T08 | 필수 | 구현 |

@@ -151,7 +151,8 @@ export function afterLogin(role: Role, next: string | null | undefined, fallback
   const path = next.split(/[?#]/)[0];
   const under = (p: string) => path === p || path.startsWith(`${p}/`);
   if (under("/login") || under("/signup")) return fallback;
-  const ok = role === "tourist" ? !under("/admin") && !under("/buddy") : role === "buddy" ? under("/buddy") : under("/admin");
+  // 여행자도 버디 지원(/buddy/apply)으로는 돌아갈 수 있다 — 가입 직후 계정은 아직 tourist라 막으면 홈으로 떨어진다
+  const ok = role === "tourist" ? !under("/admin") && (!under("/buddy") || under("/buddy/apply")) : role === "buddy" ? under("/buddy") : under("/admin");
   return ok ? next : fallback;
 }
 
