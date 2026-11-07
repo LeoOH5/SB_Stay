@@ -5,7 +5,7 @@ export default function BuddyLayout({ children }: { children: React.ReactNode })
   return (
     <div className="mobile-shell flex flex-col">
       <div className="flex flex-1 flex-col">{children}</div>
-      <TabBar tabs={[{ href: "/buddy", label: "홈", icon: "home" }, { href: "/buddy/requests", label: "요청함", icon: "inbox" }, { href: "/buddy/schedule", label: "일정", icon: "calendar" }, { href: "/buddy/activity", label: "내 활동", icon: "user", also: ["/buddy/settlement", "/buddy/me"] }]} hideOn={["/buddy/login", "/buddy/apply", "/buddy/meals", "/buddy/log"]} />
+      <TabBar tabs={[{ href: "/buddy", label: "홈", icon: "home", exact: true }, { href: "/buddy/requests", label: "요청함", icon: "inbox" }, { href: "/buddy/schedule", label: "일정", icon: "calendar" }, { href: "/buddy/activity", label: "내 활동", icon: "user", also: ["/buddy/settlement"] }]} hideOn={["/buddy/login", "/buddy/apply", "/buddy/meals", "/buddy/log"]} />
     </div>
   );
 }
