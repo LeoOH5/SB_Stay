@@ -5,7 +5,7 @@ import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Brand, Button, Spinner, inputCls } from "@/components/ui";
+import { Brand, Button, Icon, Spinner, inputCls } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { afterLogin, errMsg, loginHref } from "@/components/tourist/format";
 import { FieldLabel, Segmented } from "@/components/tourist/v3";
@@ -13,6 +13,16 @@ import { post } from "@/lib/api";
 import { session } from "@/lib/auth";
 import { tr, useLang } from "@/lib/i18n";
 import type { Lang, TokenOut } from "@/lib/types";
+
+const DEMO_PW = "demo1234";
+const DEMO: { role: () => string; who: () => string; email: string }[] = [
+  { role: () => tr("관광객", "Traveler"), who: () => tr("Emma, 영어", "Emma, English"), email: "emma@example.com" },
+  { role: () => tr("관광객", "Traveler"), who: () => tr("Yuki, 일본어에서 영어", "Yuki, Japanese → English"), email: "yuki@example.com" },
+  { role: () => tr("관광객", "Traveler"), who: () => tr("Noah, 예약 없음 · 무료 코스만", "Noah, no bookings · free walks only"), email: "noah@example.com" },
+  { role: () => tr("버디", "Buddy"), who: () => tr("지우, 고려대학교", "Jiwoo, Korea University"), email: "jiwoo@a-univ.ac.kr" },
+  { role: () => tr("대학 담당자", "University staff"), who: () => tr("고려대학교 기숙사", "Korea University dorms"), email: "admin@a-univ.ac.kr" },
+  { role: () => tr("운영자", "Operator"), who: () => tr("성북스테이 운영팀", "SB Stay operations"), email: "operator@sbstay.app" },
+];
 
 function GoogleG() {
   return (
@@ -83,6 +93,19 @@ function LoginPage() {
       <Button variant="ghost" className="mt-3" onClick={loginGoogle} disabled={busy !== null}>
         <GoogleG />{busy === "google" ? tr("로그인 중…", "Signing in…") : tr("Google로 계속하기", "Continue with Google")}
       </Button>
+      <div className="mt-9 flex items-center justify-between">
+        <h2 className="text-[18px] font-bold text-ink">{tr("심사용 데모 계정", "Demo accounts for judges")}</h2>
+        <span className="text-[13.5px] text-muted">{tr("비밀번호", "Password")} {DEMO_PW}</span>
+      </div>
+      <div className="mt-1 divide-y divide-line">
+        {DEMO.map((d) => (
+          <button key={d.email} type="button" disabled={busy !== null} onClick={() => void loginWith(d.email, DEMO_PW, d.email)} className="flex w-full items-center gap-3 py-4 text-left disabled:opacity-60">
+            <span className="w-[88px] shrink-0 text-[14px] text-muted">{d.role()}</span>
+            <span className="min-w-0 flex-1 text-[15px] text-ink">{busy === d.email ? tr("로그인 중…", "Signing in…") : d.who()}</span>
+            <Icon name="chevron-right" className="h-5 w-5 text-ink" />
+          </button>
+        ))}
+      </div>
       <p className="mt-8 text-center text-[12.5px] text-muted">
         <Link href="/privacy" className="underline">{tr("개인정보처리방침", "Privacy")}</Link><span className="mx-2">·</span><Link href="/terms" className="underline">{tr("이용약관", "Terms")}</Link>
       </p>

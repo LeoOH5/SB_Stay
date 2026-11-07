@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, LinkButton, LogoMark, cn } from "@/components/ui";
+import { Button, LogoMark, cn } from "@/components/ui";
 import { errMsg, homeFor } from "@/components/tourist/format";
 import { post } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
@@ -44,7 +44,7 @@ export default function Splash() {
         <div className="mt-3 text-[14px] font-bold tracking-[0.3em] text-navy">SB STAY</div>
       </div>
       <Button onClick={start}>시작하기</Button>
-      <LinkButton href="/buddy/apply" variant="secondary" className="mt-3">버디 신청하기</LinkButton>
+      <Button variant="secondary" className="mt-3" onClick={() => { set("ko"); router.push("/buddy/apply"); }}>버디 신청하기</Button>
 
       <section className="mt-7" aria-label="데모 계정">
         <h2 className="text-[14px] font-bold text-ink">데모 계정으로 둘러보기</h2>

@@ -9,7 +9,7 @@
 - [AU-03](AU-03.md) `GET /auth/me` — 내 정보 조회 (필수 / 구현)
 - [AU-04](AU-04.md) `PATCH /users/me` — 언어·통화 설정 / 프로필 수정 (필수 / 구현(언어만))
 - [AU-05](AU-05.md) `POST /auth/login` — 이메일 로그인, 데모 계정 전용 (필수 / 구현)
-- [AU-06](AU-06.md) `PATCH /users/me/role` — 역할 선택, 첫 로그인 (필수 / 구현)
+- [AU-06](AU-06.md) `PATCH /auth/me/role` — 역할 선택, 첫 로그인 (필수 / 구현)
 - [AU-07](AU-07.md) `POST /auth/google/calendar` — 구글 캘린더 연동 (권장 / 구현)
 - [AU-08](AU-08.md) `DELETE /auth/google/calendar` — 구글 캘린더 연동 해제 (권장 / 구현)
 - [AU-09](AU-09.md) `GET /auth/me/plan` — 내 이용 방식 무료/버디, 오늘 남은 AI 질문 (v3.4, 필수 / 구현)

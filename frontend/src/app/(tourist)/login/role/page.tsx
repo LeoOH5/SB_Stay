@@ -28,7 +28,7 @@ function RolePage() {
   const submit = async () => {
     setBusy(true); setErr(null);
     try {
-      const u = await patch<User | null>("/users/me/role", { role: sel });
+      const u = await patch<User | null>("/auth/me/role", { role: sel });
       session.update({ role: u?.role ?? sel });
       router.push(afterLogin(u?.role ?? sel, next));
     } catch (e) { setErr(errMsg(e)); setBusy(false); }
