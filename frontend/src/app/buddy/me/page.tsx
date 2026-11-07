@@ -101,7 +101,7 @@ export default function Page() {
             </button>
           ))}
         </div>
-        <button type="button" onClick={logout} className="mt-2 py-3 text-[15px] text-muted">로그아웃</button>
+        <Button onClick={logout} className="mt-8">로그아웃</Button>
       </div>
 
       <BottomSheet open={docKey !== null} onClose={() => setDocKey(null)} title={doc?.title ?? DOCS.find((d) => d.key === docKey)?.label ?? ""}>
