@@ -72,6 +72,27 @@ def test_brief_llm_and_number_guard(client, buddy, monkeypatch):
     assert second["ai"] is False and "5,000" not in second["brief"]
 
 
+def test_brief_llm_gets_no_traveler_name_or_nationality(client, buddy, db, monkeypatch):
+    """v3.9 개인정보: LLM에는 여행자 이름·국적을 보내지 않는다 (요청 사항·코스·장소만)"""
+    from app.models import Booking, BookingItem
+    item = db.get(BookingItem, 3)
+    traveler = db.get(Booking, item.booking_id).traveler or {}
+    seen: list[str] = []
+
+    async def fake(system, user):
+        seen.append(system + "\n" + user)
+        return {"brief": "여행자와 천천히 걸어요.", "phrases": ["Shall we rest here?"]}
+
+    monkeypatch.setattr(llm, "complete_json", fake)
+    r = client.post(BRIEF, json={"booking_item_id": 3}, headers=buddy)
+    assert r.status_code == 200 and r.json()["ai"] is True
+    sent = seen[0]
+    assert "name withheld" in sent and "Traveler requests: 비건, 버섯 알레르기" in sent
+    for secret in [traveler.get("name"), (traveler.get("name") or "").split(" ")[0], traveler.get("nationality"), traveler.get("passport_no")]:
+        if secret:
+            assert secret not in sent
+
+
 def test_brief_permissions(client, buddy, tourist, monkeypatch):
     _no_llm(monkeypatch)
     assert client.post(BRIEF, json={"booking_item_id": 13}, headers=buddy).status_code == 403  # 다른 버디(32번) 항목
