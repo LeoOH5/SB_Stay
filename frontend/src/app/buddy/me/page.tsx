@@ -1,7 +1,6 @@
 "use client";
-// 버디 마이페이지 — BD-05 GET·PUT /buddy/profile (전공·학년·성격·스타일·도와줄 수 있는 것·쓰는 말·소개), CM-01 GET /contents/{key}, 로그아웃
+// 버디 마이페이지 — BD-05 GET·PUT /buddy/profile (전공·학년·성격·스타일·도와줄 수 있는 것·쓰는 말·소개), CM-01 GET /contents/{key}
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BottomSheet } from "@/components/tourist";
 import { LoginGate } from "@/components/buddy/login-gate";
@@ -10,7 +9,7 @@ import { useToast } from "@/components/buddy/toast";
 import { Avatar } from "@/components/buddy/ui";
 import { Button, Hero, Icon, Spinner, cn, inputCls } from "@/components/ui";
 import { get, put } from "@/lib/api";
-import { session, useUser } from "@/lib/auth";
+import { useUser } from "@/lib/auth";
 import type { BuddyProfile, ContentDoc } from "@/lib/types";
 
 const DOCS: { key: string; label: string }[] = [
@@ -23,7 +22,6 @@ const STATUS_TEXT: Record<string, string> = { approved: "활동 중", pending: "
 
 export default function Page() {
   const { user } = useUser();
-  const router = useRouter();
   const { show, toast } = useToast();
   const [profile, setProfile] = useState<BuddyProfile | null>(null);
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
@@ -51,7 +49,6 @@ export default function Page() {
     setDocKey(key); setDoc(null); setDocErr(null);
     get<ContentDoc>(`/contents/${key}`, { lang: "ko" }).then(setDoc).catch((e: unknown) => { if (key === "privacy") setDoc(PRIVACY); else setDocErr(e instanceof Error ? e.message : "불러오지 못했어요"); });
   };
-  const logout = () => { session.clear(); router.push("/"); };
 
   const name = user?.name ?? profile?.name ?? "";
   return (
@@ -101,7 +98,6 @@ export default function Page() {
             </button>
           ))}
         </div>
-        <Button onClick={logout} className="mt-8">로그아웃</Button>
       </div>
 
       <BottomSheet open={docKey !== null} onClose={() => setDocKey(null)} title={doc?.title ?? DOCS.find((d) => d.key === docKey)?.label ?? ""}>

@@ -1,6 +1,5 @@
 "use client";
 // T17 마이페이지 — AU-03 세션, AU-04 PATCH /auth/me(이름·언어), AU-07 구글 캘린더, BK-10 알림, CM-01 GET /contents/{key}
-import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { BottomSheet, ErrorBox, LoginRequired } from "@/components/tourist";
 import { CartButton } from "@/components/tourist/header-actions";
@@ -64,7 +63,6 @@ function SettingRow({ title, sub, children }: { title: string; sub?: string; chi
 }
 
 export default function MePage() {
-  const router = useRouter();
   const { user } = useUser();
   const { lang, set: setLang, currency } = useLang();
   const [notis, setNotis] = useState<Notification[] | null>(null);
@@ -110,7 +108,6 @@ export default function MePage() {
     setDocKey(key); setDoc(null); setDocErr(null);
     okv(get<ContentDoc>(`/contents/${key}`, { lang })).then(setDoc).catch((e: unknown) => { if (key === "privacy") setDoc(lang === "en" ? PRIVACY_FALLBACK_EN : PRIVACY_FALLBACK); else setDocErr(errMsg(e)); });
   };
-  const logout = () => { session.clear(); router.push("/"); };
 
   if (!user) {
     return (<><Hero title={tr("마이페이지", "My page")} right={<CartButton className="-mr-1" />} /><div className="px-5 pb-6 pt-2"><LoginRequired what={tr("마이페이지", "My page")} /><BuddyEntry className="mt-4" /></div></>);
@@ -163,7 +160,6 @@ export default function MePage() {
 
         <h2 className="mb-1 mt-9 text-[18px] font-bold text-ink">{tr("버디", "Buddy")}</h2>
         <BuddyEntry />
-        <Button onClick={logout} className="mt-8">{tr("로그아웃", "Log out")}</Button>
       </div>
 
       <BottomSheet open={docKey !== null} onClose={() => setDocKey(null)} title={doc?.title ?? (() => { const d = DOCS.find((x) => x.key === docKey); return d ? (lang === "en" ? d.en : d.label) : ""; })()}>
