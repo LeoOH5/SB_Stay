@@ -196,7 +196,9 @@
         "title": "서울시 내 손안에 서울",
         "url": "https://mediahub.seoul.go.kr/archives/2018698"
       }
-    ]
+    ],
+    "photo_url": "/places/108.jpg",
+    "photo_credit": "바로 옆 선잠단지 · 1997au · Wikimedia Commons · CC BY-SA 4.0"
   },
   {
     "id": 107,
@@ -219,7 +221,9 @@
       {
         "title": "서울 한양도성"
       }
-    ]
+    ],
+    "photo_url": "/places/107.jpg",
+    "photo_credit": "북악구간 숙정문 · Tom Page · Wikimedia Commons · CC BY-SA 2.0"
   },
   {
     "id": 108,
@@ -244,7 +248,9 @@
         "title": "서울시 내 손안에 서울",
         "url": "https://mediahub.seoul.go.kr/archives/2005784"
       }
-    ]
+    ],
+    "photo_url": "/places/108.jpg",
+    "photo_credit": "1997au · Wikimedia Commons · CC BY-SA 4.0"
   },
   {
     "id": 109,
@@ -279,7 +285,9 @@
         "title": "서울시 내 손안에 서울",
         "url": "https://mediahub.seoul.go.kr/archives/2011088"
       }
-    ]
+    ],
+    "photo_url": "/places/109.jpg",
+    "photo_credit": "한국학중앙연구원·김형수 · 공공누리 제1유형"
   },
   {
     "id": 110,
@@ -355,7 +363,9 @@
       "nature"
     ],
     "story_doc": "# p12 성북천(한성대입구역 분수마루)\n\n\n## 한 줄 소개\n한성대입구역 앞 성북천 산책로. 코스 출발점.\n\n## 기본 사실과 이야기\n- 역사 이야기는 없어도 됨. 만남 장소 안내용\n- 정확한 위치와 분수마루 설명은 성북구청 누리집에서 확인 [확인 필요]\n\n## English\nIntro: The Seongbukcheon stream walk in front of Hansung University station, the starting point of the course.",
-    "sources": []
+    "sources": [],
+    "photo_url": "/places/113.jpg",
+    "photo_credit": "Korea.net/KOCIS (Jeon Han) · Wikimedia Commons · CC BY-SA 2.0"
   },
   {
     "id": 114,
@@ -551,7 +561,9 @@
         "title": "성락원(서울) 장소 정보 (좌표)",
         "url": "https://xn--ok0b236bp0a.com/place/13593"
       }
-    ]
+    ],
+    "photo_url": "/places/118.jpg",
+    "photo_credit": "국가유산청 · 공공누리 제1유형"
   },
   {
     "id": 119,
@@ -762,7 +774,9 @@
         "title": "Wikipedia, Samcheonggak",
         "url": "https://en.wikipedia.org/wiki/Samcheonggak"
       }
-    ]
+    ],
+    "photo_url": "/places/123.jpg",
+    "photo_credit": "el_ave · Wikimedia Commons · CC BY 2.0"
   },
   {
     "id": 126,
@@ -802,7 +816,9 @@
         "title": "서울신문, 박환희 위원장, 조선 최고 군사기관 '삼군부' 복원방안 토론회 개최 (2022)",
         "url": "https://m.go.seoul.co.kr/news/2022/12/16/20221216500020"
       }
-    ]
+    ],
+    "photo_url": "/places/126.jpg",
+    "photo_credit": "오모군 · Wikimedia Commons · CC BY 4.0"
   },
   {
     "id": 128,
@@ -934,6 +950,8 @@
         "title": "성북구청 영문 관광, Uireung",
         "url": "https://sb.go.kr/en/contents.do?key=471"
       }
-    ]
+    ],
+    "photo_url": "/places/130.jpg",
+    "photo_credit": "바로 옆 의릉 · Younghopark7 · Wikimedia Commons · CC BY-SA 3.0"
   }
 ]

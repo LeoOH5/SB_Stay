@@ -36,3 +36,20 @@
 | seokyeong-dorm.jpg | 서경대 생활관 3동 | https://www.skuniv.ac.kr/campus-map (원본 400px) |
 
 | karts-dorm.jpg | 한예종 천장관 | https://blog.naver.com/baba101203/223300554554 (개인 블로그 사진, 작성자 baba101203) |
+
+## 관광지 사진 (코스·장소)
+
+한국관광공사 TourAPI에 공공누리 제1유형 사진이 없던 장소는 아래 사진을 씁니다. 화면 사진 아래에 출처를 표시합니다. 파일은 `frontend/public/places/`, 운영 DB에는 마이그레이션 `v3k_place_photos`로 넣습니다.
+
+| 장소 | 파일 | 내용 | 작성자 | 라이선스 | 원본 |
+|---|---|---|---|---|---|
+| 107 한양도성 북악구간 | places/107.jpg | 북악구간 숙정문 (성문은 종로구) | Tom Page | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:Sukjeongmun.jpg |
+| 108 선잠단지 (106 성북선잠박물관에도 '바로 옆 선잠단지'로 사용) | places/108.jpg | 선잠단지 홍살문 | 1997au | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Seonjamdamji1.jpg |
+| 109 간송미술관 | places/109.jpg | 보화각 외관 (옛 사진) | 한국학중앙연구원·김형수 | 공공누리 제1유형 | https://commons.wikimedia.org/wiki/File:Encykorea-간송미술관.jpg |
+| 113 성북천 | places/113.jpg | 성북천과 다리 | Korea.net / KOCIS (Jeon Han) | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:KOCIS_Korea_Cheonggyecheon_2013_02_(10988642386).jpg |
+| 118 서울 성북동 별서 | places/118.jpg | 성락원 정자 | 국가유산청 | 공공누리 제1유형 | https://commons.wikimedia.org/wiki/File:성락원.jpg |
+| 123 삼청각 | places/123.jpg | 본관 한옥 | el_ave | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Samcheonggak.jpg |
+| 126 삼군부 총무당 | places/126.jpg | 총무당 정면 | 오모군 | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Samgunbu_Chongmudang.jpg |
+| 130 의릉역사문화관 | places/130.jpg | 바로 옆 의릉 금천교·홍살문 (문화관 건물 사진은 없음) | Younghopark7 | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:의릉_금천교_홍살문_정자각_비각.jpg |
+
+사진을 찾지 못한 곳(라이선스가 맞는 사진 없음): 110 한국가구박물관, 111 성북근현대문학관, 116 성북역사문화센터, 117 성북동 이종석 별장, 119 우리옛돌박물관, 122 성북구립미술관, 129 성북구립 최만린미술관. 화면에는 사진 대신 기본 아이콘이 나온다.
