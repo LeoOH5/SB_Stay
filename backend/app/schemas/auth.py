@@ -1,4 +1,6 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, computed_field
+
+from app.core.demo import is_demo_email
 
 
 class UserOut(BaseModel):
@@ -12,6 +14,11 @@ class UserOut(BaseModel):
     calendar_connected: bool = False
 
     model_config = {"from_attributes": True}
+
+    @computed_field  # 심사용 시드 데모 계정 — 프론트가 버디 신청 버튼을 누르면 안내만 띄운다
+    @property
+    def is_demo(self) -> bool:
+        return is_demo_email(self.email)
 
 
 class TokenOut(BaseModel):

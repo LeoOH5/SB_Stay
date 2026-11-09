@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { GoogleG } from "@/components/buddy/ui";
 import { isProvider } from "@/components/buddy/format";
-import { Brand, Button, LinkButton, inputCls } from "@/components/ui";
+import { DemoBuddyNotice, useDemoBuddyGuard } from "@/components/demo-buddy-notice";
+import { Brand, Button, inputCls } from "@/components/ui";
 import { BUDDY_ELIGIBILITY } from "@/lib/codes";
 import { post } from "@/lib/api";
-import { session } from "@/lib/auth";
+import { session, useUser } from "@/lib/auth";
 import { googleBody, googleConfigured, requestGoogleCode } from "@/lib/google";
 import type { TokenOut } from "@/lib/types";
 
@@ -16,11 +17,13 @@ export default function Page() {
   const [email, setEmail] = useState("jiwoo@a-univ.ac.kr");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const { user } = useUser();
+  const demo = useDemoBuddyGuard(user);
   const [error, setError] = useState<string | null>(null);
 
   const finish = (r: TokenOut) => {
     session.set(r.user, r.access_token);
-    // 버디가 아닌 계정이면 지원 단계로
+    // 버디가 아닌 계정이면 지원 단계로 (데모 여행자는 지원 화면이 막힘 안내를 띄운다)
     router.push(isProvider(r.user.role) ? "/buddy" : "/buddy/apply");
   };
   const login = async (e: FormEvent) => {
@@ -64,7 +67,8 @@ export default function Page() {
 
       <h2 className="mt-10 text-[18px] font-bold text-ink">버디가 되고 싶어요</h2>
       <p className="mt-1.5 text-[14px] text-muted">{BUDDY_ELIGIBILITY}이면 지원할 수 있어요.</p>
-      <LinkButton href="/buddy/apply" variant="secondary" className="mt-4">6단계로 지원하기</LinkButton>
+      <Button variant="secondary" className="mt-4" onClick={() => demo.guard(() => router.push("/buddy/apply"))}>6단계로 지원하기</Button>
+      <DemoBuddyNotice open={demo.open} onClose={demo.close} ko />
     </div>
   );
 }
