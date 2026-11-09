@@ -13,6 +13,7 @@ import { Button, Icon, LinkButton, Spinner, StepDots, TopBar, cn, inputCls } fro
 import { BUDDY_MIN_AGE, BUDDY_PROMISES as PROMISES, KOREAN_NATIONAL_NOTE, QUIZ_PASS, QUIZ_TOTAL } from "@/lib/codes";
 import { ApiError, get, patch, post, put } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
+import { isDemoTourist } from "@/components/demo-buddy-notice";
 import { UPLOAD_ACCEPT } from "@/lib/uploads";
 import type { User, BuddyApplyEmailOut, BuddyApplyStatus, BuddyProfile, EducationOut, Eligibility, QuizQuestion, QuizResult } from "@/lib/types";
 
@@ -51,7 +52,8 @@ function ApplyPage() {
   // 지원은 버디 역할 계정만 할 수 있다 (서버 403).
   // 로그인 안 했으면 회원가입부터(가입 뒤 이 화면으로), 여행자 계정이면 버디로 바로 바꿔 1단계(학교 메일 인증)부터 시작한다
   const [gateErr, setGateErr] = useState<string | null>(null);
-  const needsRole = !!user && user.role === "tourist";
+  const isDemo = isDemoTourist(user);
+  const needsRole = !!user && user.role === "tourist" && !isDemo;
   const isAdmin = !!user && (user.role === "univ_admin" || user.role === "operator");
   // 첫 렌더(하이드레이션 전)에는 저장된 로그인 정보를 아직 못 읽어 user 가 비어 보인다 → 다 읽은 뒤에만 판단
   const hydrated = useSyncExternalStore(() => () => {}, () => true, () => false);
@@ -77,11 +79,11 @@ function ApplyPage() {
   const newAccount = () => { session.clear(); router.push("/signup?next=/buddy/apply"); };
 
   if (!user) return <Spinner />;
-  if (isAdmin || (needsRole && gateErr)) {
+  if (isDemo || isAdmin || (needsRole && gateErr)) {
     return (
       <div className="px-5 pb-10 pt-10">
-        <Title sub={isAdmin ? "관리자 계정으로는 버디 지원을 할 수 없어요. 새 계정을 만들어 지원해 주세요." : gateErr ?? ""}>이 계정으로는 지원할 수 없어요</Title>
-        <Button className="mt-8" onClick={newAccount}>새 계정으로 지원하기</Button>
+        <Title sub={isDemo ? "심사용 데모 계정이라 버디로 바꿀 수 없어요. 로그아웃한 뒤 새 계정을 만들어 신청해 주세요." : isAdmin ? "관리자 계정으로는 버디 지원을 할 수 없어요. 새 계정을 만들어 지원해 주세요." : gateErr ?? ""}>{isDemo ? "데모 계정은 버디 신청을 할 수 없어요" : "이 계정으로는 지원할 수 없어요"}</Title>
+        <Button className="mt-8" onClick={newAccount}>{isDemo ? "로그아웃하고 새 계정 만들기" : "새 계정으로 지원하기"}</Button>
         <LinkButton href="/" variant="ghost" className="mt-3">처음 화면으로</LinkButton>
       </div>
     );

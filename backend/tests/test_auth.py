@@ -84,6 +84,15 @@ def test_demo_accounts_cannot_change_role(client, tourist):
     assert client.get("/api/v1/auth/me", headers=tourist).json()["role"] == "tourist"
 
 
+def test_is_demo_flag(client, tourist, reset_db):
+    """프론트가 버디 신청 버튼에서 안내를 띄우도록 데모 계정 여부를 내려준다 (새로 가입한 계정은 false)"""
+    assert client.get("/api/v1/auth/me", headers=tourist).json()["is_demo"] is True
+    r = client.post("/api/v1/auth/signup", json={"name": "New", "email": "fresh@example.org", "password": "password1"})
+    assert r.json()["user"]["is_demo"] is False
+    h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    assert client.patch("/api/v1/auth/me/role", json={"role": "buddy"}, headers=h).status_code == 200
+
+
 def test_back_to_tourist_drops_pending_application(client, reset_db):
     """버디로 바꿔 지원(승인 대기)하다 여행자로 돌아가면 지원서가 지워져 운영자 승인 대기 목록에 남지 않는다"""
     from tests.conftest import login

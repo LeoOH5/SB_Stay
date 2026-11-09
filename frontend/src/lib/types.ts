@@ -30,6 +30,8 @@ export type BuddyGrade = "basic" | "growth" | "top";
 export interface User {
   id: number; name: string; email: string; role: Role; university_id: number | null;
   language: Lang; avatar_url?: string | null; calendar_connected?: boolean; birth_date?: string | null;
+  /** 심사용 시드 데모 계정 — 버디 신청 버튼을 누르면 안내만 띄운다 */
+  is_demo?: boolean;
 }
 export interface TokenOut { access_token: string; user: User; needs_role_setup: boolean }
 
