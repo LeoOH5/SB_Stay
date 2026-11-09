@@ -1,10 +1,12 @@
 "use client";
 // T17 마이페이지 — AU-03 세션, AU-04 PATCH /auth/me(이름), BK-10 알림, CM-01 GET /contents/{key}
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BottomSheet, ErrorBox, LoginRequired } from "@/components/tourist";
 import { CartButton } from "@/components/tourist/header-actions";
 import { dateTime, errMsg, okv, ROLE_LABEL } from "@/components/tourist/format";
 import { Avatar } from "@/components/tourist/trips/util";
+import { DemoBuddyNotice, useDemoBuddyGuard } from "@/components/demo-buddy-notice";
 import { Button, Hero, Icon, ListRow, Spinner, inputCls } from "@/components/ui";
 import { get, patch } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
@@ -22,7 +24,15 @@ const PRIVACY_FALLBACK_EN: ContentDoc = { key: "privacy", language: "en", title:
 
 /** v3.9 여행자 앱 → 버디 앱 입구 */
 function BuddyEntry({ className }: { className?: string }) {
-  return <ListRow href="/buddy/login" icon="users" title={tr("버디로 활동하기", "Become a buddy")} meta={tr("성북구 대학생이라면 버디로 지원할 수 있어요", "University students in Seongbuk-gu can apply as buddies")} className={className} />;
+  const router = useRouter();
+  const { user } = useUser();
+  const demo = useDemoBuddyGuard(user);
+  return (
+    <>
+      <ListRow onClick={() => demo.guard(() => router.push("/buddy/login"))} chevron icon="users" title={tr("버디로 활동하기", "Become a buddy")} meta={tr("성북구 대학생이라면 버디로 지원할 수 있어요", "University students in Seongbuk-gu can apply as buddies")} className={className} />
+      <DemoBuddyNotice open={demo.open} onClose={demo.close} />
+    </>
+  );
 }
 
 export default function MePage() {

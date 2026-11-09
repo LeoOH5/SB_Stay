@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { DemoBuddyNotice, useDemoBuddyGuard } from "@/components/demo-buddy-notice";
 import { Button, LogoMark, cn } from "@/components/ui";
 import { errMsg, homeFor } from "@/components/tourist/format";
 import { post } from "@/lib/api";
@@ -25,6 +26,7 @@ export default function Splash() {
   const { set } = useLang();
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const demoGuard = useDemoBuddyGuard(user);
   const start = () => { set("ko"); router.push(user ? homeFor(user.role) : "/login"); };
 
   async function demo(email: string) {
@@ -45,7 +47,8 @@ export default function Splash() {
         <div className="mt-3 text-[14px] font-bold tracking-[0.3em] text-navy">SB STAY</div>
       </div>
       <Button onClick={start}>시작하기</Button>
-      <Button variant="secondary" className="mt-3" onClick={() => { set("ko"); router.push(user ? "/buddy/apply" : "/signup?next=/buddy/apply"); }}>버디 신청하기</Button>
+      <Button variant="secondary" className="mt-3" onClick={() => demoGuard.guard(() => { set("ko"); router.push(user ? "/buddy/apply" : "/signup?next=/buddy/apply"); })}>버디 신청하기</Button>
+      <DemoBuddyNotice open={demoGuard.open} onClose={demoGuard.close} ko />
 
       <section className="mt-7" aria-label="데모 계정">
         <h2 className="text-[14px] font-bold text-ink">데모 계정으로 둘러보기</h2>

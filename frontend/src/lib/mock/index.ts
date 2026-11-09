@@ -486,7 +486,7 @@ export async function mockHandlers(method: string, path: string, body?: unknown,
   }
 
   // ---- 인증
-  if (method === "POST" && path === "/auth/google") { const u = D.users["emma@example.com"]; state.currentUser = u; return { access_token: "mock", user: u, needs_role_setup: false }; }
+  if (method === "POST" && path === "/auth/google") { const u = D.users["emma@example.com"]; state.currentUser = { ...u, is_demo: true }; return { access_token: "mock", user: state.currentUser, needs_role_setup: false }; }
   if (method === "POST" && path === "/auth/login") {
     const u = D.users[String(b.email)];
     if (!u || b.password !== "demo1234") fail(401, "UNAUTHORIZED", "이메일 또는 비밀번호가 맞지 않습니다");

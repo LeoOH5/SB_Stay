@@ -1,6 +1,4 @@
 """인증 — AU-01 구글 로그인 · AU-02 회원가입 · AU-03 내 정보 · AU-04 설정 · AU-05 데모 로그인 · AU-06 역할 · AU-07/08 캘린더 · AU-09 이용 방식"""
-import json
-from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import delete, exists, select
@@ -9,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.crypto import encrypt
 from app.core.db import get_db
+from app.core.demo import DEMO_BUDDY_BLOCKED, is_demo_email
 from app.core.deps import get_current_user
 from app.core.errors import api_error
 from app.core.security import create_access_token, hash_password, verify_password
@@ -117,10 +116,6 @@ def update_me(body: MeUpdateIn, user: User = Depends(get_current_user), db: Sess
     return user
 
 
-# 시드 데모 계정 — 심사 중 누가 버디 지원을 눌러도 데모 시나리오(Emma 예약 등)가 깨지지 않게 역할 변경을 막는다
-DEMO_EMAILS = frozenset(u["email"] for u in json.loads((Path(__file__).resolve().parents[1] / "seeds" / "data" / "users.json").read_text()))
-
-
 def drop_pending_application(db: Session, user: User) -> None:
     """버디 → 여행자로 돌아가면, 아직 승인 전이고 활동 기록이 없는 지원서는 지운다 (운영자 승인 대기 목록에 남지 않게)"""
     prof = db.scalar(select(BuddyProfile).where(BuddyProfile.user_id == user.id))
@@ -143,8 +138,9 @@ def set_role(body: RoleIn, user: User = Depends(get_current_user), db: Session =
         raise api_error(422, "VALIDATION", "role은 tourist | buddy")
     if user.role in ("univ_admin", "operator"):
         raise api_error(409, "CONFLICT", "관리자 계정은 역할을 바꿀 수 없습니다")
-    if user.email in DEMO_EMAILS and body.role != user.role:
-        raise api_error(409, "DEMO_LOCKED", "데모 계정은 역할을 바꿀 수 없어요. 새 계정을 만들어 버디 지원을 해 보세요")
+    # 시드 데모 계정 — 심사 중 누가 버디 신청을 눌러도 데모 시나리오(Emma 예약 등)가 깨지지 않게 역할 변경을 막는다
+    if is_demo_email(user.email) and body.role != user.role:
+        raise api_error(409, "DEMO_LOCKED", DEMO_BUDDY_BLOCKED)
     if body.role == "tourist" and user.role == "buddy":
         drop_pending_application(db, user)
     if body.role == "buddy" and body.university_id:
