@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Banner, Button, LinkButton, ListRow, Spinner, TagChip, TopBar } from "@/components/ui";
+import { Banner, Button, Icon, LinkButton, ListRow, Spinner, TagChip, TopBar } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { submitBooking } from "@/components/tourist/booking";
 import { loginHref, nightsBetween, okv, SS_TRAVELER } from "@/components/tourist/format";
@@ -150,7 +150,7 @@ export default function CartPage() {
                       {chips.length > 0 && <div className="mt-2.5 flex flex-wrap gap-1.5">{chips.map((c) => <TagChip key={c}>{c}</TagChip>)}</div>}
                       <div className="mt-2 flex items-center gap-3 text-[13.5px]">
                         <span className="text-muted">{name ? tr(`${name}${iga(name)} 수락해요`, `${name} will accept`) : tr("버디가 수락해요", "Your buddy will accept")}</span>
-                        <button type="button" onClick={() => (bad ? router.push(`/buddies/${i.ref_id}?from=${stay!.date_from}&to=${stay!.date_to}`) : editBuddy(i))} className="font-semibold text-navy">{bad ? tr("날짜 바꾸기", "Change date") : tr("요청·옵션 바꾸기", "Edit requests & options")}</button>
+                        <button type="button" onClick={() => (bad ? router.push(`/buddies/${i.ref_id}?from=${stay!.date_from}&to=${stay!.date_to}`) : editBuddy(i))} className="inline-flex items-center gap-0.5 font-semibold text-navy">{bad ? tr("날짜 바꾸기", "Change date") : tr("요청·옵션 바꾸기", "Edit requests & options")}<Icon name="chevron-right" className="h-4 w-4" strokeWidth={2.4} /></button>
                       </div>
                     </div>
                     <RemoveBtn what={tr("버디", "buddy")} onClick={() => cart.remove("buddy", i.ref_id)} />
@@ -177,7 +177,7 @@ export default function CartPage() {
                     <div className="text-[16px] font-semibold text-ink">{tr("여행자 정보", "Traveler info")}</div>
                     <div className="mt-1.5 text-[15px] text-muted">{traveler ? `${traveler.name} · ${(curLang() === "en" ? NATION_EN : NATION_KO)[traveler.nationality] ?? traveler.nationality}` : tr("아직 입력하지 않았어요", "Not entered yet")}</div>
                   </div>
-                  <Link href="/checkout" className="shrink-0 text-[15px] font-semibold text-navy">{traveler ? tr("수정", "Edit") : tr("입력", "Add")}</Link>
+                  <Link href="/checkout" className="inline-flex shrink-0 items-center gap-0.5 text-[15px] font-semibold text-navy">{traveler ? tr("수정", "Edit") : tr("입력", "Add")}<Icon name="chevron-right" className="h-4 w-4" strokeWidth={2.4} /></Link>
                 </div>
                 <div className="py-5">
                   <div className="text-[16px] font-semibold text-ink">{tr("결제 수단", "Payment method")}</div>
@@ -198,7 +198,7 @@ export default function CartPage() {
           <Button className="mt-3" onClick={() => void submit()} disabled={busy || blocked}>
             {missing ? tr("버디를 고르면 신청할 수 있어요", "Pick a buddy to book") : outside.length ? tr("버디 날짜를 숙박 기간 안으로 바꿔 주세요", "Move the buddy date into your stay") : dorms.length > 1 ? tr("숙박을 하나만 남겨 주세요", "Keep only one stay") : busy ? tr("신청 중…", "Booking…") : tr("예약 신청하기", "Request booking")}
           </Button>
-          {!user && !blocked && <p className="mt-2 text-center text-[13px] text-muted">{tr("예약 신청에는 로그인이 필요해요.", "Please log in to book.")} <Link href={loginHref("/cart")} className="font-semibold text-navy">{tr("로그인", "Log in")}</Link></p>}
+          {!user && !blocked && <p className="mt-2 text-center text-[13px] text-muted">{tr("예약 신청에는 로그인이 필요해요.", "Please log in to book.")} <Link href={loginHref("/cart")} className="font-semibold text-navy underline underline-offset-2">{tr("로그인", "Log in")}</Link></p>}
         </BottomBar>
       )}
     </>

@@ -1,11 +1,12 @@
 "use client";
 // B01 버디 로그인 — AU-01 POST /auth/login, AU-02 POST /auth/google. 버디가 되고 싶으면 /buddy/apply (6단계)
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { GoogleG } from "@/components/buddy/ui";
 import { isProvider } from "@/components/buddy/format";
 import { DemoBuddyNotice, useDemoBuddyGuard } from "@/components/demo-buddy-notice";
-import { Brand, Button, inputCls } from "@/components/ui";
+import { Button, Icon, inputCls } from "@/components/ui";
 import { BUDDY_ELIGIBILITY } from "@/lib/codes";
 import { post } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
@@ -44,9 +45,11 @@ export default function Page() {
   };
 
   return (
-    <div className="px-5 pb-10 pt-6">
-      <Brand badge="버디" href="/" />
-      <h1 className="mt-8 text-[28px] font-bold leading-[1.3] text-ink">버디<br />로그인</h1>
+    <div className="px-5 pb-10 pt-4">
+      <Link href="/" aria-label="처음 화면으로" className="-ml-2 inline-flex h-11 items-center gap-0.5 rounded-full pl-1.5 pr-3 text-[15px] font-semibold text-ink hover:bg-gray-bg">
+        <Icon name="chevron-left" className="h-6 w-6" strokeWidth={2.2} />처음으로
+      </Link>
+      <h1 className="mt-5 text-[28px] font-bold leading-[1.3] text-ink">버디<br />로그인</h1>
       <p className="mt-2 text-[15px] text-muted">학교 이메일로 들어오면 소속 대학이 자동으로 정해져요.</p>
 
       <form onSubmit={login} className="mt-7 space-y-5">

@@ -65,7 +65,7 @@ export default function ToursPage() {
         {tours && tours.length > 0 && (
           <div className="mt-8 flex items-start gap-2.5 border-t border-line pt-5 text-[14px] leading-relaxed text-muted">
             <Icon name="users" className="mt-0.5 h-[18px] w-[18px] shrink-0 text-navy" />
-            <p>{tr("버디와 같이 걷고 싶다면 버디 요청에서 코스를 골라요.", "Want to walk with a buddy? Pick a walk when you request one.")} <Link href="/buddies" className="font-semibold text-navy">{tr("버디 보기 →", "See buddies →")}</Link></p>
+            <p>{tr("버디와 같이 걷고 싶다면 버디 요청에서 코스를 골라요.", "Want to walk with a buddy? Pick a walk when you request one.")} <Link href="/buddies" className="font-semibold text-navy underline underline-offset-2">{tr("버디 보기", "See buddies")}</Link></p>
           </div>
         )}
         {tours && tours.length > 0 && <p className="mt-3 text-[12px] text-muted">{walkNote(tours.every((t) => t.route_source === "route") ? "route" : "estimate", lang)}</p>}

@@ -83,6 +83,17 @@ export function StayList({ universityId }: { universityId?: number }) {
           </div>
         )}
 
+        {/* 성북 주민 게스트하우스 — 기숙사 밖 선택지 (협력 준비 중, 실제 업소는 확정 후 노출) */}
+        {all && (
+          <section className="mt-4 rounded-[14px] bg-[#E8F3EC] px-4 py-3.5">
+            <div className="flex items-center gap-2">
+              <Icon name="home" className="h-5 w-5 text-[#2F6B45]" />
+              <span className="text-[15.5px] font-bold text-[#2F6B45]">{tr("성북 주민 게스트하우스", "Seongbuk resident guesthouses")}</span>
+              <span className="ml-auto rounded-full bg-white px-2.5 py-1 text-[12px] font-bold text-[#2F6B45]">{tr("연결 준비 중", "Coming soon")}</span>
+            </div>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#2F4A3A]">{tr("방학이 아닐 때나 기숙사가 다 찼을 때를 위해, 성북 주민이 운영하는 게스트하우스를 함께 연결할 예정이에요. 숙박비가 동네 주민에게 돌아가요.", "For dates outside the dorm season or when dorms are full, we plan to connect guesthouses run by Seongbuk residents, so your stay supports locals.")}</p>
+          </section>
+        )}
         <div className="mt-6 flex items-center justify-between text-[14px] text-muted">
           <span>{all ? tr(`${rooms.length}곳`, `${rooms.length} rooms`) : ""}</span><span>{tr("1박 가격", "Per night")}</span>
         </div>
@@ -103,6 +114,7 @@ export function StayList({ universityId }: { universityId?: number }) {
         </div>
 
         {all && <p className="mt-6 border-l-[3px] border-line py-1 pl-4 text-[14.5px] leading-relaxed text-muted">{tr("숙박은 각 대학이 판매해요. 신청하면 대학 담당자가 승인한 뒤 확정돼요.", "Each university offers its own rooms. Your stay is confirmed once university staff approve it.")}</p>}
+
       </div>
 
       {sheet && <StayDatesSheet open onClose={() => setSheet(false)} value={dates} onSave={setDates} min={openFrom} max={openTo} />}

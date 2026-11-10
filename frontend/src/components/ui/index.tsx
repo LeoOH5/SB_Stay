@@ -371,7 +371,7 @@ export function TabBar({ tabs, hideOn = [] }: { tabs: { href: string; label: str
   const best = tabs.flatMap((x) => [x.href, ...(x.also ?? [])].filter((h) => path === h || (!(x.exact && h === x.href) && path.startsWith(h + "/"))).map((h) => ({ tab: x, len: h.length })))
     .sort((a, b) => b.len - a.len)[0]?.tab;
   return (
-    <nav className="sticky bottom-0 z-20 mt-auto border-t border-line bg-white px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5">
+    <nav className="sticky bottom-0 z-20 mt-auto bg-white shadow-[0_-4px_16px_rgba(19,40,64,0.10)] px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5">
       <div className="grid" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
         {tabs.map((t) => {
           const active = best?.href === t.href;

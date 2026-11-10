@@ -275,7 +275,7 @@ function ProofPicker({ title, hint, upload }: { title: string; hint: string; upl
           <div className="min-w-0 flex-1">
             <div className={cn("text-[15px] font-semibold", slot.error ? "text-red" : "text-ink")}>{slot.error ? "올리지 못했어요" : slot.url ? `${title} 올렸어요` : "올리는 중…"}</div>
             <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{slot.error ?? hint}</p>
-            <button type="button" onClick={() => ref.current?.click()} className="mt-1.5 text-[14px] font-semibold text-navy">다른 사진으로 바꾸기</button>
+            <button type="button" onClick={() => ref.current?.click()} className="mt-1.5 text-[14px] font-semibold text-navy underline underline-offset-2">다른 사진으로 바꾸기</button>
           </div>
         </div>
       ) : (

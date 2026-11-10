@@ -1,12 +1,12 @@
 "use client";
-// 어드민 왼쪽 메뉴 — v3: 흰 바탕 + 로고 "관리" 배지. 대학 담당자는 대시보드·객실·예약·정산(자기 학교)만, 나머지는 운영팀(operator)만.
+// 어드민 왼쪽 메뉴 — 남색 바탕 + 흰 로고 "관리" 배지 (본문 흰 화면과 한눈에 구분). 대학 담당자는 대시보드·객실·예약·정산(자기 학교)만, 나머지는 운영팀(operator)만.
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { get } from "@/lib/api";
 import { session, useUser } from "@/lib/auth";
 import type { AdminReportRow, ListResponse } from "@/lib/types";
-import { Brand, Icon, cn, type IconName } from "./ui";
+import { Icon, LogoMark, cn, type IconName } from "./ui";
 
 const MENU: { href: string; label: string; icon: IconName; operatorOnly?: boolean }[] = [
   { href: "/admin", label: "대시보드", icon: "grid" },
@@ -36,13 +36,17 @@ export function AdminSidebar() {
   const who = user ? (user.role === "operator" ? "성북스테이 운영팀" : user.name) : "성북스테이 관리";
   const menu = MENU.filter((m) => !m.operatorOnly || isOperator);
   const logout = () => { session.clear(); router.push("/"); };
-  const logoutBtn = (cls: string) => <button type="button" onClick={logout} className={cn("rounded-[10px] text-[14px] font-semibold text-muted hover:bg-gray-bg hover:text-ink", cls)}>로그아웃</button>;
+  const logoutBtn = (cls: string) => <button type="button" onClick={logout} className={cn("rounded-[10px] text-[14px] font-semibold text-white/70 hover:bg-white/10 hover:text-white", cls)}>로그아웃</button>;
   return (
-    <aside className="sticky top-0 z-20 flex shrink-0 flex-col border-b border-line bg-white xl:h-dvh xl:w-[248px] xl:border-b-0 xl:border-r">
+    <aside className="sticky top-0 z-20 flex shrink-0 flex-col bg-navy text-white xl:h-dvh xl:w-[248px]">
       <div className="flex items-center justify-between gap-4 px-5 pb-3 pt-4 xl:block xl:px-8 xl:pb-7 xl:pt-7">
         <div className="flex min-w-0 items-center gap-3 xl:block">
-          <Brand badge="관리" href="/admin" />
-          <div className="truncate text-[13px] text-muted xl:mt-3">{who}</div>
+          <Link href="/admin" aria-label="성북스테이 관리 홈" className="inline-flex items-center gap-2">
+            <LogoMark className="h-7 w-7 rounded-[8px] ring-1 ring-white/25" />
+            <span className="text-[20px] font-bold tracking-[-0.01em]">성북스테이</span>
+            <span className="rounded-md bg-orange px-1.5 py-0.5 text-[11.5px] font-bold leading-none text-white">관리</span>
+          </Link>
+          <div className="truncate text-[13px] text-white/60 xl:mt-3">{who}</div>
         </div>
         {logoutBtn("h-9 shrink-0 px-3 xl:hidden")}
       </div>
@@ -51,7 +55,7 @@ export function AdminSidebar() {
           const active = m.href === "/admin" ? path === "/admin" : path.startsWith(m.href);
           const badge = m.href === "/admin/reports" && isOperator ? openReports : 0;
           return (
-            <Link key={m.href} href={m.href} aria-current={active ? "page" : undefined} className={cn("flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] px-3 text-[14px] xl:h-11 xl:gap-3 xl:px-3.5 xl:text-[15px]", active ? "bg-navy-bg font-bold text-navy" : "text-ink hover:bg-gray-bg")}>
+            <Link key={m.href} href={m.href} aria-current={active ? "page" : undefined} className={cn("flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] px-3 text-[14px] xl:h-11 xl:gap-3 xl:px-3.5 xl:text-[15px]", active ? "bg-white font-bold text-navy" : "text-white/80 hover:bg-white/10 hover:text-white")}>
               <Icon name={m.icon} className="h-5 w-5" />
               <span className="xl:flex-1">{m.label}</span>
               {badge > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1.5 text-[11px] font-bold text-white" aria-label={`처리 전 신고 ${badge}건`}>{badge}</span>}

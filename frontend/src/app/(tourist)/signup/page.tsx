@@ -65,7 +65,7 @@ function SignupPage() {
       </div>
       <BottomBar>
         <Button type="submit" disabled={busy}>{busy ? tr("가입 중…", "Signing up…") : tr("가입하기", "Sign up")}</Button>
-        <p className="mt-3 text-center text-[14px] text-muted">{tr("이미 계정이 있어요", "Already have an account?")} <Link href={loginHref(next)} className="font-semibold text-ink">{tr("로그인", "Log in")}</Link></p>
+        <p className="mt-3 text-center text-[14px] text-muted">{tr("이미 계정이 있어요", "Already have an account?")} <Link href={loginHref(next)} className="font-semibold text-navy underline underline-offset-2">{tr("로그인", "Log in")}</Link></p>
       </BottomBar>
     </form>
   );

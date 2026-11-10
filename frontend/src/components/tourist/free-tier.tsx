@@ -38,7 +38,7 @@ export function UpsellLinks({ courseId, primary = tr("버디와 걷기", "Walk w
     <div className={className}>
       <LinkButton href={courseId ? `/buddies?course=${courseId}` : "/buddies"}>{primary}</LinkButton>
       <p className="mt-3 text-center text-[14px] text-muted">
-        {tr("숙소도 필요하다면", "Need a place to stay too?")} <Link href="/stay" className="font-semibold text-navy">{tr("기숙사 숙박 + 버디", "Dorm stay + buddy")}</Link>
+        {tr("숙소도 필요하다면", "Need a place to stay too?")} <Link href="/stay" className="font-semibold text-navy underline underline-offset-2">{tr("기숙사 숙박 + 버디", "Dorm stay + buddy")}</Link>
       </p>
     </div>
   );

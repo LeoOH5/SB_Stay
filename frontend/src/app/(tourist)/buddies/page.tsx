@@ -138,7 +138,7 @@ function Buddies() {
 
         {!(from && to) && (
           <p className="mt-4 text-[14.5px] leading-relaxed text-muted">
-            {tr("숙소가 이미 있어도 괜찮아요. 숙박 없이 버디만 신청할 수 있어요.", "Already have a place to stay? You can book just a buddy.")} <Link href="/stay" className="font-semibold text-navy">{tr("숙박도 같이 보기", "See stays too")}</Link>
+            {tr("숙소가 이미 있어도 괜찮아요. 숙박 없이 버디만 신청할 수 있어요.", "Already have a place to stay? You can book just a buddy.")} <Link href="/stay" className="font-semibold text-navy underline underline-offset-2">{tr("숙박도 같이 보기", "See stays too")}</Link>
           </p>
         )}
         {(reqChips.length > 0 || (from && to)) && (

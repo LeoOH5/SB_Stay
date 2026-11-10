@@ -158,7 +158,7 @@ function Detail() {
 
           {acts.length > 0 && (
             <>
-              <SectionHead className="mt-9" title={tr("최근 활동", "Recent walks")} right={allActs ? undefined : <button type="button" onClick={loadAll} className="font-semibold text-ink">{tr("전체", "All")}</button>} />
+              <SectionHead className="mt-9" title={tr("최근 활동", "Recent walks")} right={allActs ? undefined : <button type="button" onClick={loadAll} className="inline-flex items-center gap-0.5 font-semibold text-navy">{tr("전체 보기", "See all")}<Icon name="chevron-down" className="h-4 w-4" strokeWidth={2.4} /></button>} />
               <div className="mt-1 divide-y divide-line">{acts.map((a, i) => <ActivityRow key={`${a.date}-${i}`} a={a} />)}</div>
             </>
           )}

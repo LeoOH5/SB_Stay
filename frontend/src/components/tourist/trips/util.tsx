@@ -7,6 +7,7 @@ import { curLang, tr } from "@/lib/i18n";
 import { personName } from "@/lib/i18n-data";
 import { get } from "@/lib/api";
 import type { Booking, BookingItem } from "@/lib/types";
+import { PersonArt } from "@/components/person-art";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const parts = (s: string) => s.split("-").map(Number) as [number, number, number];
@@ -75,10 +76,11 @@ export function useBooking(id: string | undefined) {
   return { booking, err, setBooking };
 }
 
-/** 이름 첫 글자 동그라미 */
+/** 프로필 그림 (선택하면 체크) */
 export function Avatar({ name, size = "md", active, className }: { name: string; size?: "sm" | "md" | "lg"; active?: boolean; className?: string }) {
   const s = size === "lg" ? "h-16 w-16 text-[22px]" : size === "sm" ? "h-10 w-10 text-[15px]" : "h-12 w-12 text-[18px]";
-  return <span className={cn("flex shrink-0 items-center justify-center rounded-full font-bold transition", active ? "bg-navy text-white" : "bg-navy-bg text-navy", s, className)} aria-hidden>{active ? <Icon name="check" className="h-6 w-6" strokeWidth={2.6} /> : name.trim().charAt(0).toUpperCase()}</span>;
+  if (!active) return <PersonArt name={name} className={cn(s, className)} />;
+  return <span className={cn("flex shrink-0 items-center justify-center rounded-full bg-navy font-bold text-white transition", s, className)} aria-hidden><Icon name="check" className="h-6 w-6" strokeWidth={2.6} /></span>;
 }
 
 /** 타임라인 점: done(쪽빛 채움 + 체크) · wait(감 주황 테두리) · open(빈 원) · off(회색) */
