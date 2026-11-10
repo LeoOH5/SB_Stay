@@ -20,7 +20,9 @@ const okItem = (s: BookingItem["status"]) => s === "approved" || s === "confirme
 const nodeOf = (s: BookingItem["status"]) => (okItem(s) ? "done" : s === "requested" ? "wait" : "off");
 /** 버디 바꾸기 가능: 신청·거절 상태이거나, 확정이지만 아직 날짜 전 */
 const canReplace = (it: BookingItem) => it.type === "buddy" && (it.status === "requested" || it.status === "rejected" || (it.status === "confirmed" && (it.date_from ?? "") > DEMO_TODAY));
-const linkCls = "text-[15px] font-semibold text-navy";
+/** 누르면 다른 화면·창으로 가는 글자 — 오른쪽 › 표시 */
+const linkCls = "inline-flex items-center gap-0.5 text-[15px] font-semibold text-navy";
+const Arrow = () => <Icon name="chevron-right" className="h-4 w-4" strokeWidth={2.4} />;
 
 export default function TripsPage() {
   useLang();
@@ -236,7 +238,7 @@ function DormStep({ it, onGuide }: { it: BookingItem; onGuide: () => void }) {
       <div className="mt-1 text-[15px] text-muted">{krRange(it.date_from, it.date_to)}{it.date_from && it.date_to ? tr(`, ${nightsOf(it.date_from, it.date_to)}박`, `, ${nightsOf(it.date_from, it.date_to)} night${nightsOf(it.date_from, it.date_to) === 1 ? "" : "s"}`) : ""}</div>
       {it.status === "requested" && <div className="mt-1 text-[14px] text-orange-ink">{tr("대학이 확인하고 있어요", "The university is reviewing it")}</div>}
       {it.status === "rejected" && <div className="mt-1 text-[14px] text-muted">{tr("대학이 거절했어요", "The university declined")}{it.reject_reason ? ` · ${it.reject_reason}` : ""}</div>}
-      {okItem(it.status) && <button type="button" onClick={onGuide} className={cn(linkCls, "mt-2.5")}>{tr("체크인 안내 보기", "View check-in guide")}</button>}
+      {okItem(it.status) && <button type="button" onClick={onGuide} className={cn(linkCls, "mt-2.5")}>{tr("체크인 안내 보기", "View check-in guide")}<Arrow /></button>}
     </>
   );
 }
@@ -266,9 +268,9 @@ function BuddyStep({ b, it, onChat }: { b: Booking; it: BookingItem; onChat: () 
       )}
 
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-        {it.status === "confirmed" && <button type="button" onClick={onChat} className={linkCls}>{tr("채팅", "Chat")}</button>}
-        {it.album && it.status !== "rejected" && <Link href={`/trips/${b.id}/album`} className={linkCls}>{tr(`앨범 ${it.album_photos ?? 0}장`, `Photo record · ${it.album_photos ?? 0}`)}</Link>}
-        {it.can_review && <Link href={`/trips/${b.id}/review?item=${it.id}`} className={linkCls}>{tr("후기 쓰기", "Write a review")}</Link>}
+        {it.status === "confirmed" && <button type="button" onClick={onChat} className={linkCls}>{tr("채팅", "Chat")}<Arrow /></button>}
+        {it.album && it.status !== "rejected" && <Link href={`/trips/${b.id}/album`} className={linkCls}>{tr(`앨범 ${it.album_photos ?? 0}장`, `Photo record · ${it.album_photos ?? 0}`)}<Arrow /></Link>}
+        {it.can_review && <Link href={`/trips/${b.id}/review?item=${it.id}`} className={linkCls}>{tr("후기 쓰기", "Write a review")}<Arrow /></Link>}
         {canReplace(it) && <Link href={`/trips/${b.id}/replace?item=${it.id}`} className={cn(linkCls, it.status === "rejected" && "text-orange")}>{it.status === "rejected" ? tr("다른 버디 고르기", "Pick another buddy") : tr("버디 바꾸기", "Change buddy")}</Link>}
       </div>
     </>
@@ -283,7 +285,7 @@ function CourseStep({ it, course }: { it: BookingItem; course?: Tour }) {
     <>
       <StepHead title={tr(title.endsWith("코스") ? title : `${title} 코스`, titleEn ? `${titleEn} walk` : title)} pill={<StatusPill status="none" tone="gray" label={tr("무료 코스", "Free walk")} />} />
       <div className="mt-1 text-[15px] text-muted">{krDate(it.date_from)} {tr(`${name}${wa(name)} 함께`, `with ${name}`)}{course ? tr(` · 장소 ${course.places.length}곳`, ` · ${course.places.length} stops`) : ""}</div>
-      <Link href={`/tours/${it.course_id}`} className={cn(linkCls, "mt-2.5 inline-block")}>{tr("AI 이야기 듣기", "Hear AI stories")}</Link>
+      <Link href={`/tours/${it.course_id}`} className={cn(linkCls, "mt-2.5")}>{tr("AI 이야기 듣기", "Hear AI stories")}<Arrow /></Link>
     </>
   );
 }
@@ -308,10 +310,10 @@ function PastTrip({ b }: { b: Booking }) {
                 {it.type === "dorm" ? `${krRange(it.date_from, it.date_to)}${it.date_from && it.date_to ? tr(`, ${nightsOf(it.date_from, it.date_to)}박`, `, ${nightsOf(it.date_from, it.date_to)} night${nightsOf(it.date_from, it.date_to) === 1 ? "" : "s"}`) : ""}` : `${krDate(it.date_from)} ${it.time ?? ""}`}
                 {it.type === "buddy" && (it.meal_deposit ?? 0) > 0 && !cancelled ? tr(` · 식사비 ${money(it.meal_used ?? 0)} 사용, ${money(it.meal_refund ?? 0)} 환불`, ` · Meals ${money(it.meal_used ?? 0)} used, ${money(it.meal_refund ?? 0)} refunded`) : ""}
               </div>
-              {it.album && !cancelled && <Link href={`/trips/${b.id}/album`} className="mt-1.5 inline-block text-[14px] font-semibold text-navy">{tr(`앨범 ${it.album_photos ?? 0}장`, `Photo record · ${it.album_photos ?? 0}`)}</Link>}
+              {it.album && !cancelled && <Link href={`/trips/${b.id}/album`} className="mt-1.5 inline-flex items-center gap-0.5 text-[14px] font-semibold text-navy">{tr(`앨범 ${it.album_photos ?? 0}장`, `Photo record · ${it.album_photos ?? 0}`)}<Icon name="chevron-right" className="h-4 w-4" strokeWidth={2.4} /></Link>}
             </div>
             <div className="shrink-0">
-              {it.can_review ? <Link href={`/trips/${b.id}/review?item=${it.id}`} className="text-[15px] font-semibold text-navy">{tr("후기 쓰기", "Write a review")}</Link>
+              {it.can_review ? <Link href={`/trips/${b.id}/review?item=${it.id}`} className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-navy">{tr("후기 쓰기", "Write a review")}<Icon name="chevron-right" className="h-4 w-4" strokeWidth={2.4} /></Link>
                 : it.reviewed ? <span className="text-[14px] text-muted">{tr("후기 남김", "Reviewed")}</span> : null}
             </div>
           </div>

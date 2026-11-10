@@ -7,7 +7,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { KakaoMap } from "@/components/kakao-map";
 import { useEffect, useRef, useState } from "react";
-import { Button, Spinner, TopBar, cn } from "@/components/ui";
+import { Button, Icon, Spinner, TopBar, cn } from "@/components/ui";
 import { ErrorBox } from "@/components/tourist";
 import { AdInterstitial, FixedCourseNote, HelpSheet, QuestionLimit, QuestionsLeft, SurveySheet, useMyPlan } from "@/components/tourist/free-tier";
 import { DAY_LABEL, errMsg, herePath, loginHref, okv } from "@/components/tourist/format";
@@ -114,7 +114,7 @@ export default function CourseDetailPage() {
 
   return (
     <>
-      <TopBar back="/tours" title={tr("코스", "Walk")} right={tour && my.free ? <button type="button" onClick={() => setHelpOpen(true)} className="font-semibold text-navy">{tr("도움이 필요해요", "I need help")}</button> : undefined} />
+      <TopBar back="/tours" title={tr("코스", "Walk")} right={tour && my.free ? <button type="button" onClick={() => setHelpOpen(true)} className="font-semibold text-navy underline underline-offset-2">{tr("도움이 필요해요", "I need help")}</button> : undefined} />
       <div className="px-5">
         <ErrorBox message={err} />
         {!tour && !err && <Spinner />}
@@ -146,7 +146,7 @@ export default function CourseDetailPage() {
             onSelect={(i) => { const pid = mapPlaces[i]?.id; if (pid !== undefined && pid !== placeId) select(pid); }} />
 
           <div ref={stopsRef} className="scroll-mt-4">
-            <SectionHead className="mt-8" title={tr("코스", "Stops")} right={tr("눌러서 AI 이야기 듣기", "Tap for the AI story")} />
+            <SectionHead className="mt-8" title={tr("코스", "Stops")} right={tr("장소를 누르면 AI가 이야기해요", "Tap a stop to hear its story")} />
           </div>
           <ol className="mt-4">
             {orderedPlaces.map((p, i) => {
@@ -160,9 +160,25 @@ export default function CourseDetailPage() {
                   <button type="button" onClick={() => select(p.id)} aria-expanded={open} aria-label={tr(`${i + 1}번 장소 이야기`, `Story for stop ${i + 1}`)}
                     className={cn("relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] text-[12px] font-bold", open ? "border-ink bg-ink text-white" : "border-ink bg-white text-ink")}>{i + 1}</button>
                   <div className="min-w-0 flex-1">
-                    <button type="button" onClick={() => select(p.id)} className="block text-left">
-                      <span className="block text-[16px] font-semibold text-ink">{lang === "en" ? p.name_en : p.name}</span>
-                      {info && <span className="mt-1 block text-[14px] text-muted">{placeMeta(info)}</span>}
+                    <button type="button" onClick={() => select(p.id)} aria-expanded={open} className="flex w-full items-start gap-3 text-left">
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1 text-[16px] font-semibold text-ink">
+                          {lang === "en" ? p.name_en : p.name}
+                          <Icon name="chevron-down" className={cn("h-[18px] w-[18px] text-muted transition-transform", open && "rotate-180")} strokeWidth={2.2} />
+                        </span>
+                        {info && <span className="mt-1 block text-[14px] text-muted">{placeMeta(info)}</span>}
+                        {!open && (
+                          <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-navy-bg px-3 py-1.5 text-[13px] font-semibold text-navy">
+                            <Icon name="sparkle" className="h-[15px] w-[15px]" strokeWidth={2} />
+                            {tr("눌러서 AI 이야기 듣기", "Tap for the AI story")}
+                            <Icon name="chevron-right" className="h-[14px] w-[14px]" strokeWidth={2.4} />
+                          </span>
+                        )}
+                      </span>
+                      {!open && info?.photo_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={info.photo_url} alt="" className="h-16 w-16 shrink-0 rounded-[10px] object-cover" loading="lazy" />
+                      )}
                     </button>
                     {open && (
                       <div className="mt-3">

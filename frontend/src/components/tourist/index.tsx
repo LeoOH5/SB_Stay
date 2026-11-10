@@ -14,8 +14,8 @@ export function BottomSheet({ open, onClose, title, children }: { open: boolean;
   const path = usePathname();
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="w-full max-w-[430px] max-h-[85dvh] overflow-y-auto rounded-t-[20px] bg-white px-5 pt-4 pb-[max(env(safe-area-inset-bottom),20px)]" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-[#0B1626]/70" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="w-full max-w-[430px] max-h-[85dvh] overflow-y-auto rounded-t-[20px] bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.25)] px-5 pt-4 pb-[max(env(safe-area-inset-bottom),20px)]" onClick={(e) => e.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-[16px] font-bold text-ink">{title}</h3>

@@ -79,7 +79,7 @@ export default function MePage() {
             <div className="text-[18px] font-bold text-ink">{user.name}</div>
             <div className="mt-0.5 truncate text-[14px] text-muted">{user.email}, {ROLE_LABEL[user.role]}</div>
           </div>
-          <button type="button" className="shrink-0 text-[15px] font-semibold text-ink" onClick={() => { setName(user.name); setEditing(true); }}>{tr("수정", "Edit")}</button>
+          <button type="button" className="shrink-0 text-[15px] font-semibold text-navy underline underline-offset-2" onClick={() => { setName(user.name); setEditing(true); }}>{tr("수정", "Edit")}</button>
         </div>
 
         <ErrorBox message={msg} className="mt-2" />
