@@ -61,7 +61,7 @@ body {
   max-width: 430px;
   min-height: 100dvh;
   margin: 0 auto;
-  background: #fff;
+  background: #fff; /* 화면 바탕 흰색 — 위 메뉴줄·아래 탭바는 그림자로 구분 */
   position: relative;
   box-shadow: 0 0 0 1px var(--sb-line);
   flex: none; /* body가 flex 컬럼이라 화면 높이로 눌려 배경이 끊기던 문제 */

@@ -34,7 +34,9 @@ export default function CheckoutPage() {
 
   const prefill = () => {
     const saved = readSS<Traveler | null>(SS_TRAVELER, null);
-    setForm(saved ? { ...EMPTY, ...saved } : { ...EMPTY, name: user?.name ?? "", email: user?.email ?? "" });
+    // 데모 계정은 비상 연락처까지 채워 두어 바로 다음 단계로 넘어갈 수 있게
+    const demo = user?.is_demo ? { emergency_contact: "+1 555 0100" } : {};
+    setForm(saved ? { ...EMPTY, ...saved } : { ...EMPTY, ...demo, name: user?.name ?? "", email: user?.email ?? "" });
   };
   const set = <K extends keyof Traveler>(k: K, v: Traveler[K]) => setForm((f) => ({ ...f, [k]: v }));
 

@@ -128,7 +128,7 @@ export default function AdminRoomsPage() {
         sub={period && (
           <span className="inline-flex flex-wrap items-center gap-x-3">
             <span>서울 성북구, 방학 개방 {mdKo(period.from)} – {mdKo(period.to)}</span>
-            {!editPeriod && <button type="button" className="text-[13px] font-semibold text-navy hover:underline" onClick={() => setEditPeriod(true)}>기간 수정</button>}
+            {!editPeriod && <button type="button" className="text-[13px] font-semibold text-navy underline underline-offset-2" onClick={() => setEditPeriod(true)}>기간 수정</button>}
           </span>
         )}
         right={

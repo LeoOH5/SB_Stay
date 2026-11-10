@@ -2,9 +2,10 @@
 // T01 홈 — HM-01 GET /packages (숙박 + 버디 + 추천 코스), 패키지 담기용 DM-03·TR-02·BD-02, TR-01 코스 수
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Banner, Brand, Button, ImageBlock, LinkButton, ListRow, Spinner, TagChip } from "@/components/ui";
+import { Banner, Brand, Button, Icon, ImageBlock, LinkButton, ListRow, Spinner, TagChip } from "@/components/ui";
 import { BottomSheet, ErrorBox } from "@/components/tourist";
 import { DEFAULT_FROM, addDays, errMsg, nightsBetween, okv, ROOM_LABEL } from "@/components/tourist/format";
+import { TouristGuide, TouristGuideRow, useTouristGuide } from "@/components/tourist/guide";
 import { HeaderActions } from "@/components/tourist/header-actions";
 import { koDay, koDuration, koRange, wa } from "@/components/tourist/v3/flow";
 import { SectionHead } from "@/components/tourist/v3";
@@ -60,6 +61,7 @@ export default function HomePage() {
   const [sel, setSel] = useState<Package | null>(null);
   const [selItems, setSelItems] = useState<CartItem[] | null>(null);
   const [sheetErr, setSheetErr] = useState<string | null>(null);
+  const guide = useTouristGuide();
 
   useEffect(() => {
     let alive = true;
@@ -86,7 +88,7 @@ export default function HomePage() {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between bg-white px-5 pt-2">
+      <header className="flex h-16 items-center justify-between bg-white px-5 pt-1">
         <Brand href="/home" />
         <HeaderActions />
       </header>
@@ -95,13 +97,15 @@ export default function HomePage() {
         <h1 className="text-[26px] font-bold leading-[1.35] tracking-[-0.01em] text-ink">{first ? <>{tr(`${first} 님,`, `Hi ${first},`)}<br /></> : null}{tr("이번 겨울은 성북동에서", "This winter, stay in Seongbuk")}</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-muted">{tr("성북구와 대학이 함께 여는 방학 스테이예요. 1월 5일부터 2월 20일까지 기숙사에 머물며 같은 학교 버디와 동네를 걸어요.", "A vacation stay run by Seongbuk-gu and local universities. From Jan 5 to Feb 20, stay in a university dorm and walk the neighborhood with a buddy from the same school.")}</p>
 
+        <TouristGuideRow onClick={guide.show} className="mt-4" />
+
         <ImageBlock src={HERO_PHOTO} label={tr("길상사 · 성북동", "Gilsangsa Temple · Seongbuk-dong")} credit={tr("한국관광공사", "Korea Tourism Organization")} h="h-[196px]" className="mt-6" />
 
         <LinkButton href="/plan" className="mt-5">{tr("AI에게 일정 맡기기", "Let AI plan my stay")}</LinkButton>
         <p className="mt-2.5 text-center text-[13.5px] text-muted">{tr("날짜와 예산, 관심사만 고르면 숙소·버디·산책 코스를 묶어 드려요", "Pick dates, budget and interests — we bundle a stay, a buddy and a walk")}</p>
 
         <SectionHead className="mt-9" title={tr("묶어서 고르기", "Bundles")}
-          right={pkgs && pkgs.length > SHOWN ? <button type="button" onClick={() => setAll((v) => !v)} className="font-semibold text-navy">{all ? tr("접기", "Show less") : tr("전체 보기", "See all")}</button> : undefined} />
+          right={pkgs && pkgs.length > SHOWN ? <button type="button" onClick={() => setAll((v) => !v)} className="inline-flex items-center gap-0.5 font-semibold text-navy">{all ? tr("접기", "Show less") : tr("전체 보기", "See all")}<Icon name="chevron-down" className={all ? "h-4 w-4 rotate-180" : "h-4 w-4"} strokeWidth={2.4} /></button> : undefined} />
         <ErrorBox message={err} className="mt-3" />
         {!pkgs && !err && <Spinner />}
         <div className="divide-y divide-line">
@@ -128,6 +132,7 @@ export default function HomePage() {
         <p className="mt-2 text-[15px] leading-relaxed text-muted">{tr("서울 도성 바로 바깥, 문화재가 가장 많은 동네예요. 정릉, 심우장, 길상사, 수연산방, 선잠박물관이 모두 걸어서 닿는 거리에 있어요.", "Just outside Seoul's old city wall, it's the neighborhood with the most heritage sites. Jeongneung, Simujang, Gilsangsa, Suyeonsanbang and the Seonjam Museum are all within walking distance.")}</p>
       </div>
 
+      <TouristGuide open={guide.open} onClose={guide.close} />
       <BottomSheet open={sel !== null} onClose={() => setSel(null)} title={sel ? (lang === "en" ? sel.title_en : sel.title) : ""}>
         {sel && (
           <div>

@@ -89,7 +89,7 @@ export default function StayDetailPage() {
               <InfoRow label={tr("포함", "Included")}>{tr("침구, 수건, 퇴실 청소", "Bedding, towels, checkout cleaning")}</InfoRow>
               <div className="flex items-center justify-between gap-4 py-3.5 text-[15px]">
                 <span className="text-muted">{tr("묵는 날", "Dates")}</span>
-                <button type="button" onClick={() => setSheet(true)} className="font-semibold text-navy">{koRange(dates.from, dates.to)}, {nightsTxt(nights)} · {tr("바꾸기", "Change")}</button>
+                <button type="button" onClick={() => setSheet(true)} className="font-semibold text-navy underline underline-offset-2">{koRange(dates.from, dates.to)}, {nightsTxt(nights)} · {tr("바꾸기", "Change")}</button>
               </div>
             </div>
             {!inOpen && <p className="text-[13px] text-orange-ink">{tr(`개방 기간(${koMD(dorm.open_from)} – ${koMD(dorm.open_to)}) 안에서 골라 주세요.`, `Please pick dates within the open period (${koMD(dorm.open_from)} – ${koMD(dorm.open_to)}).`)}</p>}

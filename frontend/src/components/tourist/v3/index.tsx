@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { Icon, cn } from "@/components/ui";
 import { tr } from "@/lib/i18n";
 import { koDay } from "./flow";
+import { PersonArt } from "@/components/person-art";
 
 /** 브라우저에서 그려졌는지 (sessionStorage 값을 읽기 전 깜빡임 방지) */
 const noop = () => () => {};
@@ -23,7 +24,7 @@ export function BottomBar({ children, className }: { children: ReactNode; classN
   return (
     <>
       <div style={{ height: h }} aria-hidden />
-      <div ref={ref} className={cn("fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[430px] border-t border-line bg-white px-5 pb-[max(env(safe-area-inset-bottom),16px)] pt-3", className)}>
+      <div ref={ref} className={cn("fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[430px] bg-white shadow-[0_-4px_16px_rgba(19,40,64,0.10)] px-5 pb-[max(env(safe-area-inset-bottom),16px)] pt-3", className)}>
         {children}
       </div>
     </>
@@ -112,13 +113,9 @@ export function InfoRow({ label, children, className }: { label: ReactNode; chil
   );
 }
 
-/** 이름 첫 글자 동그라미 */
+/** 프로필 그림 (이름마다 정해진 일러스트) */
 export function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
-  return (
-    <div className={cn("flex shrink-0 items-center justify-center rounded-full bg-navy-bg font-bold text-navy", size === "lg" ? "h-[72px] w-[72px] text-[26px]" : "h-12 w-12 text-[19px]")}>
-      {name.trim().charAt(0)}
-    </div>
-  );
+  return <PersonArt name={name} className={size === "lg" ? "h-[72px] w-[72px]" : "h-12 w-12"} />;
 }
 
 /** 코스 장소 수를 점선으로 이은 동그라미 */

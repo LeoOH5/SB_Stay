@@ -233,7 +233,7 @@ export function ErrorText({ children, className }: { children: ReactNode; classN
 /* ------------------------------------------------------------------ 상수·도우미 */
 /** 표 안·패널 버튼 (42px, 모서리 12) */
 export const smallBtn = "h-[42px] min-h-0! rounded-[12px] px-4 text-[15px]";
-export const linkCls = "text-[14px] font-semibold text-navy hover:underline disabled:opacity-40";
+export const linkCls = "text-[14px] font-semibold text-navy underline underline-offset-2 disabled:opacity-40";
 export const adminInput = "h-[42px] rounded-[10px] border border-[#CDD3DA] bg-white px-3.5 text-[14px] text-ink placeholder:text-muted focus:outline-none focus:border-navy";
 export const errMsg = (e: unknown) => (e instanceof Error ? e.message : "요청에 실패했어요");
 

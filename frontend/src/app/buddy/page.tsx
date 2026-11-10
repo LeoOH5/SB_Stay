@@ -4,12 +4,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { DEMO_TODAY, krDate, langsName } from "@/components/buddy/format";
+import { BuddyGuide, useBuddyGuide } from "@/components/buddy/guide";
 import { LoginGate } from "@/components/buddy/login-gate";
 import { RequestCard, type DecideAction } from "@/components/buddy/request-card";
 import { useToast } from "@/components/buddy/toast";
 import { usePlaceNames } from "@/components/buddy/ui";
 import { HeaderActions } from "@/components/tourist/header-actions";
-import { Banner, Brand, ListRow, Spinner, StatusPill } from "@/components/ui";
+import { Banner, Brand, Icon, ListRow, Spinner, StatusPill } from "@/components/ui";
 import { get, patch } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import type { Activity, BuddyProfile, BuddyRequest, ListResponse } from "@/lib/types";
@@ -25,6 +26,7 @@ export default function Page() {
   const [schedule, setSchedule] = useState<BuddyRequest[] | null>(null);
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
+  const guide = useBuddyGuide();
 
   const reload = useCallback(() => {
     get<ListResponse<BuddyRequest>>("/buddy/requests", { status: "requested" }).then((r) => setRequests(r.items)).catch(() => setRequests([]));
@@ -56,14 +58,19 @@ export default function Page() {
 
   return (
     <div className="pb-8">
-      <header className="px-5 pt-5">
-        <div className="flex items-center justify-between">
-          <Brand badge="버디" href="/buddy" />
-          <HeaderActions />
-        </div>
-        <h1 className="mt-7 text-[28px] font-bold leading-[1.3] text-ink">안녕하세요,<br />{name || "버디"} 님</h1>
+      <div className="flex h-16 items-center justify-between bg-white px-5 pt-1">
+        <Brand badge="버디" href="/buddy" />
+        <HeaderActions />
+      </div>
+      <header className="px-5 pt-1">
+        <h1 className="mt-6 text-[28px] font-bold leading-[1.3] text-ink">안녕하세요,<br />{name || "버디"} 님</h1>
         {profile && <StatusPill className="mt-3" status={st} label={st === "approved" ? "활동 중" : st === "suspended" ? "활동 멈춤" : "승인 대기"} />}
         {profile && <p className="mt-2 text-[15px] text-muted">{profile.university} {profile.major} {profile.year}학년, {langsName(profile.languages)}</p>}
+        <button type="button" onClick={guide.show} className="mt-4 flex w-full items-center gap-3 rounded-[14px] bg-orange-bg px-4 py-3 text-left">
+          <Icon name="info" className="h-5 w-5 shrink-0 text-orange-ink" />
+          <span className="flex-1 text-[14.5px] font-semibold text-orange-ink">처음이라면? 버디 활동 4단계 안내</span>
+          <Icon name="chevron-right" className="h-5 w-5 shrink-0 text-orange-ink" />
+        </button>
       </header>
       <LoginGate className="mx-5 mt-4" />
       {st === "suspended" && <Banner variant="warn" className="mx-5 mt-4">신고가 들어와 운영팀이 확인하고 있어요. 확인이 끝날 때까지 새 요청을 받지 않아요.</Banner>}
@@ -72,16 +79,16 @@ export default function Page() {
       <section className="mt-8 px-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[18px] font-bold text-ink">새 요청 {requests?.length ?? 0}건</h2>
-          <Link href="/buddy/requests" className="text-[15px] font-semibold text-navy">요청함</Link>
+          <Link href="/buddy/requests" className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-navy">요청함<Icon name="chevron-right" className="h-4 w-4" strokeWidth={2.4} /></Link>
         </div>
         {requests === null ? <Spinner /> : requests.length === 0 ? (
-          <p className="py-4 text-[15px] leading-relaxed text-muted">새 요청이 없어요. <Link href="/buddy/schedule" className="font-semibold text-navy">가능한 날짜</Link>를 열어 두면 요청이 들어와요.</p>
+          <p className="py-4 text-[15px] leading-relaxed text-muted">새 요청이 없어요. <Link href="/buddy/schedule" className="font-semibold text-navy underline underline-offset-2">가능한 날짜</Link>를 열어 두면 요청이 들어와요.</p>
         ) : (
           <div className="space-y-3">
             {requests.slice(0, 3).map((req, i) => (
               <RequestCard key={req.item_id} req={req} placeNames={places} compact={i > 0} busy={busy === req.item_id} onDecide={(a, reason) => decide(req, a, reason)} />
             ))}
-            {requests.length > 3 && <Link href="/buddy/requests" className="block py-2 text-center text-[15px] font-semibold text-navy">요청 {requests.length - 3}건 더 보기</Link>}
+            {requests.length > 3 && <Link href="/buddy/requests" className="flex items-center justify-center gap-0.5 py-2 text-[15px] font-semibold text-navy">요청 {requests.length - 3}건 더 보기<Icon name="chevron-right" className="h-4 w-4" strokeWidth={2.4} /></Link>}
           </div>
         )}
       </section>
@@ -100,6 +107,7 @@ export default function Page() {
         )}
       </section>
       {toast}
+      <BuddyGuide open={guide.open} onClose={guide.close} />
     </div>
   );
 }

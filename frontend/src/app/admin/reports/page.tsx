@@ -182,8 +182,8 @@ function ReportPanel({ r, buddy, bookings, onDone }: { r: Row; buddy?: AdminBudd
             <Button variant="danger" className={smallBtn} disabled={!!busy} onClick={() => act("suspend")}>활동 정지</Button>
           </div>
           <div className="mt-3 flex items-center justify-center gap-4 text-[13px]">
-            {suspended && <button type="button" className="font-semibold text-muted hover:text-ink hover:underline disabled:opacity-40" disabled={!!busy} onClick={() => act("warn")}>경고만 하기</button>}
-            <button type="button" className="font-semibold text-muted hover:text-ink hover:underline disabled:opacity-40" disabled={!!busy} onClick={() => act("dismiss")}>신고 기각</button>
+            {suspended && <button type="button" className="font-semibold text-muted hover:text-ink underline underline-offset-2 disabled:opacity-40" disabled={!!busy} onClick={() => act("warn")}>경고만 하기</button>}
+            <button type="button" className="font-semibold text-muted hover:text-ink underline underline-offset-2 disabled:opacity-40" disabled={!!busy} onClick={() => act("dismiss")}>신고 기각</button>
           </div>
         </>
       ) : (

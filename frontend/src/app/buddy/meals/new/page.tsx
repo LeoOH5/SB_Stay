@@ -81,7 +81,7 @@ function MealClaimPage() {
                 <div className="min-w-0 flex-1">
                   <div className={cn("text-[16px] font-semibold", slot.error ? "text-red" : "text-ink")}>{slot.error ? "올리지 못했어요" : receipt ? "영수증 사진을 올렸어요" : "올리는 중…"}</div>
                   <p className="mt-1 text-[13px] leading-relaxed text-muted">{slot.error ?? "가게 이름, 날짜, 금액이 잘 보이는지 확인해 주세요"}</p>
-                  <button type="button" onClick={() => fileRef.current?.click()} className="mt-2 text-[14px] font-semibold text-navy">다른 사진으로 바꾸기</button>
+                  <button type="button" onClick={() => fileRef.current?.click()} className="mt-2 text-[14px] font-semibold text-navy underline underline-offset-2">다른 사진으로 바꾸기</button>
                 </div>
               </div>
             ) : (

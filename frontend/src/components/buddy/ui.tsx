@@ -5,15 +5,16 @@ import { Icon, cn } from "@/components/ui";
 import { get } from "@/lib/api";
 import type { ListResponse, Place } from "@/lib/types";
 import { monthLabel } from "./format";
+import { PersonArt } from "@/components/person-art";
 
 export function Avatar({ name, large, className }: { name: string; large?: boolean; className?: string }) {
-  return <span className={cn("flex shrink-0 items-center justify-center rounded-full bg-navy-bg font-bold text-navy", large ? "h-14 w-14 text-[20px]" : "h-12 w-12 text-[18px]", className)} aria-hidden>{name.trim().charAt(0)}</span>;
+  return <PersonArt name={name} className={cn(large ? "h-14 w-14" : "h-12 w-12", className)} />;
 }
 
 /** 화면 아래 붙는 버튼 줄 (탭바를 숨긴 화면용) */
 export function BottomBar({ children, note }: { children: ReactNode; note?: ReactNode }) {
   return (
-    <div className="sticky bottom-0 z-10 mt-auto border-t border-line bg-white px-5 pb-[max(env(safe-area-inset-bottom),16px)] pt-4">
+    <div className="sticky bottom-0 z-10 mt-auto bg-white shadow-[0_-4px_16px_rgba(19,40,64,0.10)] px-5 pb-[max(env(safe-area-inset-bottom),16px)] pt-4">
       {children}
       {note && <p className="mt-2.5 text-center text-[13px] text-muted">{note}</p>}
     </div>

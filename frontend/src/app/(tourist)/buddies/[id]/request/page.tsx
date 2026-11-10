@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Chip, Spinner, TopBar, inputCls } from "@/components/ui";
+import { Button, Chip, Icon, Spinner, TopBar, inputCls } from "@/components/ui";
 import { BottomSheet, ErrorBox, textareaCls } from "@/components/tourist";
 import { errMsg, okv } from "@/components/tourist/format";
 import { useSS } from "@/components/tourist/session";
@@ -54,7 +54,7 @@ export default function BuddyRequestPage() {
         <TopBar back={`/buddies/${id}`} />
         <div className="px-5 py-10 text-center">
           <p className="text-[15px] text-muted">{tr("버디와 만날 날짜를 먼저 골라 주세요.", "Please pick a date with your buddy first.")}</p>
-          <Link href={`/buddies/${id}`} className="mt-3 inline-block text-[15px] font-semibold text-navy">{tr("버디 보러 가기", "Go to buddy")}</Link>
+          <Link href={`/buddies/${id}`} className="mt-3 inline-flex items-center gap-0.5 text-[15px] font-semibold text-navy">{tr("버디 보러 가기", "Go to buddy")}<Icon name="chevron-right" className="h-4 w-4" strokeWidth={2.4} /></Link>
         </div>
       </>
     );

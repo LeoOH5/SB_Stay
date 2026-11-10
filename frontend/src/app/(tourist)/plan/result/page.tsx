@@ -212,7 +212,7 @@ export default function PlanResultPage() {
 
   return (
     <>
-      <TopBar back="/plan" right={<Link href="/plan" className="font-semibold text-navy">{tr("다시 짜기", "Start over")}</Link>} />
+      <TopBar back="/plan" right={<Link href="/plan" className="font-semibold text-navy underline underline-offset-2">{tr("다시 짜기", "Start over")}</Link>} />
       <Headline className="pt-2" title={nights > 0 ? tr(`${nights}박 ${nights + 1}일 일정`, `${nights} night${nights === 1 ? "" : "s"}, ${nights + 1} days`) : tr("하루 일정", "One-day plan")}
         sub={first && last ? tr(`${koMD(first)} ${longDay(first)}부터 ${sameMonth ? `${parseDate(last).getDate()}일` : koMD(last)} ${longDay(last)}까지`, `${enDay(first)} – ${enDay(last)}`) : undefined} />
       <div className="px-5 pb-6 pt-5">

@@ -125,7 +125,7 @@ function BookingsBody() {
                         <span><span className="text-muted">항목 상태</span> {PILL_LABEL[r.status]}</span>
                         <span className="text-muted">{r.type === "dorm" ? "숙박은 대학 담당자가 승인해요" : "버디가 직접 수락해요"}</span>
                         {isOperator && r.status !== "cancelled" && (
-                          <button type="button" className="ml-auto text-[13px] font-semibold text-red hover:underline disabled:opacity-40" disabled={busy === r.booking_id} onClick={() => cancel(r)}>예약 전체 취소</button>
+                          <button type="button" className="ml-auto text-[13px] font-semibold text-red underline underline-offset-2 disabled:opacity-40" disabled={busy === r.booking_id} onClick={() => cancel(r)}>예약 전체 취소</button>
                         )}
                       </div>
                     </td>

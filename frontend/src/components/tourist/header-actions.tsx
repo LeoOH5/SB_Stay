@@ -11,6 +11,7 @@ import type { Lang, ListResponse, Notification, User } from "@/lib/types";
 import { BottomSheet } from "@/components/tourist";
 import { Icon } from "@/components/ui";
 import { dateTime, loginHref } from "@/components/tourist/format";
+import { PersonArt } from "@/components/person-art";
 
 const READ_KEY = "sbstay.readNotis";
 
@@ -97,8 +98,8 @@ export function HeaderActions() {
         )}
         {user ? (
           <div className="relative">
-            <button type="button" onClick={() => { setMeOpen((v) => !v); setLangOpen(false); }} aria-haspopup="menu" aria-expanded={meOpen} aria-label={tr("내 정보", "My account")} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-bg text-[15px] font-bold text-navy">
-              {user.name.trim().charAt(0).toUpperCase()}
+            <button type="button" onClick={() => { setMeOpen((v) => !v); setLangOpen(false); }} aria-haspopup="menu" aria-expanded={meOpen} aria-label={tr("내 정보", "My account")} className="flex h-9 w-9 items-center justify-center rounded-full">
+              <PersonArt name={user.name} className="h-9 w-9" />
             </button>
             {meOpen && <button type="button" aria-label={tr("닫기", "Close")} className="fixed inset-0 z-20 cursor-default" onClick={() => setMeOpen(false)} />}
             {meOpen && (

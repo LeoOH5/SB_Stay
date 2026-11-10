@@ -169,7 +169,7 @@ export default function AdminMembersPage() {
                     : <StatusPill status="suspended" label={auto ? "자동 정지 · 확인 필요" : "정지"} />}
                 </Td>
                 <Td className="pr-4">
-                  {!suspended && <button type="button" className="text-[14px] font-semibold text-red hover:underline disabled:opacity-40" disabled={busy === b.id} onClick={() => act(b, "suspend")}>정지</button>}
+                  {!suspended && <button type="button" className="text-[14px] font-semibold text-red underline underline-offset-2 disabled:opacity-40" disabled={busy === b.id} onClick={() => act(b, "suspend")}>정지</button>}
                   {suspended && auto && isOperator && <Link href="/admin/reports" className={linkCls}>신고 보기</Link>}
                   {suspended && (!auto || !isOperator) && <button type="button" className={linkCls} disabled={busy === b.id} onClick={() => act(b, "unsuspend")}>정지 풀기</button>}
                 </Td>
