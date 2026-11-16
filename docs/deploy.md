@@ -1,5 +1,11 @@
 # 배포
 
+> **2026-11-16 대회 종료 후 상태**
+> - 프론트(Vercel)는 그대로, Production 환경변수 `NEXT_PUBLIC_USE_MOCK=true`로 **데모 모드** (백엔드 호출 없음)
+> - Railway 구독 해지 (2026-12-06까지 유효, 배포 중지). 해지 전 운영 DB·업로드 사진은 로컬에 백업
+> - 도메인 sbstay.site 자동 연장 꺼짐 (만료 2027-11-07), `api` CNAME·`_railway-verify.api` TXT 삭제
+> - 다시 백엔드를 붙이려면: 아래 절차로 백엔드·DB를 새로 띄우고 `NEXT_PUBLIC_USE_MOCK=false`, `NEXT_PUBLIC_API_URL` 설정 후 재배포
+
 | 대상 | 플랫폼 | 주소 |
 |---|---|---|
 | 프론트 (Next.js) | Vercel 프로젝트 `sbstay` (root: `frontend`) | https://sbstay.site (www·sbstay.vercel.app 은 sbstay.site 로 308 이동) |
