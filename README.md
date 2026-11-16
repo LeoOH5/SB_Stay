@@ -5,9 +5,11 @@
 
 2026 SB 스타트업 네트워킹 페스티벌 「AI 기반 지역문제 해결 해커톤」 출품작
 
-| 서비스 | API 문서 | 홍보 영상 |
-|---|---|---|
-| https://sbstay.site | https://api.sbstay.site/docs | [보기 (46초)](https://sbstay.site/promo/sbstay-promo.mp4) |
+| 서비스 (데모) | 홍보 영상 |
+|---|---|
+| https://sbstay.site | [보기 (46초)](https://sbstay.site/promo/sbstay-promo.mp4) |
+
+> 대회가 끝나 2026-11-16부터 **데모 모드**로 운영합니다. 사이트는 백엔드 없이 목 데이터로 모든 화면을 보여 주고, 실제 가입·예약·결제·AI 응답은 동작하지 않아요. 백엔드를 직접 띄우는 방법은 아래 [로컬 실행](#로컬-실행)을 보세요.
 
 ## 홍보 영상
 
@@ -54,7 +56,7 @@
 | 영역 | 사용 |
 |---|---|
 | 프론트 | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4 — Vercel |
-| 백엔드 | FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16, Python 3.12 — Railway |
+| 백엔드 | FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16, Python 3.12 — 대회 기간 Railway (지금은 내림) |
 | AI | OpenAI 호환 LLM API(모델은 `.env`), 공공데이터 기반 RAG |
 | 외부 연동 | 구글 로그인·캘린더, 카카오맵, 토스페이먼츠, PayPal, 한국관광공사 TourAPI |
 | 테스트 | pytest (GitHub Actions, PR마다) |
@@ -126,7 +128,7 @@ npm run dev
 
 ## 개발 규칙
 
-- 흐름: `feat/<이니셜>-<기능>` → PR → `develop` (pytest 통과 필수) → `main`. main에 병합되면 프론트(Vercel)·백엔드(Railway)가 자동 배포
+- 흐름: `feat/<이니셜>-<기능>` → PR → `develop` (pytest 통과 필수) → `main`. main에 병합되면 프론트(Vercel)가 자동 배포 (백엔드 Railway는 대회 후 내림)
 - 명세를 먼저 고치고 코드를 바꾼다. main은 항상 실행 가능한 상태
 - API 키는 `.env`에만, 깃허브에 올리지 않는다
 - 자세한 규칙: [docs/backend-plan.md](docs/backend-plan.md)
